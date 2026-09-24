@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "97C146ED1A900023007C39D3"
+               BlueprintIdentifier = "Runner"
                BuildableName = "Runner.app"
                BlueprintName = "Runner"
                ReferencedContainer = "container:Runner.xcodeproj">
@@ -31,7 +31,7 @@
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "Release"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -44,7 +44,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "97C146ED1A900023007C39D3"
+            BlueprintIdentifier = "Runner"
             BuildableName = "Runner.app"
             BlueprintName = "Runner"
             ReferencedContainer = "container:Runner.xcodeproj">
@@ -61,7 +61,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "97C146ED1A900023007C39D3"
+            BlueprintIdentifier = "Runner"
             BuildableName = "Runner.app"
             BlueprintName = "Runner"
             ReferencedContainer = "container:Runner.xcodeproj">
