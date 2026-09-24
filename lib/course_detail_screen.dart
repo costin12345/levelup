@@ -8,7 +8,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 // Import condiționat: folosește codul de Web doar pe browser Web
 import 'web_iframe_stub.dart' if (dart.library.html) 'web_iframe_web.dart';
-
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 class CourseDetailScreen extends StatelessWidget {
   final String courseId;
   final String title;
@@ -45,7 +46,35 @@ class CourseDetailScreen extends StatelessWidget {
       }
     }
   }
+  Future<void> sendPushNotification(String fcmToken, String title, String body) async {
+    try {
+      // Înlocuiește SERVER_KEY cu Server Key-ul tău din Firebase Console -> Project Settings -> Cloud Messaging (Legacy API)
+      const String serverKey = 'AICI_PUI_SERVER_KEY_DIN_FIREBASE';
 
+      await http.post(
+        Uri.parse('https://fcm.googleapis.com/fcm/send'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'key=$serverKey',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'to': fcmToken,
+          'priority': 'high',
+          'notification': <String, dynamic>{
+            'title': title,
+            'body': body,
+            'sound': 'default',
+            'badge': '1',
+          },
+          'data': <String, dynamic>{
+            'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+          },
+        }),
+      );
+    } catch (e) {
+      debugPrint("Eroare trimitere Push: $e");
+    }
+  }
   // Dialog și metodă pentru ștergerea unei lecții (exclusiv profesori)
   Future<void> _deleteLesson(
     BuildContext context,
@@ -183,27 +212,73 @@ class CourseDetailScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (titleController.text.trim().isNotEmpty) {
+                final String lessonTitle = titleController.text.trim();
+                if (lessonTitle.isNotEmpty) {
+                  // 1. Salvează lecția în Firestore
                   await FirebaseFirestore.instance
                       .collection('courses')
                       .doc(courseId)
                       .collection('lessons')
                       .add({
-                        'title': titleController.text.trim(),
-                        'content': contentController.text.trim(),
-                        'videoUrl': videoUrlController.text.trim(),
-                        'pdfUrl': pdfUrlController.text.trim(),
-                        'createdAt': FieldValue.serverTimestamp(),
-                      });
-                  if (context.mounted) Navigator.pop(context);
+                    'title': lessonTitle,
+                    'content': contentController.text.trim(),
+                    'videoUrl': videoUrlController.text.trim(),
+                    'pdfUrl': pdfUrlController.text.trim(),
+                    'createdAt': FieldValue.serverTimestamp(),
+                  });
+
+                  // 2. Găsește toti elevii înrolați la acest curs
+                  final enrollmentsSnapshot = await FirebaseFirestore.instance
+                      .collection('enrollments')
+                      .where('courseId', isEqualTo: courseId)
+                      .where('status', isEqualTo: 'approved')
+                      .get();
+
+                  // 3. Trimite notificare pentru fiecare elev
+                  for (var doc in enrollmentsSnapshot.docs) {
+                    String studentId = doc['userId'];
+
+                    // Salvează notificarea in-app
+                    await FirebaseFirestore.instance.collection('notifications').add({
+                      'userId': studentId,
+                      'title': 'Lecție nouă în $title',
+                      'body': 'Profesorul a adăugat: "$lessonTitle"',
+                      'courseId': courseId,
+                      'isRead': false,
+                      'createdAt': FieldValue.serverTimestamp(),
+                    });
+
+                    // Preluăm fcmToken-ul elevului din colecția users
+                    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(studentId)
+                        .get();
+
+                    if (userDoc.exists) {
+                      var userData = userDoc.data() as Map<String, dynamic>;
+                      String? fcmToken = userData['fcmToken'];
+
+                      // Trimitem notificarea pe ecranul blocat
+                      if (fcmToken != null && fcmToken.isNotEmpty) {
+                        await sendPushNotification(
+                          fcmToken,
+                          'Lecție nouă în $title',
+                          'Profesorul a adăugat: "$lessonTitle"',
+                        );
+                      }
+                    }
+                  }
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Lecție adăugată și notificări trimise!')),
+                    );
+                    Navigator.pop(context);
+                  }
                 }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xff42153e),
-                foregroundColor: Colors.white,
-              ),
               child: const Text("Salvează Lecția"),
-            ),
+            )
           ],
         );
       },

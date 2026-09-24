@@ -38,7 +38,7 @@ dependencies:
   url_launcher: ^6.3.0
   webview_flutter: ^4.10.0
   firebase_messaging: ^15.2.10
-
+  http: ^1.2.0
 
 
   # Pachete pentru interfață și iconițe
