@@ -1,11 +1,8 @@
+# Uncomment this line to define a global platform for your project
 platform :ios, '13.0'
 
-# Flutter Podfile template
-if !MemFs.respond_to?(:exist?)
-  def MemFs.exist?(path)
-    File.exist?(path)
-  end
-end
+# CocoaPods analytics sends network stats which slows down build times.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
   'Debug' => :debug,
