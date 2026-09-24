@@ -94,13 +94,12 @@ class _MainScreenState extends State<MainScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Image.asset(
-                'images/logo.png',
+                'images/logo.jpg',
                 height: 38,
                 fit: BoxFit.contain,
               ),
             ),
             const SizedBox(width: 10),
-            // Expanded/Flexible previne depășirea textului pe mobil
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,11 +112,9 @@ class _MainScreenState extends State<MainScreen> {
         actions: [
           LayoutBuilder(
             builder: (context, constraints) {
-              // Verificăm lățimea ecranului
               double screenWidth = MediaQuery.of(context).size.width;
 
               if (screenWidth > 600) {
-                // ECAN MARE (Laptop/Desktop): Afișăm butoanele orizontal
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -173,7 +170,6 @@ class _MainScreenState extends State<MainScreen> {
                   ],
                 );
               } else {
-                // ECRAN MIC (Mobil): Meniu de tip Popup Menu
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -249,8 +245,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ================= ECRANUL HOME FĂRĂ TESTIMONIALE ȘI CU STATISTICI 100% REALTIME =================
-// ================= ECRANUL HOME RESPONSIVE PENTRU MOBIL ȘI DESKTOP =================
 class HomeTab extends StatelessWidget {
   final VoidCallback onGoToCourses;
 
@@ -292,7 +286,6 @@ class HomeTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. SECȚIUNEA HERO
               Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
@@ -335,7 +328,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Status Acces
               if (!hasAccess)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -368,7 +360,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // 2. BARA DE CARACTERISTICI
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: LayoutBuilder(
@@ -409,7 +400,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // 3. SECȚIUNEA DE CATEGORII / NIVELURI
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -496,7 +486,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // 4. BANDA DE STATISTICI LIVE (RESPONSIVE 2X2 PE MOBIL)
               Container(
                 color: const Color(0xff42153e),
                 padding: const EdgeInsets.symmetric(
@@ -608,7 +597,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 30),
 
-              // 5. FOOTER RESPONSIVE (FĂRĂ OVERFLOW)
               Container(
                 color: const Color(0xff2b0c28),
                 padding: const EdgeInsets.symmetric(
@@ -628,7 +616,7 @@ class HomeTab extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Image.asset(
-                            'images/logo.png',
+                            'images/logo.jpg',
                             height: 28,
                             fit: BoxFit.contain,
                           ),
@@ -672,11 +660,6 @@ class HomeTab extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [],
-                              ),
                             ],
                           );
                         }
@@ -975,101 +958,6 @@ class HomeTab extends StatelessWidget {
           style: const TextStyle(fontSize: 11, color: Colors.white70),
         ),
       ],
-    );
-  }
-}
-
-// ================= ECRANUL DE CURSURI =================
-class CoursesTab extends StatelessWidget {
-  const CoursesTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    User? currentUser = FirebaseAuth.instance.currentUser;
-
-    if (currentUser == null) {
-      return const Center(child: Text("Trebuie să te autentifici."));
-    }
-
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xff42153e)),
-          );
-        }
-
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(
-            child: Text("Profilul nu a fost găsit în baza de date."),
-          );
-        }
-
-        var userData = snapshot.data!.data() as Map<String, dynamic>;
-        bool hasAccess = userData['hasAccess'] ?? false;
-
-        if (!hasAccess) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.lock_clock_outlined,
-                    size: 72,
-                    color: Color(0xff42153e),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Acces Restricționat",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xff42153e),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Contul tău a fost creat cu succes! Accesul la materiale este în curs de verificare.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Color(0xff42153e),
-                  child: Icon(Icons.functions, color: Colors.white),
-                ),
-                title: Text(
-                  "Matematică - Clasa a XII-a",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text("Sisteme de ecuații, Matrice și Analiză"),
-                trailing: Icon(Icons.arrow_forward_ios, size: 16),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

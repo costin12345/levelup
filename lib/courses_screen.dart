@@ -145,6 +145,50 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
+  // Funcție de ștergere curs cu confirmare (doar pentru profesori)
+  Future<void> _deleteCourse(String courseId, String courseTitle) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ștergere "$courseTitle"'),
+        content: const Text(
+          'Ești sigur că vrei să ștergi acest curs? Toate datele vor fi șterse definitiv.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Șterge', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('courses')
+            .doc(courseId)
+            .delete();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cursul a fost șters cu succes!')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Eroare la ștergere: $e')));
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     User? currentUser = FirebaseAuth.instance.currentUser;
@@ -360,8 +404,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: filteredDocs.length,
                       itemBuilder: (context, index) {
+                        var courseDoc = filteredDocs[index];
                         var courseData =
-                            filteredDocs[index].data() as Map<String, dynamic>;
+                            courseDoc.data() as Map<String, dynamic>;
+                        String courseId = courseDoc.id;
                         String title = courseData['title'] ?? 'Fără titlu';
                         String category = courseData['category'] ?? 'General';
                         String description = courseData['description'] ?? '';
@@ -374,7 +420,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           ),
                           child: InkWell(
                             onTap: () {
-                              String courseId = filteredDocs[index].id;
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -420,10 +465,26 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                           ),
                                         ),
                                       ),
-                                      const Icon(
-                                        Icons.arrow_forward_ios,
-                                        size: 14,
-                                        color: Colors.grey,
+                                      Row(
+                                        children: [
+                                          if (role == 'teacher')
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.delete,
+                                                color: Colors.red,
+                                                size: 20,
+                                              ),
+                                              onPressed: () => _deleteCourse(
+                                                courseId,
+                                                title,
+                                              ),
+                                            ),
+                                          const Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 14,
+                                            color: Colors.grey,
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

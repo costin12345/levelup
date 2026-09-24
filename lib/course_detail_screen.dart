@@ -46,6 +46,56 @@ class CourseDetailScreen extends StatelessWidget {
     }
   }
 
+  // Dialog și metodă pentru ștergerea unei lecții (exclusiv profesori)
+  Future<void> _deleteLesson(
+    BuildContext context,
+    String lessonId,
+    String lessonTitle,
+  ) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ștergere "$lessonTitle"'),
+        content: const Text(
+          'Ești sigur că vrei să ștergi această lecție? Acțiunea este ireversibilă.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Șterge', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('courses')
+            .doc(courseId)
+            .collection('lessons')
+            .doc(lessonId)
+            .delete();
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Lecția a fost ștearsă cu succes!')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Eroare la ștergere: $e')));
+        }
+      }
+    }
+  }
+
   void _showAddLessonDialog(BuildContext context) {
     final titleController = TextEditingController();
     final contentController = TextEditingController();
@@ -293,8 +343,9 @@ class CourseDetailScreen extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: lessons.length,
                   itemBuilder: (context, index) {
-                    var lessonData =
-                        lessons[index].data() as Map<String, dynamic>;
+                    var lessonDoc = lessons[index];
+                    var lessonData = lessonDoc.data() as Map<String, dynamic>;
+                    String lessonId = lessonDoc.id;
                     String lessonTitle = lessonData['title'] ?? 'Lecție';
                     String lessonContent = lessonData['content'] ?? '';
                     String videoUrl = lessonData['videoUrl'] ?? '';
@@ -325,6 +376,19 @@ class CourseDetailScreen extends StatelessWidget {
                             color: Color(0xff42153e),
                           ),
                         ),
+                        trailing: role == 'teacher'
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _deleteLesson(
+                                  context,
+                                  lessonId,
+                                  lessonTitle,
+                                ),
+                              )
+                            : null,
                         children: [
                           Padding(
                             padding: const EdgeInsets.all(16.0),
@@ -353,7 +417,7 @@ class CourseDetailScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 8),
                                   UniversalEmbeddedViewer(
-                                    viewId: 'video_${lessons[index].id}',
+                                    viewId: 'video_$lessonId',
                                     url: videoUrl,
                                     height: 250,
                                   ),
@@ -371,7 +435,7 @@ class CourseDetailScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 8),
                                   UniversalEmbeddedViewer(
-                                    viewId: 'pdf_${lessons[index].id}',
+                                    viewId: 'pdf_$lessonId',
                                     url:
                                         pdfUrl.contains('drive.google.com') ||
                                             pdfUrl.contains('firebasestorage')
