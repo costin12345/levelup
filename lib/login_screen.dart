@@ -87,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Image.asset(
-                'images/logo.png',
+                'images/logo.jpg',
                 height: 48,
                 fit: BoxFit.contain,
               ),
