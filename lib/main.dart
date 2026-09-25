@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 
 import 'courses_screen.dart';
 import 'firebase_options.dart';
@@ -13,6 +13,12 @@ import 'login_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Forțează prezentarea notificărilor în Foreground și Background pe iOS
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
   runApp(const LevelUpApp());
 }
 
@@ -66,21 +72,42 @@ class _MainScreenState extends State<MainScreen> {
 
   // Configurare permisiuni FCM și salvare token pentru ecranul blocat
   Future<void> _setupFCM() async {
-    if (kIsWeb) return; // <-- BARAJEAZĂ EROAREA PE BROWSER
+    if (kIsWeb) return;
 
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
     try {
       FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+      // 1. Cerem permisiunea explicit pe iOS
       NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
+        provisional: false,
       );
 
+      debugPrint('User notification status: ${settings.authorizationStatus}');
+
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        // 2. Pe iOS, verificăm dacă s-a obținut mai întâi APNs Token-ul
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          String? apnsToken = await messaging.getAPNSToken();
+          debugPrint('APNS Token obținut: $apnsToken');
+
+          if (apnsToken == null) {
+            debugPrint(
+              'EROARE: APNs Token este null! Verificați APNs Key în Firebase și Entitlements.',
+            );
+            return;
+          }
+        }
+
+        // 3. Obținem FCM Token-ul final
         String? token = await messaging.getToken();
+        debugPrint('FCM Token generat cu succes: $token');
+
         if (token != null) {
           await FirebaseFirestore.instance
               .collection('users')
