@@ -39,6 +39,7 @@ dependencies:
   webview_flutter: ^4.10.0
   firebase_messaging: ^15.2.10
   http: ^1.2.0
+  file_picker: ^13.1.0
 
 
   # Pachete pentru interfață și iconițe

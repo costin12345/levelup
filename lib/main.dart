@@ -71,7 +71,6 @@ class _MainScreenState extends State<MainScreen> {
     try {
       FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-      // Cerere de permisiune pentru notificări pe ecranul blocat
       NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         badge: true,
@@ -105,7 +104,7 @@ class _MainScreenState extends State<MainScreen> {
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
-            (route) => false,
+        (route) => false,
       );
     }
   }
@@ -358,21 +357,21 @@ class HomeTab extends StatelessWidget {
                       bool isWide = constraints.maxWidth > 750;
                       return isWide
                           ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(child: _buildHeroText(context)),
-                          const SizedBox(width: 24),
-                          SizedBox(width: 320, child: _buildHeroCard()),
-                        ],
-                      )
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(child: _buildHeroText(context)),
+                                const SizedBox(width: 24),
+                                SizedBox(width: 320, child: _buildHeroCard()),
+                              ],
+                            )
                           : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeroText(context),
-                          const SizedBox(height: 24),
-                          _buildHeroCard(),
-                        ],
-                      );
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeroText(context),
+                                const SizedBox(height: 24),
+                                _buildHeroCard(),
+                              ],
+                            );
                     },
                   ),
                 ),
@@ -483,55 +482,55 @@ class HomeTab extends StatelessWidget {
                         bool isMobile = constraints.maxWidth < 600;
                         return isMobile
                             ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCategoryCard(
-                              "Gimnaziu",
-                              "Clasele V - VIII",
-                              Icons.child_care,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildCategoryCard(
-                              "Liceu",
-                              "Clasele IX - XII",
-                              Icons.menu_book,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildCategoryCard(
-                              "Bacalaureat",
-                              "Simulări & Teste",
-                              Icons.assignment,
-                            ),
-                          ],
-                        )
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildCategoryCard(
+                                    "Gimnaziu",
+                                    "Clasele V - VIII",
+                                    Icons.child_care,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildCategoryCard(
+                                    "Liceu",
+                                    "Clasele IX - XII",
+                                    Icons.menu_book,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildCategoryCard(
+                                    "Bacalaureat",
+                                    "Simulări & Teste",
+                                    Icons.assignment,
+                                  ),
+                                ],
+                              )
                             : Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: _buildCategoryCard(
-                                "Gimnaziu",
-                                "Clasele V - VIII",
-                                Icons.child_care,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildCategoryCard(
-                                "Liceu",
-                                "Clasele IX - XII",
-                                Icons.menu_book,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildCategoryCard(
-                                "Bacalaureat",
-                                "Simulări & Teste",
-                                Icons.assignment,
-                              ),
-                            ),
-                          ],
-                        );
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: _buildCategoryCard(
+                                      "Gimnaziu",
+                                      "Clasele V - VIII",
+                                      Icons.child_care,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildCategoryCard(
+                                      "Liceu",
+                                      "Clasele IX - XII",
+                                      Icons.menu_book,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildCategoryCard(
+                                      "Bacalaureat",
+                                      "Simulări & Teste",
+                                      Icons.assignment,
+                                    ),
+                                  ),
+                                ],
+                              );
                       },
                     ),
                   ],
@@ -584,7 +583,7 @@ class HomeTab extends StatelessWidget {
                                 children: [
                                   Row(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.center,
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Expanded(
                                         child: _buildCounterItem(
@@ -603,7 +602,7 @@ class HomeTab extends StatelessWidget {
                                   const SizedBox(height: 16),
                                   Row(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.center,
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Expanded(
                                         child: _buildCounterItem(
@@ -915,11 +914,11 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildFeatureCard(
-      IconData icon,
-      String title,
-      String desc,
-      double maxWidth,
-      ) {
+    IconData icon,
+    String title,
+    String desc,
+    double maxWidth,
+  ) {
     double cardWidth = maxWidth > 600
         ? (maxWidth - 36) / 4
         : (maxWidth - 12) / 2;
