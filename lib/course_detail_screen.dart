@@ -110,7 +110,10 @@ class CourseDetailScreen extends StatelessWidget {
                     },
                   },
                   'apns': {
-                    'headers': {'apns-priority': '10'},
+                    'headers': {
+                      'apns-priority': '10',
+                      'apns-push-type': 'alert', // OBLIGATORIU pentru notificări de tip pop-up
+                    },
                     'payload': {
                       'aps': {
                         'alert': {
@@ -119,7 +122,6 @@ class CourseDetailScreen extends StatelessWidget {
                         },
                         'sound': 'default',
                         'badge': 1,
-                        'content-available': 1,
                       },
                     },
                   },

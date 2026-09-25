@@ -498,7 +498,7 @@ class HomeTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 12),
                             _buildCategoryCard(
-                              "Bacalaureat",
+                              "Evaluarea Națională/Bacalaureat",
                               "Simulări & Teste",
                               Icons.assignment,
                             ),
@@ -708,7 +708,7 @@ class HomeTab extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                "© 2026 Level Up App. Toate drepturile rezervate.",
+                                "©Aplicație dezvoltată de Diana Cioroiu. 2026 Level Up App. Toate drepturile rezervate.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.5),
@@ -784,7 +784,7 @@ class HomeTab extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          "Inspirăm Excelența,\nConstruim Lideri.",
+          "Every problem,\nhas a solution.",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
@@ -831,24 +831,7 @@ class HomeTab extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white70),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                "DESPRE NOI",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
+
           ],
         ),
       ],
