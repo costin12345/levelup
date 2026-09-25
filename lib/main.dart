@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'courses_screen.dart';
 import 'firebase_options.dart';
@@ -65,12 +66,13 @@ class _MainScreenState extends State<MainScreen> {
 
   // Configurare permisiuni FCM și salvare token pentru ecranul blocat
   Future<void> _setupFCM() async {
+    if (kIsWeb) return; // <-- BARAJEAZĂ EROAREA PE BROWSER
+
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
     try {
       FirebaseMessaging messaging = FirebaseMessaging.instance;
-
       NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         badge: true,
