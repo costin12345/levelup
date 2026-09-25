@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -28,7 +29,26 @@ class CourseDetailScreen extends StatelessWidget {
   // Funcție de trimitere Push Notification către toți elevii aprobați la curs
   Future<void> _sendPushToStudents(String lessonTitle) async {
     try {
-      // 1. Găsim toți elevii aprobați la acest curs
+      // 1. Datele din fisierul Service Account JSON descarcat din Firebase Console
+      final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
+        {
+          "type": "service_account",
+          "project_id": "level-up-19583",
+          "private_key_id": "1ca4912cb3b892f44fd3642499274c36d38abebb",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDKLKo/AvOTLf8v\nO6HRZc0rD+poRMVV7hpPhlkk3pS7u1k6BdWOTQtWOlAiyE5PpFIvBjAoj/O5Bvcp\ngTLUEGsqVte3QdgMgTb9V5Q0D+Wzn9gHPde3IvlPUwKftTRyJAAuj6qNSv31DSTT\n6Oidua6jI4RLGBPV1xDFyOwyxVCg3b852cF7o/3VhR/MA9ztBcOdkwfhZCBiyh5/\nca0TrB8U6aGGgics1Ix7O5O23mlX3IKM3xXOrdoj50HRYt8NWjGe3T9OpJ3Xg5s5\n5fLHrr+Hk3btKhi2G/ORVTqL4hcu7nVmU8Ra/PAyXdH/kM+7HWqhwviBkCLnvxHt\ntenZo46nAgMBAAECggEAV0XppfK9t6qS7k5FH7Hc27pum10YfGwgwnSB1ccZmGKa\n9U+gbOG4Q5w/jIxANeP+sBrxPglKEfS+TBXgHagKwsejLhIH0/oRhVJBgSndo+kb\n5aBeFsnLqmDwkIW14pHE3FSbMIwPTbHDVJDFnZSSnQzPZmU55sUEkgSWZaJEmHPs\nMLdBeRmt2GyijY7Ca6jiqsFgHYqF/4jdUwvPVTxwy4w4PlujBUSZW4MzxQ3zfkql\nsiJKaDX6teJaScf5sCl1DAGc+xUMZJ8NQF/K4BlM3w0J8gNswvbNLFse4AUJBBnB\nqeTpyn+E5SAcXIprMbRyfIDrSbSQkZO6D6XF6PTTQQKBgQDshpyIx7K2hPv7KGWJ\nDzJzxNIzIg1iYoLgvPpbTlBeqkJNifFBxbxjhTRuTSEfwH60LkyU8JBIrU9gIBN9\nyYCw3ZnKPFitk1ULbdH7hEAgoGlo1H2rAUSk7SLRvNsNme2xw2H2g9FyBJ2j5l37\ngfeeKaubwFKIYyW2GRwQ6+ctZwKBgQDa0gK7U34c3pPgGuBoblgFbTlRvdzTM8py\nuDU2ll+n7iFsWam1oSfx3rCodBST9UQwSANoNYw3GyAs+pc/Rp4G1FLfUqAii6Dp\nBCZJrGO7BP2SAeA2nNxWUWoLgOLJc2Na22jRq0VAcygCFA06d2q5F1cp/AUDarra\nLGL11oqMwQKBgQDButQV2HORucTmh8T6iR8K4chFp3uM/SEz0LXC+ZcsooniFr0r\n4TkXzrAONFCQQEvHazDAwXV8ga/FDSDJ47TrqOZhViJQMZ/z14SpXT5lOt57xagU\n29oMuErPvb8yGcUt19myX2+60vsHlxWdfmuB+aGc1d8D5SmrSE/LsF1OuwKBgAv0\n37tWo5R2QQRE07BBH0QkpLYntrI/qTc9g4LZEp79bwwZliFbjfA0Z9i8hwdSpogw\n1ybRjjjQnaB3jN4jQK1E2sZjIGbi1EcHOARcjBKDAkwBGDxDs/JvfmjkgP/a8zna\ntU6HmkAcSrpaWCKytb0pXlTn9WorYcxcEog2UdnBAoGBAILX8dcNWZa8Fht6Em+0\neaQadP+hJGFeHbGY1AfvcZxqCIYbAN1NzutNGTgTRzc5to1XbntltTuU2yKy+EQp\n3QmACBfV62fBXhqaVP6/fi3IYegv2lvcXImEjFLkaWUsda2821uwwNFypP0yBp71\nYfUWxKMEbQZKSwa9NGPl/WwV\n-----END PRIVATE KEY-----\n",
+          "client_email":
+              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
+          "client_id": "112777526185284576732",
+        },
+      );
+
+      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+      final client = await auth.clientViaServiceAccount(
+        serviceAccountCredentials,
+        scopes,
+      );
+
+      // 2. Preluam toti elevii aprobati la acest curs
       final enrollments = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('courseId', isEqualTo: courseId)
@@ -37,12 +57,10 @@ class CourseDetailScreen extends StatelessWidget {
 
       if (enrollments.docs.isEmpty) return;
 
-      // 2. Colectăm token-urile FCM ale elevilor
-      List<String> tokens = [];
       for (var doc in enrollments.docs) {
         String userId = doc['userId'];
 
-        // Salvăm și notificarea in-app
+        // Salvare Notificare In-App
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': userId,
           'title': 'Lecție nouă în $title',
@@ -60,51 +78,54 @@ class CourseDetailScreen extends StatelessWidget {
         if (userDoc.exists) {
           var uData = userDoc.data() as Map<String, dynamic>?;
           String? fcmToken = uData?['fcmToken'];
+
           if (fcmToken != null && fcmToken.isNotEmpty) {
-            tokens.add(fcmToken);
+            // 3. Trimitere cerere prin FCM API v1 (oficial)
+            final String fcmV1Url =
+                'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
+
+            final response = await client.post(
+              Uri.parse(fcmV1Url),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'message': {
+                  'token': fcmToken,
+                  'notification': {
+                    'title': 'Lecție nouă în $title 📚',
+                    'body': 'A fost adăugată lecția: "$lessonTitle"',
+                  },
+                  'android': {
+                    'notification': {
+                      'sound': 'default',
+                      'default_vibrate_timings': true,
+                      'priority': 'HIGH',
+                    },
+                  },
+                  'apns': {
+                    'payload': {
+                      'aps': {
+                        'sound': 'default',
+                        'badge': 1,
+                        'content-available': 1,
+                      },
+                    },
+                  },
+                  'data': {
+                    'courseId': courseId,
+                    'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                  },
+                },
+              }),
+            );
+
+            debugPrint("FCM v1 Response status: ${response.statusCode}");
+            debugPrint("FCM v1 Response body: ${response.body}");
           }
         }
       }
-
-      // 3. Trimitem notificările Push de pe Web/Mobile
-      // Pune AICI Server Key-ul tău din Firebase Console -> Cloud Messaging
-      const String serverKey = 'AICI_PUI_SERVER_KEY_DIN_FIREBASE';
-
-      String fcmUrl = 'https://fcm.googleapis.com/fcm/send';
-      if (kIsWeb) {
-        fcmUrl = 'https://corsproxy.io/?' + Uri.encodeComponent(fcmUrl);
-      }
-
-      for (String token in tokens) {
-        await http.post(
-          Uri.parse(fcmUrl),
-          headers: <String, String>{
-            'Content-Type': 'application/json',
-            'Authorization': 'key=$serverKey',
-          },
-          body: jsonEncode(<String, dynamic>{
-            'to': token,
-            'priority': 'high',
-            'notification': <String, dynamic>{
-              'title': 'Lecție nouă în $title 📚',
-              'body': 'A fost adăugată lecția: "$lessonTitle"',
-              'sound': 'default',
-              'badge': '1',
-            },
-            'data': <String, dynamic>{
-              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-              'courseId': courseId,
-            },
-            'apns': <String, dynamic>{
-              'payload': <String, dynamic>{
-                'aps': <String, dynamic>{'sound': 'default', 'badge': 1},
-              },
-            },
-          }),
-        );
-      }
+      client.close();
     } catch (e) {
-      debugPrint("Eroare trimitere Push Notification: $e");
+      debugPrint("Eroare la trimiterea notificarii FCM v1: $e");
     }
   }
 
