@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'courses_screen.dart';
 import 'firebase_options.dart';
@@ -63,15 +64,16 @@ class _MainScreenState extends State<MainScreen> {
     _setupFCM();
   }
 
-  // Configurare permisiuni FCM și salvare token pentru ecranul blocat
+// Configurare permisiuni FCM și salvare token pentru ecranul blocat
   Future<void> _setupFCM() async {
+    if (kIsWeb) return; // <-- BARAJEAZĂ EROAREA PE BROWSER
+
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
     try {
       FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-      // Cerere de permisiune pentru notificări pe ecranul blocat
       NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         badge: true,
@@ -98,7 +100,7 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  // Funcție unică de Logout care resetează stiva de ecrane și trimite la Login
+// Funcție unică de Logout care resetează stiva de ecrane și trimite la Login
   Future<void> _handleLogout() async {
     _changeTab(0);
     await FirebaseAuth.instance.signOut();
@@ -163,7 +165,7 @@ class _MainScreenState extends State<MainScreen> {
               double screenWidth = MediaQuery.of(context).size.width;
 
               if (screenWidth > 600) {
-                // ECRAN MARE: Meniu orizontal
+// ECRAN MARE: Meniu orizontal
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -219,7 +221,7 @@ class _MainScreenState extends State<MainScreen> {
                   ],
                 );
               } else {
-                // MOBIL: Meniu Popup
+// MOBIL: Meniu Popup
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -337,7 +339,7 @@ class HomeTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. HERO SECTION
+// 1. HERO SECTION
               Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
@@ -412,7 +414,7 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // 2. FEATURE CARDS
+// 2. FEATURE CARDS
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: LayoutBuilder(
@@ -453,7 +455,7 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // 3. NIVELURI DE STUDIU
+// 3. NIVELURI DE STUDIU
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -540,7 +542,7 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // 4. STATISTICI LIVE
+// 4. STATISTICI LIVE
               Container(
                 color: const Color(0xff42153e),
                 padding: const EdgeInsets.symmetric(
@@ -652,7 +654,7 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 30),
 
-              // 5. FOOTER
+// 5. FOOTER
               Container(
                 color: const Color(0xff2b0c28),
                 padding: const EdgeInsets.symmetric(
