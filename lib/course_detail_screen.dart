@@ -34,10 +34,11 @@ class CourseDetailScreen extends StatelessWidget {
         {
           "type": "service_account",
           "project_id": "level-up-19583",
-          "private_key_id": "VALOAREA_PRIVATE_KEY_ID_DIN_JSON",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nVALOAREA_PRIVATE_KEY_DIN_JSON\n-----END PRIVATE KEY-----\n",
-          "client_email": "VALOAREA_CLIENT_EMAIL_DIN_JSON",
-          "client_id": "VALOAREA_CLIENT_ID_DIN_JSON",
+          "private_key_id": "1ca4912cb3b892f44fd3642499274c36d38abebb",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDKLKo/AvOTLf8v\nO6HRZc0rD+poRMVV7hpPhlkk3pS7u1k6BdWOTQtWOlAiyE5PpFIvBjAoj/O5Bvcp\ngTLUEGsqVte3QdgMgTb9V5Q0D+Wzn9gHPde3IvlPUwKftTRyJAAuj6qNSv31DSTT\n6Oidua6jI4RLGBPV1xDFyOwyxVCg3b852cF7o/3VhR/MA9ztBcOdkwfhZCBiyh5/\nca0TrB8U6aGGgics1Ix7O5O23mlX3IKM3xXOrdoj50HRYt8NWjGe3T9OpJ3Xg5s5\n5fLHrr+Hk3btKhi2G/ORVTqL4hcu7nVmU8Ra/PAyXdH/kM+7HWqhwviBkCLnvxHt\ntenZo46nAgMBAAECggEAV0XppfK9t6qS7k5FH7Hc27pum10YfGwgwnSB1ccZmGKa\n9U+gbOG4Q5w/jIxANeP+sBrxPglKEfS+TBXgHagKwsejLhIH0/oRhVJBgSndo+kb\n5aBeFsnLqmDwkIW14pHE3FSbMIwPTbHDVJDFnZSSnQzPZmU55sUEkgSWZaJEmHPs\nMLdBeRmt2GyijY7Ca6jiqsFgHYqF/4jdUwvPVTxwy4w4PlujBUSZW4MzxQ3zfkql\nsiJKaDX6teJaScf5sCl1DAGc+xUMZJ8NQF/K4BlM3w0J8gNswvbNLFse4AUJBBnB\nqeTpyn+E5SAcXIprMbRyfIDrSbSQkZO6D6XF6PTTQQKBgQDshpyIx7K2hPv7KGWJ\nDzJzxNIzIg1iYoLgvPpbTlBeqkJNifFBxbxjhTRuTSEfwH60LkyU8JBIrU9gIBN9\nyYCw3ZnKPFitk1ULbdH7hEAgoGlo1H2rAUSk7SLRvNsNme2xw2H2g9FyBJ2j5l37\ngfeeKaubwFKIYyW2GRwQ6+ctZwKBgQDa0gK7U34c3pPgGuBoblgFbTlRvdzTM8py\nuDU2ll+n7iFsWam1oSfx3rCodBST9UQwSANoNYw3GyAs+pc/Rp4G1FLfUqAii6Dp\nBCZJrGO7BP2SAeA2nNxWUWoLgOLJc2Na22jRq0VAcygCFA06d2q5F1cp/AUDarra\nLGL11oqMwQKBgQDButQV2HORucTmh8T6iR8K4chFp3uM/SEz0LXC+ZcsooniFr0r\n4TkXzrAONFCQQEvHazDAwXV8ga/FDSDJ47TrqOZhViJQMZ/z14SpXT5lOt57xagU\n29oMuErPvb8yGcUt19myX2+60vsHlxWdfmuB+aGc1d8D5SmrSE/LsF1OuwKBgAv0\n37tWo5R2QQRE07BBH0QkpLYntrI/qTc9g4LZEp79bwwZliFbjfA0Z9i8hwdSpogw\n1ybRjjjQnaB3jN4jQK1E2sZjIGbi1EcHOARcjBKDAkwBGDxDs/JvfmjkgP/a8zna\ntU6HmkAcSrpaWCKytb0pXlTn9WorYcxcEog2UdnBAoGBAILX8dcNWZa8Fht6Em+0\neaQadP+hJGFeHbGY1AfvcZxqCIYbAN1NzutNGTgTRzc5to1XbntltTuU2yKy+EQp\n3QmACBfV62fBXhqaVP6/fi3IYegv2lvcXImEjFLkaWUsda2821uwwNFypP0yBp71\nYfUWxKMEbQZKSwa9NGPl/WwV\n-----END PRIVATE KEY-----\n",
+          "client_email":
+              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
+          "client_id": "112777526185284576732",
         },
       );
 
