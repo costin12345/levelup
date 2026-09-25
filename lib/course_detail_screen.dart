@@ -1,15 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:http/http.dart' as http;
+import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-// Import condiționat: folosește codul de Web doar pe browser Web
 import 'web_iframe_stub.dart' if (dart.library.html) 'web_iframe_web.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 class CourseDetailScreen extends StatelessWidget {
   final String courseId;
   final String title;
@@ -25,6 +25,122 @@ class CourseDetailScreen extends StatelessWidget {
     required this.description,
     required this.role,
   });
+
+  // Funcție de trimitere Push Notification prin FCM API v1 către toți elevii aprobați
+  Future<void> _sendPushToStudents(String lessonTitle) async {
+    try {
+      // 1. Credentials din fișierul Service Account JSON descărcat din Firebase Console
+      final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
+        {
+          "type": "service_account",
+          "project_id": "level-up-19583",
+          "private_key_id": "be2af79dfbe281af83316b25ea293ebfc1beee3a",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/GHpRVvpGCezi\nK33vzeOvzPaVcNL/+U0wrAcyLDQGlaDnY/k/mjeq6XMr0l+IAapukBaI/cFUsx1r\npTnIByGyMJ6ibS9ywHygjk0imuKOtSioiFsxCa7w9cOJe8tHyugIjQWm6vELqGAk\njt9GNy1uIODZVpmeF4qyhBFcCXnbOZFLkKeNKx4V9xQcpZ7gyjvVUuDWnuPT9sLv\n5zwvi+OgBJOiksSZ03ShGgDMKwe+mnfRm/VtzfABlEdaf+hnnEsnVWm22/TVrHEk\nkZMlDH/QFh77Mf3l0bY0I5VhUfG5O/2/R+Z6X8ZWyZo+D9BF2eb2Lr71gP4FBoL/\nxCK64kEhAgMBAAECggEAApHLIl5qQRhk2SKUWpiQBU8FrOXaB5Q2skYRcyWXdQz8\ndMcqIu2UCrYsOGOgVBuCg/D2DJxmqW4esCdNJ3yeZULfNk11w/shgBefFMm0l0dQ\nisDtSd5KduenFOJJI1mojbsaX1pQtsNN1Pqtfh2nJ0kpOUZ4RTZ7KGXJjKK2NKPY\n/6WFYPpAwpr0h5utvqmVgRvkZ/SZm4dDF2q8v/S+b//Ws1Vd5T4Ng4k/aUDontpT\nwxT3Riy0O3dDO8DETM/jj5FMKNpVByM4ZfbN7fYEz9qeR9x4KdFWSo6L+a5E4PZv\nF+xvLqRcFiLqrcnXiCCViGde13KjqAr0UNmkQC+EDQKBgQDwjs/phhcMuFmEySi3\nK5LT0/6t9R4ii0nC9Uu4NaY9WiNlKAoy9Ne3whl9zOGzmRY+Fe9DAmGPFg1cWyRo\nGyUbuI2w/3fM8Hx3Fix+pT+mGNjn2K0pdy87NtAlTtjyrmWkOfPm+fOdVnBi6+Ml\nugFGxBwBkJ6q6ff0b5fGN4RyRwKBgQDLXNT5NeRnfkyhh2VFifb2YKkzFiWyCyBg\nZBQXaojMoTY5ueBdPbUecGN+G07aRJ2kx08uCY/EQYCEccjHyeB3R+0EjyiaxEnF\n33//tywzxvZ8jjUo2oZuXgO3iPXQ0SEnnIMYAtTJ7SyYsZl7Ala9SC4CIqNiPWKR\n+hdRnve9VwKBgGbeGyiYT5j/6D/xKXkSqAnvWLQY4pcRCyzUalnOj1UjC4nBUoMx\n0mFhHjd+enGroChShusXxJJEctgwnWPrX7X3+Jdc12UK3Z6rG8HYdlxXucGDFaFq\ntwbSTLX3fqxgSVSt94+pCTUZ9ptGle7XGJ6jU/qTVlZuELs1USjRKtEXAoGBAMNF\nG1dEsVHTC6Aa01pndJT1EeL1BDMmzergjg5CBKOAtQHPAqplg1F8F3zSme+p7Tl5\nDAWntr17K/2BCIsWxIukq+kx0YpyqmfvCQgxCaeaB7poDpFw6550dds5Dth4xv4z\nIgnfRhWywJzKBBcCkuljspHoUrwVN132J4f/PeE3AoGBAMO918DIrrHdGyaHSA0E\nK0gEY2dMUuAmaMeDEFtVHoZtugUUC6ZFMOgP4fQIjPnL52igeW6IUs96du2d+GIC\nqdlMb7Tp/lTxvaRGqUcAVhYbYaawonFK7QU8kNygU1IqWljXa+S+nR1O/tCmG2/n\n34ZJZ4VSGVZ/GX9IToAU297e\n-----END PRIVATE KEY-----\n",
+          "client_email": "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
+          "client_id": "112777526185284576732",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
+          "universe_domain": "googleapis.com"
+
+        },
+      );
+
+      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+      final client = await auth.clientViaServiceAccount(
+        serviceAccountCredentials,
+        scopes,
+      );
+
+      // 2. Găsim toți elevii aprobați la acest curs
+      final enrollments = await FirebaseFirestore.instance
+          .collection('enrollments')
+          .where('courseId', isEqualTo: courseId)
+          .where('status', isEqualTo: 'approved')
+          .get();
+
+      if (enrollments.docs.isEmpty) {
+        client.close();
+        return;
+      }
+
+      final String fcmV1Url =
+          'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
+
+      for (var doc in enrollments.docs) {
+        String userId = doc['userId'];
+
+        // Salvare notificare in-app
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'userId': userId,
+          'title': 'Lecție nouă în $title',
+          'body': 'A fost adăugată: "$lessonTitle"',
+          'courseId': courseId,
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        if (userDoc.exists) {
+          var uData = userDoc.data() as Map<String, dynamic>?;
+          String? fcmToken = uData?['fcmToken'];
+
+          if (fcmToken != null && fcmToken.isNotEmpty) {
+            // 3. Trimitere cerere FCM API v1 cu payload corectat
+            final response = await client.post(
+              Uri.parse(fcmV1Url),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'message': {
+                  'token': fcmToken,
+                  'notification': {
+                    'title': 'Lecție nouă în $title 📚',
+                    'body': 'A fost adăugată lecția: "$lessonTitle"',
+                  },
+                  'android': {
+                    'priority': 'HIGH',
+                    'notification': {
+                      'sound': 'default',
+                      'default_vibrate_timings': true,
+                    },
+                  },
+                  'apns': {
+                    'headers': {'apns-priority': '10'},
+                    'payload': {
+                      'aps': {
+                        'alert': {
+                          'title': 'Lecție nouă în $title 📚',
+                          'body': 'A fost adăugată lecția: "$lessonTitle"',
+                        },
+                        'sound': 'default',
+                        'badge': 1,
+                        'content-available': 1,
+                      },
+                    },
+                  },
+                  'data': {
+                    'courseId': courseId,
+                    'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                  },
+                },
+              }),
+            );
+
+            debugPrint("FCM v1 Response status: ${response.statusCode}");
+            debugPrint("FCM v1 Response body: ${response.body}");
+          }
+        }
+      }
+      client.close();
+    } catch (e) {
+      debugPrint("Eroare la trimiterea notificarii FCM v1: $e");
+    }
+  }
 
   Future<void> _openUrl(String urlString, BuildContext context) async {
     if (urlString.trim().isEmpty) return;
@@ -46,41 +162,12 @@ class CourseDetailScreen extends StatelessWidget {
       }
     }
   }
-  Future<void> sendPushNotification(String fcmToken, String title, String body) async {
-    try {
-      // Înlocuiește SERVER_KEY cu Server Key-ul tău din Firebase Console -> Project Settings -> Cloud Messaging (Legacy API)
-      const String serverKey = 'AICI_PUI_SERVER_KEY_DIN_FIREBASE';
 
-      await http.post(
-        Uri.parse('https://fcm.googleapis.com/fcm/send'),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-          'Authorization': 'key=$serverKey',
-        },
-        body: jsonEncode(<String, dynamic>{
-          'to': fcmToken,
-          'priority': 'high',
-          'notification': <String, dynamic>{
-            'title': title,
-            'body': body,
-            'sound': 'default',
-            'badge': '1',
-          },
-          'data': <String, dynamic>{
-            'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-          },
-        }),
-      );
-    } catch (e) {
-      debugPrint("Eroare trimitere Push: $e");
-    }
-  }
-  // Dialog și metodă pentru ștergerea unei lecții (exclusiv profesori)
   Future<void> _deleteLesson(
-    BuildContext context,
-    String lessonId,
-    String lessonTitle,
-  ) async {
+      BuildContext context,
+      String lessonId,
+      String lessonTitle,
+      ) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -212,73 +299,40 @@ class CourseDetailScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                final String lessonTitle = titleController.text.trim();
-                if (lessonTitle.isNotEmpty) {
-                  // 1. Salvează lecția în Firestore
+                final String lTitle = titleController.text.trim();
+                if (lTitle.isNotEmpty) {
+                  // 1. Salvare Lecție în Firestore
                   await FirebaseFirestore.instance
                       .collection('courses')
                       .doc(courseId)
                       .collection('lessons')
                       .add({
-                    'title': lessonTitle,
+                    'title': lTitle,
                     'content': contentController.text.trim(),
                     'videoUrl': videoUrlController.text.trim(),
                     'pdfUrl': pdfUrlController.text.trim(),
                     'createdAt': FieldValue.serverTimestamp(),
                   });
 
-                  // 2. Găsește toti elevii înrolați la acest curs
-                  final enrollmentsSnapshot = await FirebaseFirestore.instance
-                      .collection('enrollments')
-                      .where('courseId', isEqualTo: courseId)
-                      .where('status', isEqualTo: 'approved')
-                      .get();
-
-                  // 3. Trimite notificare pentru fiecare elev
-                  for (var doc in enrollmentsSnapshot.docs) {
-                    String studentId = doc['userId'];
-
-                    // Salvează notificarea in-app
-                    await FirebaseFirestore.instance.collection('notifications').add({
-                      'userId': studentId,
-                      'title': 'Lecție nouă în $title',
-                      'body': 'Profesorul a adăugat: "$lessonTitle"',
-                      'courseId': courseId,
-                      'isRead': false,
-                      'createdAt': FieldValue.serverTimestamp(),
-                    });
-
-                    // Preluăm fcmToken-ul elevului din colecția users
-                    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(studentId)
-                        .get();
-
-                    if (userDoc.exists) {
-                      var userData = userDoc.data() as Map<String, dynamic>;
-                      String? fcmToken = userData['fcmToken'];
-
-                      // Trimitem notificarea pe ecranul blocat
-                      if (fcmToken != null && fcmToken.isNotEmpty) {
-                        await sendPushNotification(
-                          fcmToken,
-                          'Lecție nouă în $title',
-                          'Profesorul a adăugat: "$lessonTitle"',
-                        );
-                      }
-                    }
-                  }
+                  // 2. Trimitere Push Notification la toți elevii
+                  await _sendPushToStudents(lTitle);
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Lecție adăugată și notificări trimise!')),
+                      const SnackBar(
+                        content: Text('Lecție salvată și notificări trimise!'),
+                      ),
                     );
                     Navigator.pop(context);
                   }
                 }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff42153e),
+                foregroundColor: Colors.white,
+              ),
               child: const Text("Salvează Lecția"),
-            )
+            ),
           ],
         );
       },
@@ -299,12 +353,12 @@ class CourseDetailScreen extends StatelessWidget {
       ),
       floatingActionButton: role == 'teacher'
           ? FloatingActionButton.extended(
-              onPressed: () => _showAddLessonDialog(context),
-              backgroundColor: const Color(0xff42153e),
-              foregroundColor: Colors.amber,
-              icon: const Icon(Icons.add),
-              label: const Text("Adaugă Lecție"),
-            )
+        onPressed: () => _showAddLessonDialog(context),
+        backgroundColor: const Color(0xff42153e),
+        foregroundColor: Colors.amber,
+        icon: const Icon(Icons.add),
+        label: const Text("Adaugă Lecție"),
+      )
           : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -362,9 +416,7 @@ class CourseDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
-
             const Text(
               "Lecții și Materiale",
               style: TextStyle(
@@ -373,9 +425,7 @@ class CourseDetailScreen extends StatelessWidget {
                 color: Color(0xff42153e),
               ),
             ),
-
             const SizedBox(height: 12),
-
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('courses')
@@ -453,16 +503,16 @@ class CourseDetailScreen extends StatelessWidget {
                         ),
                         trailing: role == 'teacher'
                             ? IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () => _deleteLesson(
-                                  context,
-                                  lessonId,
-                                  lessonTitle,
-                                ),
-                              )
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                          ),
+                          onPressed: () => _deleteLesson(
+                            context,
+                            lessonId,
+                            lessonTitle,
+                          ),
+                        )
                             : null,
                         children: [
                           Padding(
@@ -480,7 +530,6 @@ class CourseDetailScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 16),
                                 ],
-
                                 if (videoUrl.isNotEmpty) ...[
                                   const Text(
                                     "📹 Video Lecție",
@@ -498,7 +547,6 @@ class CourseDetailScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 16),
                                 ],
-
                                 if (pdfUrl.isNotEmpty) ...[
                                   const Text(
                                     "📄 Suport de Curs (PDF)",
@@ -512,8 +560,8 @@ class CourseDetailScreen extends StatelessWidget {
                                   UniversalEmbeddedViewer(
                                     viewId: 'pdf_$lessonId',
                                     url:
-                                        pdfUrl.contains('drive.google.com') ||
-                                            pdfUrl.contains('firebasestorage')
+                                    pdfUrl.contains('drive.google.com') ||
+                                        pdfUrl.contains('firebasestorage')
                                         ? 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(pdfUrl)}'
                                         : pdfUrl,
                                     height: 450,
@@ -580,8 +628,8 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
       child: kIsWeb
           ? getWebIframe(widget.viewId, widget.url)
           : (_mobileController != null
-                ? WebViewWidget(controller: _mobileController!)
-                : const Center(child: CircularProgressIndicator())),
+          ? WebViewWidget(controller: _mobileController!)
+          : const Center(child: CircularProgressIndicator())),
     );
   }
 }
