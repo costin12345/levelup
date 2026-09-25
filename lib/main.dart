@@ -71,38 +71,37 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   // Configurare permisiuni FCM și salvare token pentru ecranul blocat
-  Future<void> _setupFCM() async {
-    if (kIsWeb) return;
+ Future<void> _setupFCM() async {
+   if (kIsWeb) return;
 
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
+   User? currentUser = FirebaseAuth.instance.currentUser;
+   if (currentUser == null) return;
 
-    try {
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
+   try {
+     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-      // 1. Cerem permisiunea explicit pe iOS
-      NotificationSettings settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
+     NotificationSettings settings = await messaging.requestPermission(
+       alert: true,
+       badge: true,
+       sound: true,
+     );
 
-      debugPrint('User notification status: ${settings.authorizationStatus}');
+     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+       String? token = await messaging.getToken();
 
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        // 2. Pe iOS, verificăm dacă s-a obținut mai întâi APNs Token-ul
-        if (defaultTargetPlatform == TargetPlatform.iOS) {
-          String? apnsToken = await messaging.getAPNSToken();
-          debugPrint('APNS Token obținut: $apnsToken');
+       if (token != null && token.isNotEmpty) {
+         await FirebaseFirestore.instance
+             .collection('users')
+             .doc(currentUser.uid)
+             .set({'fcmToken': token}, SetOptions(merge: true));
+         debugPrint("FCM Token salvat: $token");
+       }
+     }
+   } catch (e) {
+     debugPrint("Eroare FCM: $e");
+   }
+ }
 
-          if (apnsToken == null) {
-            debugPrint(
-              'EROARE: APNs Token este null! Verificați APNs Key în Firebase și Entitlements.',
-            );
-            return;
-          }
-        }
 
         // 3. Obținem FCM Token-ul final
         String? token = await messaging.getToken();
