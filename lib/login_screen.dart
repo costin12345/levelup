@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../main.dart';
 
-import 'main.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -31,10 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       // Autentificare în Firebase Auth
+      // În login_screen.dart:
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+        email: _emailController.text.
+        trim(),
+        password: _passwordController.text.trim(),
       );
+// Fără să mai pui setupFCM() aici - îl va rula StreamBuilder-ul din main.dart!
 
       if (!mounted) return;
 
@@ -43,6 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
+
     } on FirebaseAuthException catch (e) {
       String message = 'A apărut o eroare la autentificare.';
       if (e.code == 'user-not-found') {
@@ -53,7 +57,25 @@ class _LoginScreenState extends State<LoginScreen> {
         message = 'Adresa de email este invalidă.';
       }
       _showSnackBar(message);
+    } try {
+      // 1. Autentificarea în Firebase
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      // 2. OBLIGATORIU: Generăm și salvăm token-ul de notificări imediat după logare
+
+
+      // 3. Navigarea către ecranul principal (Acasă)
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      }
     } catch (e) {
+      print("Eroare la autentificare: $e");
+    }catch (e) {
       _showSnackBar('Eroare: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);

@@ -8,13 +8,96 @@ import 'courses_screen.dart';
 import 'firebase_options.dart';
 import 'register_screen.dart';
 import 'login_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+// --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI (Trebuie să fie în afara oricărei clase) ---
 
+Future<void> saveTokenToFirestore(String token) async {
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'fcmToken': token,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint("SUCCESS: FCM Token salvat în Firestore pentru: ${user.uid}");
+    } catch (e) {
+      debugPrint("Eroare la salvarea FCM Token: $e");
+    }
+  }
+}
+
+Future<void> setupFCM() async {
+  if (kIsWeb) return;
+
+  User? currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) return;
+
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+  try {
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional) {
+
+      messaging.onTokenRefresh.listen((newToken) {
+        saveTokenToFirestore(newToken);
+      });
+
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        String? apnsToken = await messaging.getAPNSToken();
+        int retries = 0;
+        while (apnsToken == null && retries < 5) {
+          await Future.delayed(const Duration(seconds: 1));
+          apnsToken = await messaging.getAPNSToken();
+          retries++;
+        }
+      }
+
+      String? fcmToken = await messaging.getToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await saveTokenToFirestore(fcmToken);
+      }
+    }
+  } catch (e) {
+    debugPrint("Eroare FCM: $e");
+  }
+}
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const LevelUpApp());
 }
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        if (snapshot.hasData && snapshot.data != null) {
+          // Apelăm setupFCM() direct aici când utilizatorul este conectat
+          setupFCM();
+          return const MainScreen(); // Ecranul tău principal
+        }
+
+        return const LoginScreen(); // Ecranul tău de Login
+      },
+    );
+  }
+}
 class LevelUpApp extends StatelessWidget {
   const LevelUpApp({super.key});
 
@@ -60,7 +143,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    _setupFCM();
+    setupFCM();
   }
 
   // Configurare permisiuni FCM și salvare token pentru ecranul blocat
@@ -92,52 +175,50 @@ class _MainScreenState extends State<MainScreen> {
   //   }
   // }
 
-  Future<void> _setupFCM() async {
+  Future<void> saveTokenToFirestore(String token) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({'fcmToken': token}, SetOptions(merge: true));
+      print("FCM Token salvat cu succes pentru user: ${user.uid}");
+    }
+  }
+
+  Future<void> setupFCM() async {
     if (kIsWeb) return;
 
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-    try {
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
+    // Solicită permisiunile pe iOS
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
-      NotificationSettings settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      // 1. Ascultă reîmprospătările de token (se declanșează automat când iOS oferă APNs)
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+        saveTokenToFirestore(newToken);
+      });
 
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        // 1. Așteptăm explicit generarea token-ului APNs de la Apple
-        String? apnsToken;
-        int retries = 0;
-
-        while (apnsToken == null && retries < 5) {
-          apnsToken = await messaging.getAPNSToken();
-          if (apnsToken == null) {
-            await Future.delayed(const Duration(seconds: 1));
-            retries++;
-          }
+      // 2. Încearcă preluarea token-ului curent
+      try {
+        // Pe iOS oferim o scurtă pauză de sincronizare cu APNs
+        String? apnsToken = await messaging.getAPNSToken();
+        if (apnsToken == null) {
+          await Future.delayed(const Duration(seconds: 2));
         }
 
-        print("APNs Token obținut: $apnsToken");
-
-        // 2. Acum că avem APNs Token, putem genera FCM Token-ul de la Firebase
         String? token = await messaging.getToken();
-
-        if (token != null && token.isNotEmpty) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUser.uid)
-              .set({'fcmToken': token}, SetOptions(merge: true));
-
-          print('SUCCESS: FCM Token salvat în Firestore: $token');
-        } else {
-          print('Eroare: FCM Token este null deși permisiunea a fost acordată.');
+        if (token != null) {
+          await saveTokenToFirestore(token);
         }
+      } catch (e) {
+        print("Eroare la preluarea FCM token: $e");
       }
-    } catch (e) {
-      print('Eroare la configurarea FCM: $e');
     }
   }
   void _changeTab(int index) {
@@ -1045,5 +1126,64 @@ class HomeTab extends StatelessWidget {
         ),
       ],
     );
+  }
+  Future<void> saveTokenToFirestore(String token) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'fcmToken': token,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        debugPrint("SUCCESS: FCM Token salvat în Firestore pentru user: ${user.uid}");
+      } catch (e) {
+        debugPrint("Eroare la salvarea FCM Token: $e");
+      }
+    }
+  }
+
+  Future<void> setupFCM() async {
+    if (kIsWeb) return;
+
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    try {
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+
+        messaging.onTokenRefresh.listen((newToken) {
+          saveTokenToFirestore(newToken);
+        });
+
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          String? apnsToken = await messaging.getAPNSToken();
+          int retries = 0;
+          while (apnsToken == null && retries < 5) {
+            await Future.delayed(const Duration(seconds: 1));
+            apnsToken = await messaging.getAPNSToken();
+            retries++;
+          }
+        }
+
+        String? fcmToken = await messaging.getToken();
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          await saveTokenToFirestore(fcmToken);
+        }
+      }
+    } catch (e) {
+      debugPrint("Eroare FCM: $e");
+    }
   }
 }
