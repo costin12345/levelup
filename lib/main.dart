@@ -35,6 +35,12 @@ Future<void> setupFCM() async {
   User? currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser == null) return;
 
+  // Salvăm o dovadă că funcția chiar s-a executat pe iPhone
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(currentUser.uid)
+      .set({'fcm_status': 'setupFCM started'}, SetOptions(merge: true));
+
   FirebaseMessaging messaging = FirebaseMessaging.instance;
 
   try {
@@ -44,6 +50,11 @@ Future<void> setupFCM() async {
       sound: true,
     );
 
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .set({'fcm_status': 'Permission status: ${settings.authorizationStatus}'}, SetOptions(merge: true));
+
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
 
@@ -51,23 +62,24 @@ Future<void> setupFCM() async {
         saveTokenToFirestore(newToken);
       });
 
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        String? apnsToken = await messaging.getAPNSToken();
-        int retries = 0;
-        while (apnsToken == null && retries < 5) {
-          await Future.delayed(const Duration(seconds: 1));
-          apnsToken = await messaging.getAPNSToken();
-          retries++;
-        }
-      }
-
+      // Preluăm FCM Token
       String? fcmToken = await messaging.getToken();
+
       if (fcmToken != null && fcmToken.isNotEmpty) {
         await saveTokenToFirestore(fcmToken);
+      } else {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .set({'fcm_status': 'getToken returned null'}, SetOptions(merge: true));
       }
     }
   } catch (e) {
-    debugPrint("Eroare FCM: $e");
+    // Dacă apare orice eroare ascunsă pe iOS, o scriem în Firestore să o vedem
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .set({'fcm_error': e.toString()}, SetOptions(merge: true));
   }
 }
 void main() async {
