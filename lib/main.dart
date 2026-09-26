@@ -189,36 +189,46 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> setupFCM() async {
     if (kIsWeb) return;
 
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      debugPrint("setupFCM oprit: Utilizator neconectat.");
+      return;
+    }
+
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-    // Solicită permisiunile pe iOS
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    try {
+      // 1. Solicită permisiunile iOS
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      // 1. Ascultă reîmprospătările de token (se declanșează automat când iOS oferă APNs)
-      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-        saveTokenToFirestore(newToken);
-      });
+      debugPrint("Status autorizare notificări: ${settings.authorizationStatus}");
 
-      // 2. Încearcă preluarea token-ului curent
-      try {
-        // Pe iOS oferim o scurtă pauză de sincronizare cu APNs
-        String? apnsToken = await messaging.getAPNSToken();
-        if (apnsToken == null) {
-          await Future.delayed(const Duration(seconds: 2));
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+
+        // 2. Ascultă schimbările de token (dacă APNs întârzie, îl salvează imediat ce soseste)
+        messaging.onTokenRefresh.listen((newToken) {
+          debugPrint("Token refresuit primit: $newToken");
+          saveTokenToFirestore(newToken);
+        });
+
+        // 3. Încercăm preluarea directă a FCM Token-ului
+        // Pe iOS, SDK-ul Firebase se ocupă intern de așteptarea APNs-ului dacă este configurat corect
+        String? fcmToken = await messaging.getToken();
+
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          await saveTokenToFirestore(fcmToken);
+          debugPrint("SUCCESS: FCM Token obținut direct pe iOS: $fcmToken");
+        } else {
+          debugPrint("FCM Token a returnat null. Așteptăm fallback APNs...");
         }
-
-        String? token = await messaging.getToken();
-        if (token != null) {
-          await saveTokenToFirestore(token);
-        }
-      } catch (e) {
-        print("Eroare la preluarea FCM token: $e");
       }
+    } catch (e) {
+      debugPrint("Eroare la generarea FCM Token pe iOS: $e");
     }
   }
   void _changeTab(int index) {
