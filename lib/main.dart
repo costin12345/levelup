@@ -1036,12 +1036,10 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureCard(
-      IconData icon,
+  Widget _buildFeatureCard(IconData icon,
       String title,
       String desc,
-      double maxWidth,
-      ) {
+      double maxWidth,) {
     double cardWidth = maxWidth > 600
         ? (maxWidth - 36) / 4
         : (maxWidth - 12) / 2;
@@ -1137,6 +1135,7 @@ class HomeTab extends StatelessWidget {
       ],
     );
   }
+
   Future<void> saveTokenToFirestore(String token) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -1148,7 +1147,8 @@ class HomeTab extends StatelessWidget {
           'fcmToken': token,
           'lastUpdated': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-        debugPrint("SUCCESS: FCM Token salvat în Firestore pentru user: ${user.uid}");
+        debugPrint(
+            "SUCCESS: FCM Token salvat în Firestore pentru user: ${user.uid}");
       } catch (e) {
         debugPrint("Eroare la salvarea FCM Token: $e");
       }
@@ -1172,22 +1172,20 @@ class HomeTab extends StatelessWidget {
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
-
+        // Ascultăm reîmprospătările de token
         messaging.onTokenRefresh.listen((newToken) {
           saveTokenToFirestore(newToken);
         });
 
-        if (defaultTargetPlatform == TargetPlatform.iOS) {
-          String? apnsToken = await messaging.getAPNSToken();
-          int retries = 0;
-          while (apnsToken == null && retries < 5) {
-            await Future.delayed(const Duration(seconds: 1));
-            apnsToken = await messaging.getAPNSToken();
-            retries++;
-          }
+        // Încercarea 1
+        String? fcmToken = await messaging.getToken();
+
+        // Dacă este null pe iOS, mai facem o încercare după 3 secunde (timp în care APNs răspunde)
+        if (fcmToken == null && defaultTargetPlatform == TargetPlatform.iOS) {
+          await Future.delayed(const Duration(seconds: 3));
+          fcmToken = await messaging.getToken();
         }
 
-        String? fcmToken = await messaging.getToken();
         if (fcmToken != null && fcmToken.isNotEmpty) {
           await saveTokenToFirestore(fcmToken);
         }
