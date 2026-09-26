@@ -17,7 +17,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 
-version: 1.0.0+22
+version: 1.0.0+23
 environment:
   sdk: ^3.13.3
 
@@ -61,11 +61,11 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "images/logo.jpeg"
+  image_path: "images/logo.jpg"
   remove_alpha_channel: true
   web:
     generate: true
-    image_path: "images/logo.jpeg"
+    image_path: "images/logo.jpg"
     background_color: "#42153e"
     theme_color: "#42153e"
   # The "flutter_lints" package below contains a set of recommended lints to
