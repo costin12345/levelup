@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'courses_screen.dart';
 import 'firebase_options.dart';
 import 'register_screen.dart';
@@ -64,14 +64,43 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   // Configurare permisiuni FCM și salvare token pentru ecranul blocat
+  // Future<void> _setupFCM() async {
+  //   User? currentUser = FirebaseAuth.instance.currentUser;
+  //   if (currentUser == null) return;
+  //
+  //   try {
+  //     FirebaseMessaging messaging = FirebaseMessaging.instance;
+  //
+  //     // Cerere de permisiune pentru notificări pe ecranul blocat
+  //     NotificationSettings settings = await messaging.requestPermission(
+  //       alert: true,
+  //       badge: true,
+  //       sound: true,
+  //     );
+  //
+  //     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+  //       String? token = await messaging.getToken();
+  //       if (token != null) {
+  //         await FirebaseFirestore.instance
+  //             .collection('users')
+  //             .doc(currentUser.uid)
+  //             .set({'fcmToken': token}, SetOptions(merge: true));
+  //       }
+  //     }
+  //   } catch (e) {
+  //     debugPrint("Eroare la configurarea FCM: $e");
+  //   }
+  // }
+
   Future<void> _setupFCM() async {
+    if (kIsWeb) return;
+
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
     try {
       FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-      // Cerere de permisiune pentru notificări pe ecranul blocat
       NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         badge: true,
@@ -79,19 +108,38 @@ class _MainScreenState extends State<MainScreen> {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        // 1. Așteptăm explicit generarea token-ului APNs de la Apple
+        String? apnsToken;
+        int retries = 0;
+
+        while (apnsToken == null && retries < 5) {
+          apnsToken = await messaging.getAPNSToken();
+          if (apnsToken == null) {
+            await Future.delayed(const Duration(seconds: 1));
+            retries++;
+          }
+        }
+
+        print("APNs Token obținut: $apnsToken");
+
+        // 2. Acum că avem APNs Token, putem genera FCM Token-ul de la Firebase
         String? token = await messaging.getToken();
-        if (token != null) {
+
+        if (token != null && token.isNotEmpty) {
           await FirebaseFirestore.instance
               .collection('users')
               .doc(currentUser.uid)
               .set({'fcmToken': token}, SetOptions(merge: true));
+
+          print('SUCCESS: FCM Token salvat în Firestore: $token');
+        } else {
+          print('Eroare: FCM Token este null deși permisiunea a fost acordată.');
         }
       }
     } catch (e) {
-      debugPrint("Eroare la configurarea FCM: $e");
+      print('Eroare la configurarea FCM: $e');
     }
   }
-
   void _changeTab(int index) {
     setState(() {
       _currentIndex = index;
