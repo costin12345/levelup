@@ -6,16 +6,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
-import 'web_iframe_stub.dart' if (dart.library.html) 'web_iframe_web.dart';
+import 'lesson_detail_page.dart';
 
-class CourseDetailScreen extends StatelessWidget {
+class CourseDetailScreen extends StatefulWidget {
   final String courseId;
   final String title;
   final String category;
   final String description;
   final String role;
+  final String? targetLessonId;
+  final String? initialTab;
 
   const CourseDetailScreen({
     super.key,
@@ -24,12 +25,54 @@ class CourseDetailScreen extends StatelessWidget {
     required this.category,
     required this.description,
     required this.role,
+    this.targetLessonId,
+    this.initialTab,
   });
 
-  // Şterge badge-ul nativ de pe iconiţă şi marchează notificările ca citite
+  @override
+  State<CourseDetailScreen> createState() => _CourseDetailScreenState();
+}
+
+class _CourseDetailScreenState extends State<CourseDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _clearBadgeAndMarkAsRead();
+
+    if (widget.targetLessonId != null && widget.targetLessonId!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          DocumentSnapshot lessonDoc = await FirebaseFirestore.instance
+              .collection('courses')
+              .doc(widget.courseId)
+              .collection('lessons')
+              .doc(widget.targetLessonId)
+              .get();
+
+          if (lessonDoc.exists && mounted) {
+            var lData = lessonDoc.data() as Map<String, dynamic>;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LessonDetailPage(
+                  courseId: widget.courseId,
+                  lessonId: widget.targetLessonId!,
+                  lessonTitle: lData['title'] ?? 'Lecție',
+                  initialTab: widget.initialTab ?? 'lesson',
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          debugPrint("Eroare navigare lectie: $e");
+        }
+      });
+    }
+  }
+
   Future<void> _clearBadgeAndMarkAsRead() async {
     try {
-      if (!kIsWeb && await FlutterAppBadger.isAppBadgeSupported()) {
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
         FlutterAppBadger.removeBadge();
       }
 
@@ -38,7 +81,7 @@ class CourseDetailScreen extends StatelessWidget {
         var unreadDocs = await FirebaseFirestore.instance
             .collection('notifications')
             .where('userId', isEqualTo: currentUser.uid)
-            .where('courseId', isEqualTo: courseId)
+            .where('courseId', isEqualTo: widget.courseId)
             .where('isRead', isEqualTo: false)
             .get();
 
@@ -51,18 +94,18 @@ class CourseDetailScreen extends StatelessWidget {
     }
   }
 
-  // Funcție de trimitere Push Notification prin FCM API v1 către toti elevii aprobați
   Future<void> _sendPushToStudents({
     required String lessonTitle,
-    required String notificationType, // 'lesson' sau 'homework'
+    required String notificationType,
+    required String lessonId,
   }) async {
     try {
       final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
         {
           "type": "service_account",
           "project_id": "level-up-19583",
-          "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\n/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\nFQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\nUGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\nSFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
+          "private_key_id": "be2af79dfbe281af83316b25ea293ebfc1beee3a",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/GHpRVvpGCezi\nK33vzeOvzPaVcNL/+U0wrAcyLDQGlaDnY/k/mjeq6XMr0l+IAapukBaI/cFUsx1r\npTnIByGyMJ6ibS9ywHygjk0imuKOtSioiFsxCa7w9cOJe8tHyugIjQWm6vELqGAk\njt9GNy1uIODZVpmeF4qyhBFcCXnbOZFLkKeNKx4V9xQcpZ7gyjvVUuDWnuPT9sLv\n5zwvi+OgBJOiksSZ03ShGgDMKwe+mnfRm/VtzfABlEdaf+hnnEsnVWm22/TVrHEk\nkZMlDH/QFh77Mf3l0bY0I5VhUfG5O/2/R+Z6X8ZWyZo+D9BF2eb2Lr71gP4FBoL/\nxCK64kEhAgMBAAECggEAApHLIl5qQRhk2SKUWpiQBU8FrOXaB5Q2skYRcyWXdQz8\ndMcqIu2UCrYsOGOgVBuCg/D2DJxmqW4esCdNJ3yeZULfNk11w/shgBefFMm0l0dQ\nisDtSd5KduenFOJJI1mojbsaX1pQtsNN1Pqtfh2nJ0kpOUZ4RTZ7KGXJjKK2NKPY\n/6WFYPpAwpr0h5utvqmVgRvkZ/SZm4dDF2q8v/S+b//Ws1Vd5T4Ng4k/aUDontpT\nwxT3Riy0O3dDO8DETM/jj5FMKNpVByM4ZfbN7fYEz9qeR9x4KdFWSo6L+a5E4PZv\nF+xvLqRcFiLqrcnXiCCViGde13KjqAr0UNmkQC+EDQKBgQDwjs/phhcMuFmEySi3\nK5LT0/6t9R4ii0nC9Uu4NaY9WiNlKAoy9Ne3whl9zOGzmRY+Fe9DAmGPFg1cWyRo\nGyUbuI2w/3fM8Hx3Fix+pT+mGNjn2K0pdy87NtAlTtjyrmWkOfPm+fOdVnBi6+Ml\nugFGxBwBkJ6q6ff0b5fGN4RyRwKBgQDLXNT5NeRnfkyhh2VFifb2YKkzFiWyCyBg\nZBQXaojMoTY5ueBdPbUecGN+G07aRJ2kx08uCY/EQYCEccjHyeB3R+0EjyiaxEnF\n33//tywzxvZ8jjUo2oZuXgO3iPXQ0SEnnIMYAtTJ7SyYsZl7Ala9SC4CIqNiPWKR\n+hdRnve9VwKBgGbeGyiYT5j/6D/xKXkSqAnvWLQY4pcRCyzUalnOj1UjC4nBUoMx\n0mFhHjd+enGroChShusXxJJEctgwnWPrX7X3+Jdc12UK3Z6rG8HYdlxXucGDFaFq\ntwbSTLX3fqxgSVSt94+pCTUZ9ptGle7XGJ6jU/qTVlZuELs1USjRKtEXAoGBAMNF\nG1dEsVHTC6Aa01pndJT1EeL1BDMmzergjg5CBKOAtQHPAqplg1F8F3zSme+p7Tl5\nDAWntr17K/2BCIsWxIukq+kx0YpyqmfvCQgxCaeaB7poDpFw6550dds5Dth4xv4z\nIgnfRhWywJzKBBcCkuljspHoUrwVN132J4f/PeE3AoGBAMO918DIrrHdGyaHSA0E\nK0gEY2dMUuAmaMeDEFtVHoZtugUUC6ZFMOgP4fQIjPnL52igeW6IUs96du2d+GIC\nqdlMb7Tp/lTxvaRGqUcAVhYbYaawonFK7QU8kNygU1IqWljXa+S+nR1O/tCmG2/n\n34ZJZ4VSGVZ/GX9IToAU297e\n-----END PRIVATE KEY-----\n",
           "client_email":
               "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
           "client_id": "112777526185284576732",
@@ -83,7 +126,7 @@ class CourseDetailScreen extends StatelessWidget {
 
       final enrollments = await FirebaseFirestore.instance
           .collection('enrollments')
-          .where('courseId', isEqualTo: courseId)
+          .where('courseId', isEqualTo: widget.courseId)
           .where('status', isEqualTo: 'approved')
           .get();
 
@@ -93,8 +136,8 @@ class CourseDetailScreen extends StatelessWidget {
       }
 
       String pushTitle = notificationType == 'homework'
-          ? '📝 Temă Nouă în $title'
-          : '📚 Lecție Nouă în $title';
+          ? '📝 Temă Nouă în ${widget.title}'
+          : '📚 Lecție Nouă în ${widget.title}';
 
       String pushBody = notificationType == 'homework'
           ? 'A fost încărcată tema: "$lessonTitle"'
@@ -106,18 +149,17 @@ class CourseDetailScreen extends StatelessWidget {
       for (var doc in enrollments.docs) {
         String userId = doc['userId'];
 
-        // Salvare notificare in-app
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': userId,
           'title': pushTitle,
           'body': pushBody,
-          'courseId': courseId,
+          'courseId': widget.courseId,
+          'lessonId': lessonId,
           'type': notificationType,
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        // Calculare BADGE DINAMIC pentru elev
         final unreadSnap = await FirebaseFirestore.instance
             .collection('notifications')
             .where('userId', isEqualTo: userId)
@@ -156,7 +198,8 @@ class CourseDetailScreen extends StatelessWidget {
                     },
                   },
                   'data': {
-                    'courseId': courseId,
+                    'courseId': widget.courseId,
+                    'lessonId': lessonId,
                     'notificationType': notificationType,
                     'click_action': 'FLUTTER_NOTIFICATION_CLICK',
                   },
@@ -202,7 +245,7 @@ class CourseDetailScreen extends StatelessWidget {
       try {
         await FirebaseFirestore.instance
             .collection('courses')
-            .doc(courseId)
+            .doc(widget.courseId)
             .collection('lessons')
             .doc(lessonId)
             .delete();
@@ -221,11 +264,40 @@ class CourseDetailScreen extends StatelessWidget {
     }
   }
 
-  void _showAddLessonDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
-    final videoUrlController = TextEditingController();
-    final pdfUrlController = TextEditingController();
+  // DIALOG CU SUPORT PENTRU MULTIPLE LINK-URI BUNNY (VIDEO EMBED & PDF)
+  void _showAddOrEditLessonDialog(
+    BuildContext context, {
+    DocumentSnapshot? existingLesson,
+  }) {
+    var data = existingLesson?.data() as Map<String, dynamic>?;
+
+    final titleController = TextEditingController(text: data?['title'] ?? '');
+    final contentController = TextEditingController(
+      text: data?['content'] ?? '',
+    );
+    final homeworkContentController = TextEditingController(
+      text: data?['homeworkContent'] ?? '',
+    );
+
+    // Preluare liste existente (compatibilitate cu versiunile vechi)
+    List<String> videoUrls = [];
+    if (data?['videoUrls'] != null) {
+      videoUrls = List<String>.from(data!['videoUrls']);
+    } else if (data?['videoUrl'] != null &&
+        (data!['videoUrl'] as String).isNotEmpty) {
+      videoUrls = [data['videoUrl']];
+    }
+
+    List<String> pdfUrls = [];
+    if (data?['pdfUrls'] != null) {
+      pdfUrls = List<String>.from(data!['pdfUrls']);
+    } else if (data?['pdfUrl'] != null &&
+        (data!['pdfUrl'] as String).isNotEmpty) {
+      pdfUrls = [data['pdfUrl']];
+    }
+
+    final newVideoController = TextEditingController();
+    final newPdfController = TextEditingController();
     String notificationType = 'lesson';
 
     showDialog(
@@ -240,15 +312,17 @@ class CourseDetailScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              title: const Text(
-                "Adaugă Lecție Nouă",
-                style: TextStyle(
+              title: Text(
+                existingLesson == null
+                    ? "Adaugă Lecție Nouă"
+                    : "Editează Lecția / Tema",
+                style: const TextStyle(
                   color: Color(0xff42153e),
                   fontWeight: FontWeight.bold,
                 ),
               ),
               content: SizedBox(
-                width: 480,
+                width: 520,
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,55 +330,66 @@ class CourseDetailScreen extends StatelessWidget {
                     children: [
                       TextField(
                         controller: titleController,
-                        autofocus: true,
                         decoration: const InputDecoration(
                           labelText: "Titlu Lecție",
-                          hintText: "ex: Lecția 1 - Introducere",
                           border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 14),
+                      if (existingLesson == null) ...[
+                        const Text(
+                          "Tipul notificării trimise elevilor:",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xff42153e),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<String>(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  "📚 Lecție / Teorie",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                value: 'lesson',
+                                groupValue: notificationType,
+                                onChanged: (val) => setDialogState(
+                                  () => notificationType = val!,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  "📝 Temă",
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                value: 'homework',
+                                groupValue: notificationType,
+                                onChanged: (val) => setDialogState(
+                                  () => notificationType = val!,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+
+                      // SECȚIUNEA 1: TEORIE
                       const Text(
-                        "Tipul notificării trimise elevilor:",
+                        "--- SECȚIUNEA 1: TEORIE & LECȚIE ---",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: Color(0xff42153e),
+                          fontSize: 11,
+                          color: Colors.grey,
                         ),
                       ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text(
-                                "📚 Lecție / Teorie",
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              value: 'lesson',
-                              groupValue: notificationType,
-                              onChanged: (val) {
-                                setDialogState(() => notificationType = val!);
-                              },
-                            ),
-                          ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text(
-                                "📝 Temă PDF",
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              value: 'homework',
-                              groupValue: notificationType,
-                              onChanged: (val) {
-                                setDialogState(() => notificationType = val!);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: contentController,
                         maxLines: 3,
@@ -313,34 +398,152 @@ class CourseDetailScreen extends StatelessWidget {
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: videoUrlController,
-                        keyboardType: TextInputType.url,
-                        decoration: const InputDecoration(
-                          labelText: "Link Video Bunny Embed (Teorie)",
-                          hintText:
-                              "https://iframe.mediadelivery.net/embed/...",
-                          prefixIcon: Icon(
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Link-uri Video Bunny (iframe embed):",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      ...videoUrls.asMap().entries.map((entry) {
+                        int idx = entry.key;
+                        String url = entry.value;
+                        return ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(
                             Icons.video_library,
                             color: Colors.purple,
                           ),
+                          title: Text(
+                            url,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setDialogState(() => videoUrls.removeAt(idx)),
+                          ),
+                        );
+                      }),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: newVideoController,
+                              decoration: const InputDecoration(
+                                hintText: "Adaugă URL Video Bunny Embed...",
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.add_circle,
+                              color: Color(0xff42153e),
+                            ),
+                            onPressed: () {
+                              String url = newVideoController.text.trim();
+                              if (url.isNotEmpty) {
+                                setDialogState(() {
+                                  videoUrls.add(url);
+                                  newVideoController.clear();
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // SECȚIUNEA 2: TEMĂ
+                      const Text(
+                        "--- SECȚIUNEA 2: TEMĂ PENTRU ACASĂ ---",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: homeworkContentController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: "Cerințe / Exerciții Temă (Text)",
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: pdfUrlController,
-                        keyboardType: TextInputType.url,
-                        decoration: const InputDecoration(
-                          labelText: "Link Document PDF (Temă / Suport)",
-                          hintText: "https://.../fisier.pdf",
-                          prefixIcon: Icon(
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Fișiere PDF încărcate (Bunny / CDN):",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      ...pdfUrls.asMap().entries.map((entry) {
+                        int idx = entry.key;
+                        String url = entry.value;
+                        return ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(
                             Icons.picture_as_pdf,
                             color: Colors.red,
                           ),
-                          border: OutlineInputBorder(),
-                        ),
+                          title: Text(
+                            url,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setDialogState(() => pdfUrls.removeAt(idx)),
+                          ),
+                        );
+                      }),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: newPdfController,
+                              decoration: const InputDecoration(
+                                hintText: "Lipește link-ul PDF de pe Bunny...",
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.add_circle,
+                              color: Color(0xff42153e),
+                            ),
+                            tooltip: "Adaugă PDF în listă",
+                            onPressed: () {
+                              String url = newPdfController.text.trim();
+                              if (url.isNotEmpty) {
+                                setDialogState(() {
+                                  pdfUrls.add(url);
+                                  newPdfController.clear();
+                                });
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -356,31 +559,54 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    // Când apăsăm pe Salvează, dacă profesorul a scris un link în câmp dar nu a apăsat "+", îl adăugăm automat
+                    if (newPdfController.text.trim().isNotEmpty) {
+                      pdfUrls.add(newPdfController.text.trim());
+                    }
+                    if (newVideoController.text.trim().isNotEmpty) {
+                      videoUrls.add(newVideoController.text.trim());
+                    }
+
                     final String lTitle = titleController.text.trim();
                     if (lTitle.isNotEmpty) {
-                      await FirebaseFirestore.instance
-                          .collection('courses')
-                          .doc(courseId)
-                          .collection('lessons')
-                          .add({
-                            'title': lTitle,
-                            'content': contentController.text.trim(),
-                            'videoUrl': videoUrlController.text.trim(),
-                            'pdfUrl': pdfUrlController.text.trim(),
-                            'createdAt': FieldValue.serverTimestamp(),
-                          });
+                      Map<String, dynamic> lessonPayload = {
+                        'title': lTitle,
+                        'content': contentController.text.trim(),
+                        'videoUrls': videoUrls,
+                        'videoUrl': videoUrls.isNotEmpty ? videoUrls.first : '',
+                        'homeworkContent': homeworkContentController.text
+                            .trim(),
+                        'pdfUrls': pdfUrls,
+                        'pdfUrl': pdfUrls.isNotEmpty
+                            ? pdfUrls.first
+                            : '', // 👈 Compatibilitate dublă
+                        'updatedAt': FieldValue.serverTimestamp(),
+                      };
 
-                      await _sendPushToStudents(
-                        lessonTitle: lTitle,
-                        notificationType: notificationType,
-                      );
+                      if (existingLesson == null) {
+                        lessonPayload['createdAt'] =
+                            FieldValue.serverTimestamp();
+                        DocumentReference docRef = await FirebaseFirestore
+                            .instance
+                            .collection('courses')
+                            .doc(widget.courseId)
+                            .collection('lessons')
+                            .add(lessonPayload);
+
+                        await _sendPushToStudents(
+                          lessonTitle: lTitle,
+                          notificationType: notificationType,
+                          lessonId: docRef.id,
+                        );
+                      } else {
+                        // 🚀 Salvăm DIRECT în documentul existent din Firestore
+                        await existingLesson.reference.update(lessonPayload);
+                      }
 
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'Lecție salvată și notificări trimise!',
-                            ),
+                            content: Text('Lecția a fost salvată cu succes!'),
                           ),
                         );
                         Navigator.pop(context);
@@ -391,7 +617,7 @@ class CourseDetailScreen extends StatelessWidget {
                     backgroundColor: const Color(0xff42153e),
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text("Salvează Lecția"),
+                  child: const Text("Salvează"),
                 ),
               ],
             );
@@ -403,21 +629,19 @@ class CourseDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    _clearBadgeAndMarkAsRead();
-
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),
       appBar: AppBar(
         backgroundColor: const Color(0xff42153e),
         foregroundColor: Colors.white,
         title: Text(
-          title,
+          widget.title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
-      floatingActionButton: role == 'teacher'
+      floatingActionButton: widget.role == 'teacher'
           ? FloatingActionButton.extended(
-              onPressed: () => _showAddLessonDialog(context),
+              onPressed: () => _showAddOrEditLessonDialog(context),
               backgroundColor: const Color(0xff42153e),
               foregroundColor: Colors.amber,
               icon: const Icon(Icons.add),
@@ -449,7 +673,7 @@ class CourseDetailScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      category,
+                      widget.category,
                       style: TextStyle(
                         color: Colors.amber.shade900,
                         fontWeight: FontWeight.bold,
@@ -459,17 +683,17 @@ class CourseDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    title,
+                    widget.title,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Color(0xff42153e),
                     ),
                   ),
-                  if (description.isNotEmpty) ...[
+                  if (widget.description.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      description,
+                      widget.description,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade800,
@@ -493,7 +717,7 @@ class CourseDetailScreen extends StatelessWidget {
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('courses')
-                  .doc(courseId)
+                  .doc(widget.courseId)
                   .collection('lessons')
                   .orderBy('createdAt', descending: false)
                   .snapshots(),
@@ -536,17 +760,18 @@ class CourseDetailScreen extends StatelessWidget {
                     var lessonData = lessonDoc.data() as Map<String, dynamic>;
                     String lessonId = lessonDoc.id;
                     String lessonTitle = lessonData['title'] ?? 'Lecție';
-                    String lessonContent = lessonData['content'] ?? '';
-                    String videoUrl = lessonData['videoUrl'] ?? '';
-                    String pdfUrl = lessonData['pdfUrl'] ?? '';
 
                     return Card(
                       elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 16),
+                      margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: ExpansionTile(
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         leading: CircleAvatar(
                           backgroundColor: const Color(0xff42153e),
                           child: Text(
@@ -561,144 +786,61 @@ class CourseDetailScreen extends StatelessWidget {
                           lessonTitle,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                            fontSize: 16,
                             color: Color(0xff42153e),
                           ),
                         ),
-                        trailing: role == 'teacher'
-                            ? IconButton(
+                        subtitle: const Text(
+                          "Apasă pentru a deschide lecția și tema",
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.role == 'teacher') ...[
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Color(0xff42153e),
+                                ),
+                                tooltip: "Editează lecția",
+                                onPressed: () => _showAddOrEditLessonDialog(
+                                  context,
+                                  existingLesson: lessonDoc,
+                                ),
+                              ),
+                              IconButton(
                                 icon: const Icon(
                                   Icons.delete_outline,
                                   color: Colors.red,
                                 ),
+                                tooltip: "Șterge lecția",
                                 onPressed: () => _deleteLesson(
                                   context,
                                   lessonId,
                                   lessonTitle,
                                 ),
-                              )
-                            : null,
-                        children: [
-                          DefaultTabController(
-                            length: 2,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const TabBar(
-                                  labelColor: Color(0xff42153e),
-                                  unselectedLabelColor: Colors.grey,
-                                  indicatorColor: Color(0xff42153e),
-                                  tabs: [
-                                    Tab(
-                                      icon: Icon(Icons.menu_book, size: 18),
-                                      text: "Teorie & Aplicații",
-                                    ),
-                                    Tab(
-                                      icon: Icon(Icons.assignment, size: 18),
-                                      text: "Temă (PDF)",
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 500,
-                                  child: TabBarView(
-                                    children: [
-                                      SingleChildScrollView(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            if (lessonContent.isNotEmpty) ...[
-                                              Text(
-                                                lessonContent,
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  height: 1.4,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 16),
-                                            ],
-                                            if (videoUrl.isNotEmpty) ...[
-                                              const Text(
-                                                "📹 Înregistrare Curs",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 13,
-                                                  color: Color(0xff42153e),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              UniversalEmbeddedViewer(
-                                                viewId: 'video_$lessonId',
-                                                url: videoUrl,
-                                                height: 280,
-                                              ),
-                                            ] else ...[
-                                              const Center(
-                                                child: Padding(
-                                                  padding: EdgeInsets.all(32.0),
-                                                  child: Text(
-                                                    "Nu există înregistrare video încărcată pentru această lecție.",
-                                                    style: TextStyle(
-                                                      color: Colors.grey,
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                      SingleChildScrollView(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            if (pdfUrl.isNotEmpty) ...[
-                                              UniversalEmbeddedViewer(
-                                                viewId: 'pdf_$lessonId',
-                                                url:
-                                                    pdfUrl.contains(
-                                                          'drive.google.com',
-                                                        ) ||
-                                                        pdfUrl.contains(
-                                                          'firebasestorage',
-                                                        )
-                                                    ? 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(pdfUrl)}'
-                                                    : pdfUrl,
-                                                height: 420,
-                                              ),
-                                            ] else ...[
-                                              const Center(
-                                                child: Padding(
-                                                  padding: EdgeInsets.all(32.0),
-                                                  child: Text(
-                                                    "Nu a fost încărcat niciun fișier PDF pentru temă încă.",
-                                                    style: TextStyle(
-                                                      color: Colors.grey,
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                              ),
+                            ],
+                            const Icon(
+                              Icons.chevron_right,
+                              color: Color(0xff42153e),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => LessonDetailPage(
+                                courseId: widget.courseId,
+                                lessonId: lessonId,
+                                lessonTitle: lessonTitle,
+                                initialTab: 'lesson',
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
@@ -707,79 +849,6 @@ class CourseDetailScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// DEFINIȚIA CLASEI UNIVERSAL EMBEDDED VIEWER (ÎN AFARA CLASEI PRINCIPALE)
-class UniversalEmbeddedViewer extends StatefulWidget {
-  final String viewId;
-  final String url;
-  final double height;
-
-  const UniversalEmbeddedViewer({
-    super.key,
-    required this.viewId,
-    required this.url,
-    required this.height,
-  });
-
-  @override
-  State<UniversalEmbeddedViewer> createState() =>
-      _UniversalEmbeddedViewerState();
-}
-
-class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
-  WebViewController? _mobileController;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!kIsWeb) {
-      _mobileController = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onPageFinished: (String url) {
-              _mobileController?.runJavaScript('''
-                var meta = document.createElement('meta');
-                meta.name = 'viewport';
-                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
-                document.getElementsByTagName('head')[0].appendChild(meta);
-              ''');
-            },
-          ),
-        )
-        ..loadRequest(Uri.parse(widget.url));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: widget.height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InteractiveViewer(
-        panEnabled: true,
-        scaleEnabled: true,
-        minScale: 1.0,
-        maxScale: 4.0,
-        child: kIsWeb
-            ? getWebIframe(widget.viewId, widget.url)
-            : (_mobileController != null
-                  ? WebViewWidget(controller: _mobileController!)
-                  : const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xff42153e),
-                      ),
-                    )),
       ),
     );
   }

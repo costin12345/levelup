@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import 'notifications_screen.dart';
 import 'courses_screen.dart';
 import 'firebase_options.dart';
 import 'login_screen.dart';
@@ -217,7 +218,79 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ],
             ),
+            // Adaugă importul la începutul fișierului main.dart:
+
+            // În interiorul AppBar-ului din main.dart:
             actions: [
+              // BUTON UNIVERSAL DE NOTIFICĂRI PENTRU TOATE ROLURILE
+              if (currentUser != null)
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('notifications')
+                      .where('userId', isEqualTo: currentUser.uid)
+                      .where('isRead', isEqualTo: false)
+                      .snapshots(),
+                  builder: (context, notifSnap) {
+                    int unreadCount = notifSnap.hasData
+                        ? notifSnap.data!.docs.length
+                        : 0;
+
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.notifications_none,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                          tooltip: "Notificări",
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    NotificationsScreen(role: userRole),
+                              ),
+                            );
+
+                            // Dacă profesorul a apăsat pe o notificare de aprobare, deschidem dialogul de aprobări
+                            if (result == 'open_approval_center' && mounted) {
+                              _changeTab(1); // Merge pe tab-ul Cursuri
+                            }
+                          },
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: 6,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                '$unreadCount',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+
+              // Meniul existent...
               LayoutBuilder(
                 builder: (context, constraints) {
                   double screenWidth = MediaQuery.of(context).size.width;
