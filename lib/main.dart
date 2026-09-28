@@ -3,7 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 
 import 'courses_screen.dart';
@@ -11,12 +12,7 @@ import 'firebase_options.dart';
 import 'register_screen.dart';
 import 'login_screen.dart';
 
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
-// --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI (Trebuie să fie în afara oricărei clase) ---
-
-// În main.dart, adaugă în setupFCM() sau la deschiderea ecranului principal:
-import 'package:firebase_messaging/firebase_messaging.dart';
+// --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI ---
 
 Future<void> clearAppBadge() async {
   try {
@@ -49,12 +45,6 @@ Future<void> setupFCM() async {
   User? currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser == null) return;
 
-  // Salvăm o dovadă că funcția chiar s-a executat pe iPhone
-  await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set(
-    {'fcm_status': 'setupFCM started'},
-    SetOptions(merge: true),
-  );
-
   FirebaseMessaging messaging = FirebaseMessaging.instance;
 
   try {
@@ -64,39 +54,25 @@ Future<void> setupFCM() async {
       sound: true,
     );
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.uid)
-        .set({
-          'fcm_status': 'Permission status: ${settings.authorizationStatus}',
-        }, SetOptions(merge: true));
-
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
       messaging.onTokenRefresh.listen((newToken) {
         saveTokenToFirestore(newToken);
       });
 
-      // Preluăm FCM Token
       String? fcmToken = await messaging.getToken();
+
+      if (fcmToken == null && defaultTargetPlatform == TargetPlatform.iOS) {
+        await Future.delayed(const Duration(seconds: 3));
+        fcmToken = await messaging.getToken();
+      }
 
       if (fcmToken != null && fcmToken.isNotEmpty) {
         await saveTokenToFirestore(fcmToken);
-      } else {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUser.uid)
-            .set({
-              'fcm_status': 'getToken returned null',
-            }, SetOptions(merge: true));
       }
     }
   } catch (e) {
-    // Dacă apare orice eroare ascunsă pe iOS, o scriem în Firestore să o vedem
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.uid)
-        .set({'fcm_error': e.toString()}, SetOptions(merge: true));
+    debugPrint("Eroare FCM: $e");
   }
 }
 
@@ -104,32 +80,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const LevelUpApp());
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasData && snapshot.data != null) {
-          // Apelăm setupFCM() direct aici când utilizatorul este conectat
-          setupFCM();
-          return const MainScreen(); // Ecranul tău principal
-        }
-
-        return const LoginScreen(); // Ecranul tău de Login
-      },
-    );
-  }
 }
 
 class LevelUpApp extends StatelessWidget {
@@ -178,93 +128,7 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     setupFCM();
-    clearAppBadge(); // 👈 AICI: Șterge badge-ul când se deschide ecranul principal
-  }
-
-  // Configurare permisiuni FCM și salvare token pentru ecranul blocat
-  // Future<void> _setupFCM() async {
-  //   User? currentUser = FirebaseAuth.instance.currentUser;
-  //   if (currentUser == null) return;
-  //
-  //   try {
-  //     FirebaseMessaging messaging = FirebaseMessaging.instance;
-  //
-  //     // Cerere de permisiune pentru notificări pe ecranul blocat
-  //     NotificationSettings settings = await messaging.requestPermission(
-  //       alert: true,
-  //       badge: true,
-  //       sound: true,
-  //     );
-  //
-  //     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-  //       String? token = await messaging.getToken();
-  //       if (token != null) {
-  //         await FirebaseFirestore.instance
-  //             .collection('users')
-  //             .doc(currentUser.uid)
-  //             .set({'fcmToken': token}, SetOptions(merge: true));
-  //       }
-  //     }
-  //   } catch (e) {
-  //     debugPrint("Eroare la configurarea FCM: $e");
-  //   }
-  // }
-
-  Future<void> saveTokenToFirestore(String token) async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'fcmToken': token,
-      }, SetOptions(merge: true));
-      print("FCM Token salvat cu succes pentru user: ${user.uid}");
-    }
-  }
-
-  Future<void> setupFCM() async {
-    if (kIsWeb) return;
-
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      debugPrint("setupFCM oprit: Utilizator neconectat.");
-      return;
-    }
-
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-
-    try {
-      // 1. Solicită permisiunile iOS
-      NotificationSettings settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-
-      debugPrint(
-        "Status autorizare notificări: ${settings.authorizationStatus}",
-      );
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional) {
-        // 2. Ascultă schimbările de token (dacă APNs întârzie, îl salvează imediat ce soseste)
-        messaging.onTokenRefresh.listen((newToken) {
-          debugPrint("Token refresuit primit: $newToken");
-          saveTokenToFirestore(newToken);
-        });
-
-        // 3. Încercăm preluarea directă a FCM Token-ului
-        // Pe iOS, SDK-ul Firebase se ocupă intern de așteptarea APNs-ului dacă este configurat corect
-        String? fcmToken = await messaging.getToken();
-
-        if (fcmToken != null && fcmToken.isNotEmpty) {
-          await saveTokenToFirestore(fcmToken);
-          debugPrint("SUCCESS: FCM Token obținut direct pe iOS: $fcmToken");
-        } else {
-          debugPrint("FCM Token a returnat null. Așteptăm fallback APNs...");
-        }
-      }
-    } catch (e) {
-      debugPrint("Eroare la generarea FCM Token pe iOS: $e");
-    }
+    clearAppBadge();
   }
 
   void _changeTab(int index) {
@@ -273,7 +137,6 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  // Funcție unică de Logout care resetează stiva de ecrane și trimite la Login
   Future<void> _handleLogout() async {
     _changeTab(0);
     await FirebaseAuth.instance.signOut();
@@ -287,185 +150,205 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> pages = [
-      HomeTab(onGoToCourses: () => _changeTab(1)),
-      const CoursesScreen(),
-      const Center(
-        child: Text(
-          "Sistemul de Chat va fi activat în curând.",
-          style: TextStyle(color: Color(0xff42153e)),
-        ),
-      ),
-      const Center(
-        child: Text("Profilul Tău", style: TextStyle(color: Color(0xff42153e))),
-      ),
-    ];
+    User? currentUser = FirebaseAuth.instance.currentUser;
 
-    return Scaffold(
-      backgroundColor: const Color(0xfffff8dc),
-      appBar: AppBar(
-        backgroundColor: const Color(0xff42153e),
-        toolbarHeight: 75,
-        titleSpacing: 12,
-        title: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Image.asset(
-                'images/logo.jpg',
-                height: 38,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              double screenWidth = MediaQuery.of(context).size.width;
+    return StreamBuilder<DocumentSnapshot>(
+      stream: currentUser != null
+          ? FirebaseFirestore.instance
+                .collection('users')
+                .doc(currentUser.uid)
+                .snapshots()
+          : null,
+      builder: (context, userSnapshot) {
+        // Preluăm rolul din Firestore (implicit 'student' dacă se încarcă încă)
+        String userRole = 'student';
+        if (userSnapshot.hasData && userSnapshot.data!.exists) {
+          var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+          userRole = userData?['role'] ?? 'student';
+        }
 
-              if (screenWidth > 600) {
-                // ECRAN MARE: Meniu orizontal
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    TextButton(
-                      onPressed: () => _changeTab(0),
-                      child: Text(
-                        "Home",
-                        style: TextStyle(
-                          color: _currentIndex == 0
-                              ? Colors.amber
-                              : Colors.white,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => _changeTab(1),
-                      child: Text(
-                        "Cursuri",
-                        style: TextStyle(
-                          color: _currentIndex == 1
-                              ? Colors.amber
-                              : Colors.white,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => _changeTab(2),
-                      child: Text(
-                        "Chat",
-                        style: TextStyle(
-                          color: _currentIndex == 2
-                              ? Colors.amber
-                              : Colors.white,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => _changeTab(3),
-                      child: Text(
-                        "Profil",
-                        style: TextStyle(
-                          color: _currentIndex == 3
-                              ? Colors.amber
-                              : Colors.white,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      tooltip: "Deconectare",
-                      onPressed: _handleLogout,
-                    ),
-                  ],
-                );
-              } else {
-                // MOBIL: Meniu Popup
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    PopupMenuButton<int>(
-                      icon: const Icon(Icons.menu, color: Colors.white),
-                      color: const Color(0xff42153e),
-                      onSelected: (index) {
-                        if (index == 4) {
-                          _handleLogout();
-                        } else {
-                          _changeTab(index);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 0,
+        final List<Widget> pages = [
+          HomeTab(onGoToCourses: () => _changeTab(1)),
+          CoursesScreen(role: userRole), // 👈 Parametrul transmis corect
+          const Center(
+            child: Text(
+              "Sistemul de Chat va fi activat în curând.",
+              style: TextStyle(color: Color(0xff42153e)),
+            ),
+          ),
+          const Center(
+            child: Text(
+              "Profilul Tău",
+              style: TextStyle(color: Color(0xff42153e)),
+            ),
+          ),
+        ];
+
+        return Scaffold(
+          backgroundColor: const Color(0xfffff8dc),
+          appBar: AppBar(
+            backgroundColor: const Color(0xff42153e),
+            toolbarHeight: 75,
+            titleSpacing: 12,
+            title: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Image.asset(
+                    'images/logo.jpg',
+                    height: 38,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  double screenWidth = MediaQuery.of(context).size.width;
+
+                  if (screenWidth > 600) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () => _changeTab(0),
                           child: Text(
                             "Home",
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(
+                              color: _currentIndex == 0
+                                  ? Colors.amber
+                                  : Colors.white,
+                            ),
                           ),
                         ),
-                        const PopupMenuItem(
-                          value: 1,
+                        TextButton(
+                          onPressed: () => _changeTab(1),
                           child: Text(
                             "Cursuri",
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(
+                              color: _currentIndex == 1
+                                  ? Colors.amber
+                                  : Colors.white,
+                            ),
                           ),
                         ),
-                        const PopupMenuItem(
-                          value: 2,
+                        TextButton(
+                          onPressed: () => _changeTab(2),
                           child: Text(
                             "Chat",
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(
+                              color: _currentIndex == 2
+                                  ? Colors.amber
+                                  : Colors.white,
+                            ),
                           ),
                         ),
-                        const PopupMenuItem(
-                          value: 3,
+                        TextButton(
+                          onPressed: () => _changeTab(3),
                           child: Text(
                             "Profil",
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(
+                              color: _currentIndex == 3
+                                  ? Colors.amber
+                                  : Colors.white,
+                            ),
                           ),
                         ),
-                        const PopupMenuDivider(),
-                        const PopupMenuItem(
-                          value: 4,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.logout,
-                                color: Colors.redAccent,
-                                size: 18,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                "Deconectare",
-                                style: TextStyle(color: Colors.redAccent),
-                              ),
-                            ],
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.logout, color: Colors.white),
+                          tooltip: "Deconectare",
+                          onPressed: _handleLogout,
                         ),
                       ],
-                    ),
-                  ],
-                );
-              }
-            },
+                    );
+                  } else {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        PopupMenuButton<int>(
+                          icon: const Icon(Icons.menu, color: Colors.white),
+                          color: const Color(0xff42153e),
+                          onSelected: (index) {
+                            if (index == 4) {
+                              _handleLogout();
+                            } else {
+                              _changeTab(index);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 0,
+                              child: Text(
+                                "Home",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 1,
+                              child: Text(
+                                "Cursuri",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 2,
+                              child: Text(
+                                "Chat",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 3,
+                              child: Text(
+                                "Profil",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem(
+                              value: 4,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.logout,
+                                    color: Colors.redAccent,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "Deconectare",
+                                    style: TextStyle(color: Colors.redAccent),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      body: pages[_currentIndex],
+          body: pages[_currentIndex],
+        );
+      },
     );
   }
 }
@@ -512,7 +395,6 @@ class HomeTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. HERO SECTION
               Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
@@ -587,7 +469,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // 2. FEATURE CARDS
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: LayoutBuilder(
@@ -628,7 +509,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // 3. NIVELURI DE STUDIU
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -715,7 +595,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // 4. STATISTICI LIVE
               Container(
                 color: const Color(0xff42153e),
                 padding: const EdgeInsets.symmetric(
@@ -827,7 +706,6 @@ class HomeTab extends StatelessWidget {
 
               const SizedBox(height: 30),
 
-              // 5. FOOTER
               Container(
                 color: const Color(0xff2b0c28),
                 padding: const EdgeInsets.symmetric(
@@ -1171,62 +1049,5 @@ class HomeTab extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  Future<void> saveTokenToFirestore(String token) async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'fcmToken': token,
-          'lastUpdated': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        debugPrint(
-          "SUCCESS: FCM Token salvat în Firestore pentru user: ${user.uid}",
-        );
-      } catch (e) {
-        debugPrint("Eroare la salvarea FCM Token: $e");
-      }
-    }
-  }
-
-  Future<void> setupFCM() async {
-    if (kIsWeb) return;
-
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-
-    try {
-      NotificationSettings settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional) {
-        // Ascultăm reîmprospătările de token
-        messaging.onTokenRefresh.listen((newToken) {
-          saveTokenToFirestore(newToken);
-        });
-
-        // Încercarea 1
-        String? fcmToken = await messaging.getToken();
-
-        // Dacă este null pe iOS, mai facem o încercare după 3 secunde (timp în care APNs răspunde)
-        if (fcmToken == null && defaultTargetPlatform == TargetPlatform.iOS) {
-          await Future.delayed(const Duration(seconds: 3));
-          fcmToken = await messaging.getToken();
-        }
-
-        if (fcmToken != null && fcmToken.isNotEmpty) {
-          await saveTokenToFirestore(fcmToken);
-        }
-      }
-    } catch (e) {
-      debugPrint("Eroare FCM: $e");
-    }
   }
 }

@@ -758,6 +758,19 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
     if (!kIsWeb) {
       _mobileController = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageFinished: (String url) {
+              // Injectăm JS pe mobil pentru a activa zoom-ul nativ în iFrame / WebView
+              _mobileController?.runJavaScript('''
+                var meta = document.createElement('meta');
+                meta.name = 'viewport';
+                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
+                document.getElementsByTagName('head')[0].appendChild(meta);
+              ''');
+            },
+          ),
+        )
         ..loadRequest(Uri.parse(widget.url));
     }
   }
@@ -773,11 +786,22 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       clipBehavior: Clip.antiAlias,
-      child: kIsWeb
-          ? getWebIframe(widget.viewId, widget.url)
-          : (_mobileController != null
-                ? WebViewWidget(controller: _mobileController!)
-                : const Center(child: CircularProgressIndicator())),
+      // InteractiveViewer permite Zoom (pinch-to-zoom) și Pan pe tot containerul
+      child: InteractiveViewer(
+        panEnabled: true,
+        scaleEnabled: true,
+        minScale: 1.0,
+        maxScale: 4.0, // Permite Zoom până la 400%
+        child: kIsWeb
+            ? getWebIframe(widget.viewId, widget.url)
+            : (_mobileController != null
+                  ? WebViewWidget(controller: _mobileController!)
+                  : const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xff42153e),
+                      ),
+                    )),
+      ),
     );
   }
 }
