@@ -67,6 +67,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   // 1. Trimite Push Notification către toți profesorii când un elev cere acces
+  // Funcție actualizată de notificare a profesorului cu badge dinamic și debug
   Future<void> _notifyTeacherAboutEnrollment({
     required String courseTitle,
     required String studentName,
@@ -96,10 +97,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
         scopes,
       );
 
+      // Căutăm profesorii (verificăm atât 'teacher' cât și 'Teacher')
       final teachersDocs = await FirebaseFirestore.instance
           .collection('users')
-          .where('role', isEqualTo: 'teacher')
+          .where('role', whereIn: ['teacher', 'Teacher'])
           .get();
+
+      debugPrint("Profesori găsiți în DB: ${teachersDocs.docs.length}");
 
       if (teachersDocs.docs.isEmpty) {
         client.close();
@@ -114,6 +118,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
         String? teacherFcmToken = tData['fcmToken'];
         String teacherId = teacherDoc.id;
 
+        debugPrint("Profesor ID: $teacherId, FCM Token: $teacherFcmToken");
+
+        // 1. Salvăm notificarea în Firestore
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': teacherId,
           'title': '🙋‍♂️ Solicitare nouă de înscriere!',
@@ -123,8 +130,17 @@ class _CoursesScreenState extends State<CoursesScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
+        // 2. Calculăm numărul de notificări necitite ale profesorului pentru BADGE DINAMIC
+        final unreadSnap = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: teacherId)
+            .where('isRead', isEqualTo: false)
+            .get();
+        int unreadCount = unreadSnap.docs.length;
+
+        // 3. Trimitem Push Notification cu badge-ul calculat
         if (teacherFcmToken != null && teacherFcmToken.isNotEmpty) {
-          await client.post(
+          final res = await client.post(
             Uri.parse(fcmV1Url),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
@@ -142,7 +158,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 'apns': {
                   'headers': {'apns-priority': '10', 'apns-push-type': 'alert'},
                   'payload': {
-                    'aps': {'sound': 'default', 'badge': 1},
+                    'aps': {
+                      'sound': 'default',
+                      'badge': unreadCount, // 👈 BADGE DINAMIC (1, 2, 3...)
+                    },
                   },
                 },
                 'data': {
@@ -152,6 +171,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
               },
             }),
           );
+          debugPrint("Notificare profesor trimisă! Status: ${res.statusCode}");
         }
       }
       client.close();

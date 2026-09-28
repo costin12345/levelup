@@ -1,12 +1,11 @@
 import 'dart:convert';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_app_badger/flutter_app_badger.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'web_iframe_stub.dart' if (dart.library.html) 'web_iframe_web.dart';
@@ -26,28 +25,33 @@ class CourseDetailScreen extends StatelessWidget {
     required this.description,
     required this.role,
   });
-  Future<void> _markNotificationsAsRead() async {
+
+  // Şterge badge-ul nativ de pe iconiţă şi marchează notificările ca citite
+  Future<void> _clearBadgeAndMarkAsRead() async {
     try {
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
+        FlutterAppBadger.removeBadge();
+      }
+
       User? currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) return;
+      if (currentUser != null) {
+        var unreadDocs = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: currentUser.uid)
+            .where('courseId', isEqualTo: courseId)
+            .where('isRead', isEqualTo: false)
+            .get();
 
-      // Găsim notificările necitite ale utilizatorului pentru acest curs
-      var unreadDocs = await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('userId', isEqualTo: currentUser.uid)
-          .where('courseId', isEqualTo: courseId)
-          .where('isRead', isEqualTo: false)
-          .get();
-
-      for (var doc in unreadDocs.docs) {
-        await doc.reference.update({'isRead': true});
+        for (var doc in unreadDocs.docs) {
+          await doc.reference.update({'isRead': true});
+        }
       }
     } catch (e) {
-      debugPrint("Eroare la marcarea notificărilor ca citite: $e");
+      debugPrint("Eroare la curățarea notificărilor: $e");
     }
   }
 
-  // Funcție de trimitere Push Notification prin FCM API v1 către toți elevii aprobați
+  // Funcție de trimitere Push Notification prin FCM API v1 către toti elevii aprobați
   Future<void> _sendPushToStudents({
     required String lessonTitle,
     required String notificationType, // 'lesson' sau 'homework'
@@ -113,6 +117,14 @@ class CourseDetailScreen extends StatelessWidget {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
+        // Calculare BADGE DINAMIC pentru elev
+        final unreadSnap = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: userId)
+            .where('isRead', isEqualTo: false)
+            .get();
+        int unreadCount = unreadSnap.docs.length;
+
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
@@ -123,7 +135,7 @@ class CourseDetailScreen extends StatelessWidget {
           String? fcmToken = uData?['fcmToken'];
 
           if (fcmToken != null && fcmToken.isNotEmpty) {
-            final response = await client.post(
+            await client.post(
               Uri.parse(fcmV1Url),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({
@@ -140,7 +152,7 @@ class CourseDetailScreen extends StatelessWidget {
                       'apns-push-type': 'alert',
                     },
                     'payload': {
-                      'aps': {'sound': 'default', 'badge': 1},
+                      'aps': {'sound': 'default', 'badge': unreadCount},
                     },
                   },
                   'data': {
@@ -151,9 +163,6 @@ class CourseDetailScreen extends StatelessWidget {
                 },
               }),
             );
-
-            debugPrint("FCM v1 Response status: ${response.statusCode}");
-            debugPrint("FCM v1 Response body: ${response.body}");
           }
         }
       }
@@ -392,35 +401,10 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _clearBadgeAndMarkAsRead() async {
-    try {
-      // 1. Șterge bulina roșie de pe iconița aplicației
-      if (await FlutterAppBadger.isAppBadgeSupported()) {
-        FlutterAppBadger.removeBadge();
-      }
-
-      // 2. Marchează notificările necitite din Firestore ca fiind citite
-      User? currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        var unreadDocs = await FirebaseFirestore.instance
-            .collection('notifications')
-            .where('userId', isEqualTo: currentUser.uid)
-            .where('courseId', isEqualTo: courseId)
-            .where('isRead', isEqualTo: false)
-            .get();
-
-        for (var doc in unreadDocs.docs) {
-          await doc.reference.update({'isRead': true});
-        }
-      }
-    } catch (e) {
-      debugPrint("Eroare la curățarea notificărilor: $e");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    _clearBadgeAndMarkAsRead(); // 👈 AICI: Curăță badge-ul și notificările când se încarcă ecranul cursului
+    _clearBadgeAndMarkAsRead();
+
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),
       appBar: AppBar(
@@ -595,7 +579,6 @@ class CourseDetailScreen extends StatelessWidget {
                               )
                             : null,
                         children: [
-                          // TAB-URI PENTRU TEORIE ȘI TEMĂ
                           DefaultTabController(
                             length: 2,
                             child: Column(
@@ -620,7 +603,6 @@ class CourseDetailScreen extends StatelessWidget {
                                   height: 500,
                                   child: TabBarView(
                                     children: [
-                                      // TAB 1: TEORIE & ÎNREGISTRARE VIDEO
                                       SingleChildScrollView(
                                         padding: const EdgeInsets.all(16.0),
                                         child: Column(
@@ -671,8 +653,6 @@ class CourseDetailScreen extends StatelessWidget {
                                           ],
                                         ),
                                       ),
-
-                                      // TAB 2: TEMĂ & SUPORT DE CURS PDF
                                       SingleChildScrollView(
                                         padding: const EdgeInsets.all(16.0),
                                         child: Column(
@@ -732,6 +712,7 @@ class CourseDetailScreen extends StatelessWidget {
   }
 }
 
+// DEFINIȚIA CLASEI UNIVERSAL EMBEDDED VIEWER (ÎN AFARA CLASEI PRINCIPALE)
 class UniversalEmbeddedViewer extends StatefulWidget {
   final String viewId;
   final String url;
@@ -761,7 +742,6 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageFinished: (String url) {
-              // Injectăm JS pe mobil pentru a activa zoom-ul nativ în iFrame / WebView
               _mobileController?.runJavaScript('''
                 var meta = document.createElement('meta');
                 meta.name = 'viewport';
@@ -786,12 +766,11 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       clipBehavior: Clip.antiAlias,
-      // InteractiveViewer permite Zoom (pinch-to-zoom) și Pan pe tot containerul
       child: InteractiveViewer(
         panEnabled: true,
         scaleEnabled: true,
         minScale: 1.0,
-        maxScale: 4.0, // Permite Zoom până la 400%
+        maxScale: 4.0,
         child: kIsWeb
             ? getWebIframe(widget.viewId, widget.url)
             : (_mobileController != null
