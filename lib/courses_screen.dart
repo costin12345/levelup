@@ -19,7 +19,7 @@ class CoursesScreen extends StatefulWidget {
 class _CoursesScreenState extends State<CoursesScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
 
-  // Funcție de ștergere a cursului din Firestore (pentru profesor)
+  // 1. Ștergere curs (pentru profesor)
   Future<void> _deleteCourse(String courseId, String courseTitle) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -66,8 +66,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
-  // 1. Trimite Push Notification către toți profesorii când un elev cere acces
-  // Funcție actualizată de notificare a profesorului cu badge dinamic și debug
+  // 2. Notificare profesor la o cerere nouă de înscriere
   Future<void> _notifyTeacherAboutEnrollment({
     required String courseTitle,
     required String studentName,
@@ -97,13 +96,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
         scopes,
       );
 
-      // Căutăm profesorii (verificăm atât 'teacher' cât și 'Teacher')
       final teachersDocs = await FirebaseFirestore.instance
           .collection('users')
           .where('role', whereIn: ['teacher', 'Teacher'])
           .get();
-
-      debugPrint("Profesori găsiți în DB: ${teachersDocs.docs.length}");
 
       if (teachersDocs.docs.isEmpty) {
         client.close();
@@ -118,9 +114,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
         String? teacherFcmToken = tData['fcmToken'];
         String teacherId = teacherDoc.id;
 
-        debugPrint("Profesor ID: $teacherId, FCM Token: $teacherFcmToken");
-
-        // 1. Salvăm notificarea în Firestore
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': teacherId,
           'title': '🙋‍♂️ Solicitare nouă de înscriere!',
@@ -130,7 +123,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        // 2. Calculăm numărul de notificări necitite ale profesorului pentru BADGE DINAMIC
         final unreadSnap = await FirebaseFirestore.instance
             .collection('notifications')
             .where('userId', isEqualTo: teacherId)
@@ -138,9 +130,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
             .get();
         int unreadCount = unreadSnap.docs.length;
 
-        // 3. Trimitem Push Notification cu badge-ul calculat
         if (teacherFcmToken != null && teacherFcmToken.isNotEmpty) {
-          final res = await client.post(
+          await client.post(
             Uri.parse(fcmV1Url),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
@@ -158,10 +149,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 'apns': {
                   'headers': {'apns-priority': '10', 'apns-push-type': 'alert'},
                   'payload': {
-                    'aps': {
-                      'sound': 'default',
-                      'badge': unreadCount, // 👈 BADGE DINAMIC (1, 2, 3...)
-                    },
+                    'aps': {'sound': 'default', 'badge': unreadCount},
                   },
                 },
                 'data': {
@@ -171,7 +159,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
               },
             }),
           );
-          debugPrint("Notificare profesor trimisă! Status: ${res.statusCode}");
         }
       }
       client.close();
@@ -180,7 +167,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
-  // 2. Metoda prin care elevul cere acces la un curs
+  // 3. Trimitere cerere înscriere la curs de către elev
   Future<void> _requestEnrollment(String courseId, String courseTitle) async {
     if (currentUser == null) return;
 
@@ -193,7 +180,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
       String studentName = 'Un elev';
       if (userDoc.exists) {
         var uData = userDoc.data() as Map<String, dynamic>?;
-        studentName = uData?['name'] ?? uData?['email'] ?? 'Un elev';
+        studentName =
+            uData?['fullName'] ??
+            uData?['name'] ??
+            uData?['email'] ??
+            'Un elev';
       }
 
       await FirebaseFirestore.instance.collection('enrollments').add({
@@ -226,125 +217,282 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
-  // 3. Dialog de gestionare a cererilor (Clopoțelul Profesorului)
+  // 4. Centru de Aprobări la Clopoțel (Conturi noi + Înscrieri cursuri)
   void _showPendingRequestsDialog() {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Solicitări de înscriere în așteptare'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('enrollments')
-                  .where('status', isEqualTo: 'pending')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text('Nu există nicio solicitare în așteptare.'),
-                  );
-                }
-
-                var requests = snapshot.data!.docs;
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: requests.length,
-                  itemBuilder: (context, index) {
-                    var reqDoc = requests[index];
-                    var reqData = reqDoc.data() as Map<String, dynamic>;
-                    String reqId = reqDoc.id;
-                    String studentId = reqData['userId'];
-                    String courseId = reqData['courseId'];
-
-                    return FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(studentId)
-                          .get(),
-                      builder: (context, userSnap) {
-                        String studentName = 'Elev';
-                        if (userSnap.hasData && userSnap.data!.exists) {
-                          var uData =
-                              userSnap.data!.data() as Map<String, dynamic>?;
-                          studentName =
-                              uData?['name'] ?? uData?['email'] ?? 'Elev';
-                        }
-
-                        return FutureBuilder<DocumentSnapshot>(
-                          future: FirebaseFirestore.instance
-                              .collection('courses')
-                              .doc(courseId)
-                              .get(),
-                          builder: (context, courseSnap) {
-                            String courseTitle = 'Curs';
-                            if (courseSnap.hasData && courseSnap.data!.exists) {
-                              var cData =
-                                  courseSnap.data!.data()
-                                      as Map<String, dynamic>?;
-                              courseTitle = cData?['title'] ?? 'Curs';
+        return DefaultTabController(
+          length: 2,
+          child: AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text(
+              'Centru de Aprobări',
+              style: TextStyle(
+                color: Color(0xff42153e),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: SizedBox(
+              width: 500,
+              height: 400,
+              child: Column(
+                children: [
+                  const TabBar(
+                    labelColor: Color(0xff42153e),
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: Color(0xff42153e),
+                    tabs: [
+                      Tab(
+                        icon: Icon(Icons.person_add, size: 18),
+                        text: "Conturi Noi",
+                      ),
+                      Tab(
+                        icon: Icon(Icons.school, size: 18),
+                        text: "Înscrieri Curs",
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        // TAB 1: CONTURI NOI NEAPROBATE
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('users')
+                              .where('role', isEqualTo: 'student')
+                              .where('hasAccess', isEqualTo: false)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            if (!snapshot.hasData ||
+                                snapshot.data!.docs.isEmpty) {
+                              return const Center(
+                                child: Text(
+                                  'Nu există conturi noi în așteptare.',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              );
                             }
 
-                            return ListTile(
-                              title: Text(
-                                studentName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text('Curs: $courseTitle'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.check_circle,
-                                      color: Colors.green,
+                            var unapprovedUsers = snapshot.data!.docs;
+
+                            return ListView.builder(
+                              itemCount: unapprovedUsers.length,
+                              itemBuilder: (context, index) {
+                                var uDoc = unapprovedUsers[index];
+                                var uData = uDoc.data() as Map<String, dynamic>;
+                                String uId = uDoc.id;
+                                String name =
+                                    uData['fullName'] ??
+                                    uData['name'] ??
+                                    'Elev';
+                                String email = uData['email'] ?? '';
+
+                                return ListTile(
+                                  leading: const CircleAvatar(
+                                    backgroundColor: Color(0xff42153e),
+                                    child: Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                      size: 20,
                                     ),
-                                    onPressed: () async {
-                                      await FirebaseFirestore.instance
-                                          .collection('enrollments')
-                                          .doc(reqId)
-                                          .update({'status': 'approved'});
-                                    },
                                   ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.cancel,
-                                      color: Colors.red,
+                                  title: Text(
+                                    name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    onPressed: () async {
-                                      await FirebaseFirestore.instance
-                                          .collection('enrollments')
-                                          .doc(reqId)
-                                          .delete();
-                                    },
                                   ),
-                                ],
-                              ),
+                                  subtitle: Text(
+                                    email,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.check_circle,
+                                          color: Colors.green,
+                                          size: 28,
+                                        ),
+                                        tooltip: 'Aprobă Accesul',
+                                        onPressed: () async {
+                                          await FirebaseFirestore.instance
+                                              .collection('users')
+                                              .doc(uId)
+                                              .update({'hasAccess': true});
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.cancel,
+                                          color: Colors.red,
+                                          size: 28,
+                                        ),
+                                        tooltip: 'Respinge Contul',
+                                        onPressed: () async {
+                                          await FirebaseFirestore.instance
+                                              .collection('users')
+                                              .doc(uId)
+                                              .delete();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+                        ),
+
+                        // TAB 2: ÎNSCRIERI PENDING LA CURSURI
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('enrollments')
+                              .where('status', isEqualTo: 'pending')
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            if (!snapshot.hasData ||
+                                snapshot.data!.docs.isEmpty) {
+                              return const Center(
+                                child: Text(
+                                  'Nu există solicitări de curs în așteptare.',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              );
+                            }
+
+                            var requests = snapshot.data!.docs;
+
+                            return ListView.builder(
+                              itemCount: requests.length,
+                              itemBuilder: (context, index) {
+                                var reqDoc = requests[index];
+                                var reqData =
+                                    reqDoc.data() as Map<String, dynamic>;
+                                String reqId = reqDoc.id;
+                                String studentId = reqData['userId'];
+                                String courseId = reqData['courseId'];
+
+                                return FutureBuilder<DocumentSnapshot>(
+                                  future: FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(studentId)
+                                      .get(),
+                                  builder: (context, userSnap) {
+                                    String studentName = 'Elev';
+                                    if (userSnap.hasData &&
+                                        userSnap.data!.exists) {
+                                      var uData =
+                                          userSnap.data!.data()
+                                              as Map<String, dynamic>?;
+                                      studentName =
+                                          uData?['fullName'] ??
+                                          uData?['name'] ??
+                                          uData?['email'] ??
+                                          'Elev';
+                                    }
+
+                                    return FutureBuilder<DocumentSnapshot>(
+                                      future: FirebaseFirestore.instance
+                                          .collection('courses')
+                                          .doc(courseId)
+                                          .get(),
+                                      builder: (context, courseSnap) {
+                                        String courseTitle = 'Curs';
+                                        if (courseSnap.hasData &&
+                                            courseSnap.data!.exists) {
+                                          var cData =
+                                              courseSnap.data!.data()
+                                                  as Map<String, dynamic>?;
+                                          courseTitle =
+                                              cData?['title'] ?? 'Curs';
+                                        }
+
+                                        return ListTile(
+                                          title: Text(
+                                            studentName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            'Curs: $courseTitle',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.check_circle,
+                                                  color: Colors.green,
+                                                  size: 28,
+                                                ),
+                                                onPressed: () async {
+                                                  await FirebaseFirestore
+                                                      .instance
+                                                      .collection('enrollments')
+                                                      .doc(reqId)
+                                                      .update({
+                                                        'status': 'approved',
+                                                      });
+                                                },
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.cancel,
+                                                  color: Colors.red,
+                                                  size: 28,
+                                                ),
+                                                onPressed: () async {
+                                                  await FirebaseFirestore
+                                                      .instance
+                                                      .collection('enrollments')
+                                                      .doc(reqId)
+                                                      .delete();
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Închide'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Închide'),
-            ),
-          ],
         );
       },
     );
@@ -365,40 +513,57 @@ class _CoursesScreenState extends State<CoursesScreen> {
           if (widget.role == 'teacher')
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('enrollments')
-                  .where('status', isEqualTo: 'pending')
+                  .collection('users')
+                  .where('role', isEqualTo: 'student')
+                  .where('hasAccess', isEqualTo: false)
                   .snapshots(),
-              builder: (context, snapshot) {
-                int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              builder: (context, unapprovedSnap) {
+                int unapprovedAccountsCount = unapprovedSnap.hasData
+                    ? unapprovedSnap.data!.docs.length
+                    : 0;
 
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.notifications_active),
-                      onPressed: _showPendingRequestsDialog,
-                    ),
-                    if (count > 0)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            '$count',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('enrollments')
+                      .where('status', isEqualTo: 'pending')
+                      .snapshots(),
+                  builder: (context, pendingEnrollSnap) {
+                    int pendingEnrollmentsCount = pendingEnrollSnap.hasData
+                        ? pendingEnrollSnap.data!.docs.length
+                        : 0;
+                    int totalPending =
+                        unapprovedAccountsCount + pendingEnrollmentsCount;
+
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_active),
+                          onPressed: _showPendingRequestsDialog,
+                        ),
+                        if (totalPending > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '$totalPending',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                  ],
+                      ],
+                    );
+                  },
                 );
               },
             ),
@@ -414,7 +579,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('Nu există cursuri adăugate.'));
+            return const Center(
+              child: Text(
+                'Nu există cursuri adăugate în bază.',
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+            );
           }
 
           var courses = snapshot.data!.docs;
@@ -462,7 +632,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               ),
                             ),
                           ),
-                          // BUTONUL DE ȘTERGERE CURS (PENTRU PROFESOR)
                           if (widget.role == 'teacher')
                             IconButton(
                               icon: const Icon(
@@ -497,7 +666,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       ],
                       const SizedBox(height: 14),
 
-                      // BUTOANELE PENTRU PROFESOR SAU ELEV
                       if (widget.role == 'teacher')
                         ElevatedButton.icon(
                           onPressed: () {

@@ -6,15 +6,18 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'courses_screen.dart';
 import 'firebase_options.dart';
-import 'register_screen.dart';
 import 'login_screen.dart';
 
 // --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI ---
 
 Future<void> clearAppBadge() async {
+  // Pe Web sau alte platforme non-mobile nu există badge-uri native
+  if (kIsWeb) return;
+
   try {
     if (await FlutterAppBadger.isAppBadgeSupported()) {
       FlutterAppBadger.removeBadge(); // Șterge bulina roșie de pe logo
@@ -160,7 +163,6 @@ class _MainScreenState extends State<MainScreen> {
                 .snapshots()
           : null,
       builder: (context, userSnapshot) {
-        // Preluăm rolul din Firestore (implicit 'student' dacă se încarcă încă)
         String userRole = 'student';
         if (userSnapshot.hasData && userSnapshot.data!.exists) {
           var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
@@ -169,7 +171,7 @@ class _MainScreenState extends State<MainScreen> {
 
         final List<Widget> pages = [
           HomeTab(onGoToCourses: () => _changeTab(1)),
-          CoursesScreen(role: userRole), // 👈 Parametrul transmis corect
+          CoursesScreen(role: userRole),
           const Center(
             child: Text(
               "Sistemul de Chat va fi activat în curând.",
