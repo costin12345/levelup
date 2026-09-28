@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 
 import 'course_detail_screen.dart';
@@ -18,6 +20,35 @@ class CoursesScreen extends StatefulWidget {
 
 class _CoursesScreenState extends State<CoursesScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
+  // Metodă pentru reîmprospătarea badge-ului profesorului
+  Future<void> _refreshTeacherBadge() async {
+    if (kIsWeb) return;
+    try {
+      final unapprovedUsersSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'student')
+          .where('hasAccess', isEqualTo: false)
+          .get();
+
+      final pendingEnrollmentsSnap = await FirebaseFirestore.instance
+          .collection('enrollments')
+          .where('status', isEqualTo: 'pending')
+          .get();
+
+      int remaining =
+          unapprovedUsersSnap.docs.length + pendingEnrollmentsSnap.docs.length;
+
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
+        if (remaining > 0) {
+          FlutterAppBadger.updateBadgeCount(remaining);
+        } else {
+          FlutterAppBadger.removeBadge();
+        }
+      }
+    } catch (e) {
+      debugPrint("Eroare la actualizarea badge-ului: $e");
+    }
+  }
 
   // 1. Ștergere curs (pentru profesor)
   Future<void> _deleteCourse(String courseId, String courseTitle) async {
@@ -219,6 +250,20 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   // 4. Centru de Aprobări la Clopoțel (Conturi noi + Înscrieri cursuri)
   void _showPendingRequestsDialog() {
+    // Curățăm notificările vechi/orfane ale profesorului la deschiderea clopoțelului
+    User? currentTeacher = FirebaseAuth.instance.currentUser;
+    if (currentTeacher != null) {
+      FirebaseFirestore.instance
+          .collection('notifications')
+          .where('userId', isEqualTo: currentTeacher.uid)
+          .where('isRead', isEqualTo: false)
+          .get()
+          .then((snapshot) {
+            for (var doc in snapshot.docs) {
+              doc.reference.update({'isRead': true});
+            }
+          });
+    }
     showDialog(
       context: context,
       builder: (context) {
@@ -257,6 +302,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   Expanded(
                     child: TabBarView(
                       children: [
+                        // TAB 1: CONTURI NOI NEAPROBATE
                         // TAB 1: CONTURI NOI NEAPROBATE
                         StreamBuilder<QuerySnapshot>(
                           stream: FirebaseFirestore.instance
@@ -317,6 +363,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      // BUTON APROBARE CONT
+                                      // BUTON APROBARE CONT
                                       IconButton(
                                         icon: const Icon(
                                           Icons.check_circle,
@@ -325,12 +373,45 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                         ),
                                         tooltip: 'Aprobă Accesul',
                                         onPressed: () async {
+                                          // 1. Aprobăm contul în Firestore
                                           await FirebaseFirestore.instance
                                               .collection('users')
                                               .doc(uId)
                                               .update({'hasAccess': true});
+
+                                          // 2. Marchează notificările necitite ale profesorului legate de conturi ca fiind citite
+                                          if (currentUser != null) {
+                                            var notifs = await FirebaseFirestore
+                                                .instance
+                                                .collection('notifications')
+                                                .where(
+                                                  'userId',
+                                                  isEqualTo: currentUser!.uid,
+                                                )
+                                                .where(
+                                                  'isRead',
+                                                  isEqualTo: false,
+                                                )
+                                                .get();
+
+                                            for (var doc in notifs.docs) {
+                                              String bodyText =
+                                                  doc.data()['body'] ?? '';
+                                              if (bodyText.contains(email) ||
+                                                  bodyText.contains(name)) {
+                                                await doc.reference.update({
+                                                  'isRead': true,
+                                                });
+                                              }
+                                            }
+                                          }
+
+                                          // 3. Actualizăm badge-ul nativ
+                                          _refreshTeacherBadge();
                                         },
                                       ),
+
+                                      // BUTON RESPINGERE/ȘTERGERE CONT
                                       IconButton(
                                         icon: const Icon(
                                           Icons.cancel,
@@ -339,10 +420,29 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                         ),
                                         tooltip: 'Respinge Contul',
                                         onPressed: () async {
+                                          // 1. Ștergem contul neaprobat
                                           await FirebaseFirestore.instance
                                               .collection('users')
                                               .doc(uId)
                                               .delete();
+
+                                          // 2. 👈 Ștergem și notificările generate pentru acest utilizator
+                                          var userNotifs =
+                                              await FirebaseFirestore.instance
+                                                  .collection('notifications')
+                                                  .get();
+
+                                          for (var doc in userNotifs.docs) {
+                                            String bodyText =
+                                                doc.data()['body'] ?? '';
+                                            if (bodyText.contains(email) ||
+                                                bodyText.contains(name)) {
+                                              await doc.reference.delete();
+                                            }
+                                          }
+
+                                          // 3. Actualizăm badge-ul profesorului
+                                          _refreshTeacherBadge();
                                         },
                                       ),
                                     ],
@@ -352,7 +452,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             );
                           },
                         ),
-
                         // TAB 2: ÎNSCRIERI PENDING LA CURSURI
                         StreamBuilder<QuerySnapshot>(
                           stream: FirebaseFirestore.instance
