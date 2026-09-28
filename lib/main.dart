@@ -4,21 +4,35 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_app_badger/flutter_app_badger.dart';
+
 import 'courses_screen.dart';
 import 'firebase_options.dart';
 import 'register_screen.dart';
 import 'login_screen.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 // --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI (Trebuie să fie în afara oricărei clase) ---
+
+// În main.dart, adaugă în setupFCM() sau la deschiderea ecranului principal:
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+Future<void> clearAppBadge() async {
+  try {
+    if (await FlutterAppBadger.isAppBadgeSupported()) {
+      FlutterAppBadger.removeBadge(); // Șterge bulina roșie de pe logo
+    }
+  } catch (e) {
+    debugPrint("Eroare la ștergerea badge-ului: $e");
+  }
+}
 
 Future<void> saveTokenToFirestore(String token) async {
   User? user = FirebaseAuth.instance.currentUser;
   if (user != null) {
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'fcmToken': token,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -36,10 +50,10 @@ Future<void> setupFCM() async {
   if (currentUser == null) return;
 
   // Salvăm o dovadă că funcția chiar s-a executat pe iPhone
-  await FirebaseFirestore.instance
-      .collection('users')
-      .doc(currentUser.uid)
-      .set({'fcm_status': 'setupFCM started'}, SetOptions(merge: true));
+  await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set(
+    {'fcm_status': 'setupFCM started'},
+    SetOptions(merge: true),
+  );
 
   FirebaseMessaging messaging = FirebaseMessaging.instance;
 
@@ -53,11 +67,12 @@ Future<void> setupFCM() async {
     await FirebaseFirestore.instance
         .collection('users')
         .doc(currentUser.uid)
-        .set({'fcm_status': 'Permission status: ${settings.authorizationStatus}'}, SetOptions(merge: true));
+        .set({
+          'fcm_status': 'Permission status: ${settings.authorizationStatus}',
+        }, SetOptions(merge: true));
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
-
       messaging.onTokenRefresh.listen((newToken) {
         saveTokenToFirestore(newToken);
       });
@@ -71,7 +86,9 @@ Future<void> setupFCM() async {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(currentUser.uid)
-            .set({'fcm_status': 'getToken returned null'}, SetOptions(merge: true));
+            .set({
+              'fcm_status': 'getToken returned null',
+            }, SetOptions(merge: true));
       }
     }
   } catch (e) {
@@ -82,11 +99,13 @@ Future<void> setupFCM() async {
         .set({'fcm_error': e.toString()}, SetOptions(merge: true));
   }
 }
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const LevelUpApp());
 }
+
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -96,7 +115,9 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         if (snapshot.hasData && snapshot.data != null) {
@@ -110,6 +131,7 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
+
 class LevelUpApp extends StatelessWidget {
   const LevelUpApp({super.key});
 
@@ -156,6 +178,7 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     setupFCM();
+    clearAppBadge(); // 👈 AICI: Șterge badge-ul când se deschide ecranul principal
   }
 
   // Configurare permisiuni FCM și salvare token pentru ecranul blocat
@@ -190,10 +213,9 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> saveTokenToFirestore(String token) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({'fcmToken': token}, SetOptions(merge: true));
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'fcmToken': token,
+      }, SetOptions(merge: true));
       print("FCM Token salvat cu succes pentru user: ${user.uid}");
     }
   }
@@ -217,11 +239,12 @@ class _MainScreenState extends State<MainScreen> {
         sound: true,
       );
 
-      debugPrint("Status autorizare notificări: ${settings.authorizationStatus}");
+      debugPrint(
+        "Status autorizare notificări: ${settings.authorizationStatus}",
+      );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
-
         // 2. Ascultă schimbările de token (dacă APNs întârzie, îl salvează imediat ce soseste)
         messaging.onTokenRefresh.listen((newToken) {
           debugPrint("Token refresuit primit: $newToken");
@@ -243,6 +266,7 @@ class _MainScreenState extends State<MainScreen> {
       debugPrint("Eroare la generarea FCM Token pe iOS: $e");
     }
   }
+
   void _changeTab(int index) {
     setState(() {
       _currentIndex = index;
@@ -256,7 +280,7 @@ class _MainScreenState extends State<MainScreen> {
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
-            (route) => false,
+        (route) => false,
       );
     }
   }
@@ -509,21 +533,21 @@ class HomeTab extends StatelessWidget {
                       bool isWide = constraints.maxWidth > 750;
                       return isWide
                           ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(child: _buildHeroText(context)),
-                          const SizedBox(width: 24),
-                          SizedBox(width: 320, child: _buildHeroCard()),
-                        ],
-                      )
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(child: _buildHeroText(context)),
+                                const SizedBox(width: 24),
+                                SizedBox(width: 320, child: _buildHeroCard()),
+                              ],
+                            )
                           : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeroText(context),
-                          const SizedBox(height: 24),
-                          _buildHeroCard(),
-                        ],
-                      );
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeroText(context),
+                                const SizedBox(height: 24),
+                                _buildHeroCard(),
+                              ],
+                            );
                     },
                   ),
                 ),
@@ -634,55 +658,55 @@ class HomeTab extends StatelessWidget {
                         bool isMobile = constraints.maxWidth < 600;
                         return isMobile
                             ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCategoryCard(
-                              "Gimnaziu",
-                              "Clasele V - VIII",
-                              Icons.child_care,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildCategoryCard(
-                              "Liceu",
-                              "Clasele IX - XII",
-                              Icons.menu_book,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildCategoryCard(
-                              "Evaluarea Națională/Bacalaureat",
-                              "Simulări & Teste",
-                              Icons.assignment,
-                            ),
-                          ],
-                        )
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildCategoryCard(
+                                    "Gimnaziu",
+                                    "Clasele V - VIII",
+                                    Icons.child_care,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildCategoryCard(
+                                    "Liceu",
+                                    "Clasele IX - XII",
+                                    Icons.menu_book,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildCategoryCard(
+                                    "Evaluarea Națională/Bacalaureat",
+                                    "Simulări & Teste",
+                                    Icons.assignment,
+                                  ),
+                                ],
+                              )
                             : Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: _buildCategoryCard(
-                                "Gimnaziu",
-                                "Clasele V - VIII",
-                                Icons.child_care,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildCategoryCard(
-                                "Liceu",
-                                "Clasele IX - XII",
-                                Icons.menu_book,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildCategoryCard(
-                                "Bacalaureat",
-                                "Simulări & Teste",
-                                Icons.assignment,
-                              ),
-                            ),
-                          ],
-                        );
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: _buildCategoryCard(
+                                      "Gimnaziu",
+                                      "Clasele V - VIII",
+                                      Icons.child_care,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildCategoryCard(
+                                      "Liceu",
+                                      "Clasele IX - XII",
+                                      Icons.menu_book,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildCategoryCard(
+                                      "Bacalaureat",
+                                      "Simulări & Teste",
+                                      Icons.assignment,
+                                    ),
+                                  ),
+                                ],
+                              );
                       },
                     ),
                   ],
@@ -735,7 +759,7 @@ class HomeTab extends StatelessWidget {
                                 children: [
                                   Row(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.center,
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Expanded(
                                         child: _buildCounterItem(
@@ -754,7 +778,7 @@ class HomeTab extends StatelessWidget {
                                   const SizedBox(height: 16),
                                   Row(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.center,
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Expanded(
                                         child: _buildCounterItem(
@@ -982,7 +1006,6 @@ class HomeTab extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-
           ],
         ),
       ],
@@ -1048,10 +1071,12 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureCard(IconData icon,
-      String title,
-      String desc,
-      double maxWidth,) {
+  Widget _buildFeatureCard(
+    IconData icon,
+    String title,
+    String desc,
+    double maxWidth,
+  ) {
     double cardWidth = maxWidth > 600
         ? (maxWidth - 36) / 4
         : (maxWidth - 12) / 2;
@@ -1152,15 +1177,13 @@ class HomeTab extends StatelessWidget {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'fcmToken': token,
           'lastUpdated': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         debugPrint(
-            "SUCCESS: FCM Token salvat în Firestore pentru user: ${user.uid}");
+          "SUCCESS: FCM Token salvat în Firestore pentru user: ${user.uid}",
+        );
       } catch (e) {
         debugPrint("Eroare la salvarea FCM Token: $e");
       }

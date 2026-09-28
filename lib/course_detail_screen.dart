@@ -1,9 +1,10 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -25,15 +26,39 @@ class CourseDetailScreen extends StatelessWidget {
     required this.description,
     required this.role,
   });
+  Future<void> _markNotificationsAsRead() async {
+    try {
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
 
-  Future<void> _sendPushToStudents(String lessonTitle) async {
+      // Găsim notificările necitite ale utilizatorului pentru acest curs
+      var unreadDocs = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('userId', isEqualTo: currentUser.uid)
+          .where('courseId', isEqualTo: courseId)
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      for (var doc in unreadDocs.docs) {
+        await doc.reference.update({'isRead': true});
+      }
+    } catch (e) {
+      debugPrint("Eroare la marcarea notificărilor ca citite: $e");
+    }
+  }
+
+  // Funcție de trimitere Push Notification prin FCM API v1 către toți elevii aprobați
+  Future<void> _sendPushToStudents({
+    required String lessonTitle,
+    required String notificationType, // 'lesson' sau 'homework'
+  }) async {
     try {
       final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
         {
           "type": "service_account",
           "project_id": "level-up-19583",
           "private_key_id": "be2af79dfbe281af83316b25ea293ebfc1beee3a",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/GHpRVvpGCezi\nK33vzeOvzPaVcNL/+U0wrAcyLDQGlaDnY/k/mjeq6XMr0l+IAapukBaI/cFUsx1r\npTnIByGyMJ6ibS9ywHygjk0imuKOtSioiFsxCa7w9cOJe8tHyugIjQWm6vELqGAk\njt9GNy1uIODZVpmeF4qyhBFcCXnbOZFLkKeNKx4V9xQcpZ7gyjvVUuDWnuPT9sLv\n5zwvi+OgBJOiksSZ03ShGgDMKwe+mnfRm/VtzfABlEdaf+hnnEsnVWm22/TVrHEk\nkZMlDH/QFh77Mf3l0bY0I5VhUfG5O/2/R+Z6X8ZWyZo+D9BF2eb2Lr71gP4FBoL/\nxCK64kEhAgMBAAECggEAApHLIl5qQRhk2SKUWpiQBU8FrOXaB5Q2skYRcyWXdQz8\ndMcqIu2UCrYsOGOgVBuCg/D2DJxmqW4esCdNJ3yeZULfNk11w/shgBefFMm0l0dQ\nisDtSd5KduenFOJJI1mojbsaX1pQtsNN1PqtsNN1Pqtfh2nJ0kpOUZ4RTZ7KGXJjKK2NKPY\n/6WFYPpAwpr0h5utvqmVgRvkZ/SZm4dDF2q8v/S+b//Ws1Vd5T4Ng4k/aUDontpT\nwxT3Riy0O3dDO8DETM/jj5FMKNpVByM4ZfbN7fYEz9qeR9x4KdFWSo6L+a5E4PZv\nF+xvLqRcFiLqrcnXiCCViGde13KjqAr0UNmkQC+EDQKBgQDwjs/phhcMuFmEySi3\nK5LT0/6t9R4ii0nC9Uu4NaY9WiNlKAoy9Ne3whl9zOGzmRY+Fe9DAmGPFg1cWyRo\nGyUbuI2w/3fM8Hx3Fix+pT+mGNjn2K0pdy87NtAlTtjyrmWkOfPm+fOdVnBi6+Ml\nugFGxBwBkJ6q6ff0b5fGN4RyRwKBgQDLXNT5NeRnfkyhh2VFifb2YKkzFiWyCyBg\nZBQXaojMoTY5ueBdPbUecGN+G07aRJ2kx08uCY/EQYCEccjHyeB3R+0EjyiaxEnF\n33//tywzxvZ8jjUo2oZuXgO3iPXQ0SEnnIMYAtTJ7SyYsZl7Ala9SC4CIqNiPWKR\n+hdRnve9VwKBgGbeGyiYT5j/6D/xKXkSqAnvWLQY4pcRCyzUalnOj1UjC4nBUoMx\n0mFhHjd+enGroChShusXxJJEctgwnWPrX7X3+Jdc12UK3Z6rG8HYdlxXucGDFaFq\ntwbSTLX3fqxgSVSt94+pCTUZ9ptGle7XGJ6jU/qTVlZuELs1USjRKtEXAoGBAMNF\nG1dEsVHTC6Aa01pndJT1EeL1BDMmzergjg5CBKOAtQHPAqplg1F8F3zSme+p7Tl5\nDAWntr17K/2BCIsWxIukq+kx0YpyqmfvCQgxCaeaB7poDpFw6550dds5Dth4xv4z\nIgnfRhWywJzKBBcCkuljspHoUrwVN132J4f/PeE3AoGBAMO918DIrrHdGyaHSA0E\nK0gEY2dMUuAmaMeDEFtVHoZtugUUC6ZFMOgP4fQIjPnL52igeW6IUs96du2d+GIC\nqdlMb7Tp/lTxvaRGqUcAVhYbYaawonFK7QU8kNygU1IqWljXa+S+nR1O/tCmG2/n\n34ZJZ4VSGVZ/GX9IToAU297e\n-----END PRIVATE KEY-----\n",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/GHpRVvpGCezi\nK33vzeOvzPaVcNL/+U0wrAcyLDQGlaDnY/k/mjeq6XMr0l+IAapukBaI/cFUsx1r\npTnIByGyMJ6ibS9ywHygjk0imuKOtSioiFsxCa7w9cOJe8tHyugIjQWm6vELqGAk\njt9GNy1uIODZVpmeF4qyhBFcCXnbOZFLkKeNKx4V9xQcpZ7gyjvVUuDWnuPT9sLv\n5zwvi+OgBJOiksSZ03ShGgDMKwe+mnfRm/VtzfABlEdaf+hnnEsnVWm22/TVrHEk\nkZMlDH/QFh77Mf3l0bY0I5VhUfG5O/2/R+Z6X8ZWyZo+D9BF2eb2Lr71gP4FBoL/\nxCK64kEhAgMBAAECggEAApHLIl5qQRhk2SKUWpiQBU8FrOXaB5Q2skYRcyWXdQz8\ndMcqIu2UCrYsOGOgVBuCg/D2DJxmqW4esCdNJ3yeZULfNk11w/shgBefFMm0l0dQ\nisDtSd5KduenFOJJI1mojbsaX1pQtsNN1Pqtfh2nJ0kpOUZ4RTZ7KGXJjKK2NKPY\n/6WFYPpAwpr0h5utvqmVgRvkZ/SZm4dDF2q8v/S+b//Ws1Vd5T4Ng4k/aUDontpT\nwxT3Riy0O3dDO8DETM/jj5FMKNpVByM4ZfbN7fYEz9qeR9x4KdFWSo6L+a5E4PZv\nF+xvLqRcFiLqrcnXiCCViGde13KjqAr0UNmkQC+EDQKBgQDwjs/phhcMuFmEySi3\nK5LT0/6t9R4ii0nC9Uu4NaY9WiNlKAoy9Ne3whl9zOGzmRY+Fe9DAmGPFg1cWyRo\nGyUbuI2w/3fM8Hx3Fix+pT+mGNjn2K0pdy87NtAlTtjyrmWkOfPm+fOdVnBi6+Ml\nugFGxBwBkJ6q6ff0b5fGN4RyRwKBgQDLXNT5NeRnfkyhh2VFifb2YKkzFiWyCyBg\nZBQXaojMoTY5ueBdPbUecGN+G07aRJ2kx08uCY/EQYCEccjHyeB3R+0EjyiaxEnF\n33//tywzxvZ8jjUo2oZuXgO3iPXQ0SEnnIMYAtTJ7SyYsZl7Ala9SC4CIqNiPWKR\n+hdRnve9VwKBgGbeGyiYT5j/6D/xKXkSqAnvWLQY4pcRCyzUalnOj1UjC4nBUoMx\n0mFhHjd+enGroChShusXxJJEctgwnWPrX7X3+Jdc12UK3Z6rG8HYdlxXucGDFaFq\ntwbSTLX3fqxgSVSt94+pCTUZ9ptGle7XGJ6jU/qTVlZuELs1USjRKtEXAoGBAMNF\nG1dEsVHTC6Aa01pndJT1EeL1BDMmzergjg5CBKOAtQHPAqplg1F8F3zSme+p7Tl5\nDAWntr17K/2BCIsWxIukq+kx0YpyqmfvCQgxCaeaB7poDpFw6550dds5Dth4xv4z\nIgnfRhWywJzKBBcCkuljspHoUrwVN132J4f/PeE3AoGBAMO918DIrrHdGyaHSA0E\nK0gEY2dMUuAmaMeDEFtVHoZtugUUC6ZFMOgP4fQIjPnL52igeW6IUs96du2d+GIC\nqdlMb7Tp/lTxvaRGqUcAVhYbYaawonFK7QU8kNygU1IqWljXa+S+nR1O/tCmG2/n\n34ZJZ4VSGVZ/GX9IToAU297e\n-----END PRIVATE KEY-----\n",
           "client_email":
               "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
           "client_id": "112777526185284576732",
@@ -63,6 +88,14 @@ class CourseDetailScreen extends StatelessWidget {
         return;
       }
 
+      String pushTitle = notificationType == 'homework'
+          ? '📝 Temă Nouă în $title'
+          : '📚 Lecție Nouă în $title';
+
+      String pushBody = notificationType == 'homework'
+          ? 'A fost încărcată tema: "$lessonTitle"'
+          : 'A fost adăugată înregistrarea cursului: "$lessonTitle"';
+
       final String fcmV1Url =
           'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
 
@@ -72,9 +105,10 @@ class CourseDetailScreen extends StatelessWidget {
         // Salvare notificare in-app
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': userId,
-          'title': 'Lecție nouă în $title',
-          'body': 'A fost adăugată: "$lessonTitle"',
+          'title': pushTitle,
+          'body': pushBody,
           'courseId': courseId,
+          'type': notificationType,
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
@@ -95,10 +129,7 @@ class CourseDetailScreen extends StatelessWidget {
               body: jsonEncode({
                 'message': {
                   'token': fcmToken,
-                  'notification': {
-                    'title': 'Lecție nouă în $title 📚',
-                    'body': 'A fost adăugată lecția: "$lessonTitle"',
-                  },
+                  'notification': {'title': pushTitle, 'body': pushBody},
                   'android': {
                     'priority': 'HIGH',
                     'notification': {'sound': 'default'},
@@ -114,6 +145,7 @@ class CourseDetailScreen extends StatelessWidget {
                   },
                   'data': {
                     'courseId': courseId,
+                    'notificationType': notificationType,
                     'click_action': 'FLUTTER_NOTIFICATION_CLICK',
                   },
                 },
@@ -128,27 +160,6 @@ class CourseDetailScreen extends StatelessWidget {
       client.close();
     } catch (e) {
       debugPrint("Eroare la trimiterea notificarii FCM v1: $e");
-    }
-  }
-
-  Future<void> _openUrl(String urlString, BuildContext context) async {
-    if (urlString.trim().isEmpty) return;
-    final Uri url = Uri.parse(urlString.trim());
-    try {
-      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Nu s-a putut deschide link-ul: $urlString'),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Eroare: $e')));
-      }
     }
   }
 
@@ -206,130 +217,210 @@ class CourseDetailScreen extends StatelessWidget {
     final contentController = TextEditingController();
     final videoUrlController = TextEditingController();
     final pdfUrlController = TextEditingController();
+    String notificationType = 'lesson';
 
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            "Adaugă Lecție Nouă",
-            style: TextStyle(
-              color: Color(0xff42153e),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: SizedBox(
-            width: 480,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: "Titlu Lecție",
-                      hintText: "ex: Lecția 1 - Introducere",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: contentController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: "Conținut / Explicații Teoretice",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: videoUrlController,
-                    keyboardType: TextInputType.url,
-                    decoration: const InputDecoration(
-                      labelText: "Link Video Bunny Embed",
-                      hintText: "https://iframe.mediadelivery.net/embed/...",
-                      prefixIcon: Icon(
-                        Icons.video_library,
-                        color: Colors.purple,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                "Adaugă Lecție Nouă",
+                style: TextStyle(
+                  color: Color(0xff42153e),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SizedBox(
+                width: 480,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: titleController,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: "Titlu Lecție",
+                          hintText: "ex: Lecția 1 - Introducere",
+                          border: OutlineInputBorder(),
+                        ),
                       ),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: pdfUrlController,
-                    keyboardType: TextInputType.url,
-                    decoration: const InputDecoration(
-                      labelText: "Link Document PDF",
-                      hintText: "https://.../fisier.pdf",
-                      prefixIcon: Icon(Icons.picture_as_pdf, color: Colors.red),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Anulează",
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final String lTitle = titleController.text.trim();
-                if (lTitle.isNotEmpty) {
-                  // 1. Salvare Lecție în Firestore
-                  await FirebaseFirestore.instance
-                      .collection('courses')
-                      .doc(courseId)
-                      .collection('lessons')
-                      .add({
-                        'title': lTitle,
-                        'content': contentController.text.trim(),
-                        'videoUrl': videoUrlController.text.trim(),
-                        'pdfUrl': pdfUrlController.text.trim(),
-                        'createdAt': FieldValue.serverTimestamp(),
-                      });
-
-                  // 2. Trimitere Push Notification la toți elevii
-                  await _sendPushToStudents(lTitle);
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Lecție salvată și notificări trimise!'),
+                      const SizedBox(height: 14),
+                      const Text(
+                        "Tipul notificării trimise elevilor:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Color(0xff42153e),
+                        ),
                       ),
-                    );
-                    Navigator.pop(context);
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xff42153e),
-                foregroundColor: Colors.white,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                "📚 Lecție / Teorie",
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              value: 'lesson',
+                              groupValue: notificationType,
+                              onChanged: (val) {
+                                setDialogState(() => notificationType = val!);
+                              },
+                            ),
+                          ),
+                          Expanded(
+                            child: RadioListTile<String>(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                "📝 Temă PDF",
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              value: 'homework',
+                              groupValue: notificationType,
+                              onChanged: (val) {
+                                setDialogState(() => notificationType = val!);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: contentController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: "Conținut / Explicații Teoretice",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: videoUrlController,
+                        keyboardType: TextInputType.url,
+                        decoration: const InputDecoration(
+                          labelText: "Link Video Bunny Embed (Teorie)",
+                          hintText:
+                              "https://iframe.mediadelivery.net/embed/...",
+                          prefixIcon: Icon(
+                            Icons.video_library,
+                            color: Colors.purple,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: pdfUrlController,
+                        keyboardType: TextInputType.url,
+                        decoration: const InputDecoration(
+                          labelText: "Link Document PDF (Temă / Suport)",
+                          hintText: "https://.../fisier.pdf",
+                          prefixIcon: Icon(
+                            Icons.picture_as_pdf,
+                            color: Colors.red,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: const Text("Salvează Lecția"),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Anulează",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final String lTitle = titleController.text.trim();
+                    if (lTitle.isNotEmpty) {
+                      await FirebaseFirestore.instance
+                          .collection('courses')
+                          .doc(courseId)
+                          .collection('lessons')
+                          .add({
+                            'title': lTitle,
+                            'content': contentController.text.trim(),
+                            'videoUrl': videoUrlController.text.trim(),
+                            'pdfUrl': pdfUrlController.text.trim(),
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
+
+                      await _sendPushToStudents(
+                        lessonTitle: lTitle,
+                        notificationType: notificationType,
+                      );
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Lecție salvată și notificări trimise!',
+                            ),
+                          ),
+                        );
+                        Navigator.pop(context);
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff42153e),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text("Salvează Lecția"),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
+  Future<void> _clearBadgeAndMarkAsRead() async {
+    try {
+      // 1. Șterge bulina roșie de pe iconița aplicației
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
+        FlutterAppBadger.removeBadge();
+      }
+
+      // 2. Marchează notificările necitite din Firestore ca fiind citite
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        var unreadDocs = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: currentUser.uid)
+            .where('courseId', isEqualTo: courseId)
+            .where('isRead', isEqualTo: false)
+            .get();
+
+        for (var doc in unreadDocs.docs) {
+          await doc.reference.update({'isRead': true});
+        }
+      }
+    } catch (e) {
+      debugPrint("Eroare la curățarea notificărilor: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    _clearBadgeAndMarkAsRead(); // 👈 AICI: Curăță badge-ul și notificările când se încarcă ecranul cursului
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),
       appBar: AppBar(
@@ -504,58 +595,126 @@ class CourseDetailScreen extends StatelessWidget {
                               )
                             : null,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
+                          // TAB-URI PENTRU TEORIE ȘI TEMĂ
+                          DefaultTabController(
+                            length: 2,
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (lessonContent.isNotEmpty) ...[
-                                  Text(
-                                    lessonContent,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      height: 1.4,
+                                const TabBar(
+                                  labelColor: Color(0xff42153e),
+                                  unselectedLabelColor: Colors.grey,
+                                  indicatorColor: Color(0xff42153e),
+                                  tabs: [
+                                    Tab(
+                                      icon: Icon(Icons.menu_book, size: 18),
+                                      text: "Teorie & Aplicații",
                                     ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                ],
-                                if (videoUrl.isNotEmpty) ...[
-                                  const Text(
-                                    "📹 Video Lecție",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: Color(0xff42153e),
+                                    Tab(
+                                      icon: Icon(Icons.assignment, size: 18),
+                                      text: "Temă (PDF)",
                                     ),
+                                  ],
+                                ),
+                                SizedBox(
+                                  height: 500,
+                                  child: TabBarView(
+                                    children: [
+                                      // TAB 1: TEORIE & ÎNREGISTRARE VIDEO
+                                      SingleChildScrollView(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            if (lessonContent.isNotEmpty) ...[
+                                              Text(
+                                                lessonContent,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  height: 1.4,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 16),
+                                            ],
+                                            if (videoUrl.isNotEmpty) ...[
+                                              const Text(
+                                                "📹 Înregistrare Curs",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                  color: Color(0xff42153e),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              UniversalEmbeddedViewer(
+                                                viewId: 'video_$lessonId',
+                                                url: videoUrl,
+                                                height: 280,
+                                              ),
+                                            ] else ...[
+                                              const Center(
+                                                child: Padding(
+                                                  padding: EdgeInsets.all(32.0),
+                                                  child: Text(
+                                                    "Nu există înregistrare video încărcată pentru această lecție.",
+                                                    style: TextStyle(
+                                                      color: Colors.grey,
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+
+                                      // TAB 2: TEMĂ & SUPORT DE CURS PDF
+                                      SingleChildScrollView(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            if (pdfUrl.isNotEmpty) ...[
+                                              UniversalEmbeddedViewer(
+                                                viewId: 'pdf_$lessonId',
+                                                url:
+                                                    pdfUrl.contains(
+                                                          'drive.google.com',
+                                                        ) ||
+                                                        pdfUrl.contains(
+                                                          'firebasestorage',
+                                                        )
+                                                    ? 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(pdfUrl)}'
+                                                    : pdfUrl,
+                                                height: 420,
+                                              ),
+                                            ] else ...[
+                                              const Center(
+                                                child: Padding(
+                                                  padding: EdgeInsets.all(32.0),
+                                                  child: Text(
+                                                    "Nu a fost încărcat niciun fișier PDF pentru temă încă.",
+                                                    style: TextStyle(
+                                                      color: Colors.grey,
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  UniversalEmbeddedViewer(
-                                    viewId: 'video_$lessonId',
-                                    url: videoUrl,
-                                    height: 250,
-                                  ),
-                                  const SizedBox(height: 16),
-                                ],
-                                if (pdfUrl.isNotEmpty) ...[
-                                  const Text(
-                                    "📄 Suport de Curs (PDF)",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: Color(0xff42153e),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  UniversalEmbeddedViewer(
-                                    viewId: 'pdf_$lessonId',
-                                    url:
-                                        pdfUrl.contains('drive.google.com') ||
-                                            pdfUrl.contains('firebasestorage')
-                                        ? 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(pdfUrl)}'
-                                        : pdfUrl,
-                                    height: 450,
-                                  ),
-                                ],
+                                ),
                               ],
                             ),
                           ),
