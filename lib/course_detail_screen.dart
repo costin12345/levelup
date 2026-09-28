@@ -26,24 +26,23 @@ class CourseDetailScreen extends StatelessWidget {
     required this.role,
   });
 
-  // Funcție de trimitere Push Notification prin FCM API v1 către toți elevii aprobați
   Future<void> _sendPushToStudents(String lessonTitle) async {
     try {
-      // 1. Credentials din fișierul Service Account JSON descărcat din Firebase Console
       final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
         {
           "type": "service_account",
           "project_id": "level-up-19583",
           "private_key_id": "be2af79dfbe281af83316b25ea293ebfc1beee3a",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/GHpRVvpGCezi\nK33vzeOvzPaVcNL/+U0wrAcyLDQGlaDnY/k/mjeq6XMr0l+IAapukBaI/cFUsx1r\npTnIByGyMJ6ibS9ywHygjk0imuKOtSioiFsxCa7w9cOJe8tHyugIjQWm6vELqGAk\njt9GNy1uIODZVpmeF4qyhBFcCXnbOZFLkKeNKx4V9xQcpZ7gyjvVUuDWnuPT9sLv\n5zwvi+OgBJOiksSZ03ShGgDMKwe+mnfRm/VtzfABlEdaf+hnnEsnVWm22/TVrHEk\nkZMlDH/QFh77Mf3l0bY0I5VhUfG5O/2/R+Z6X8ZWyZo+D9BF2eb2Lr71gP4FBoL/\nxCK64kEhAgMBAAECggEAApHLIl5qQRhk2SKUWpiQBU8FrOXaB5Q2skYRcyWXdQz8\ndMcqIu2UCrYsOGOgVBuCg/D2DJxmqW4esCdNJ3yeZULfNk11w/shgBefFMm0l0dQ\nisDtSd5KduenFOJJI1mojbsaX1pQtsNN1Pqtfh2nJ0kpOUZ4RTZ7KGXJjKK2NKPY\n/6WFYPpAwpr0h5utvqmVgRvkZ/SZm4dDF2q8v/S+b//Ws1Vd5T4Ng4k/aUDontpT\nwxT3Riy0O3dDO8DETM/jj5FMKNpVByM4ZfbN7fYEz9qeR9x4KdFWSo6L+a5E4PZv\nF+xvLqRcFiLqrcnXiCCViGde13KjqAr0UNmkQC+EDQKBgQDwjs/phhcMuFmEySi3\nK5LT0/6t9R4ii0nC9Uu4NaY9WiNlKAoy9Ne3whl9zOGzmRY+Fe9DAmGPFg1cWyRo\nGyUbuI2w/3fM8Hx3Fix+pT+mGNjn2K0pdy87NtAlTtjyrmWkOfPm+fOdVnBi6+Ml\nugFGxBwBkJ6q6ff0b5fGN4RyRwKBgQDLXNT5NeRnfkyhh2VFifb2YKkzFiWyCyBg\nZBQXaojMoTY5ueBdPbUecGN+G07aRJ2kx08uCY/EQYCEccjHyeB3R+0EjyiaxEnF\n33//tywzxvZ8jjUo2oZuXgO3iPXQ0SEnnIMYAtTJ7SyYsZl7Ala9SC4CIqNiPWKR\n+hdRnve9VwKBgGbeGyiYT5j/6D/xKXkSqAnvWLQY4pcRCyzUalnOj1UjC4nBUoMx\n0mFhHjd+enGroChShusXxJJEctgwnWPrX7X3+Jdc12UK3Z6rG8HYdlxXucGDFaFq\ntwbSTLX3fqxgSVSt94+pCTUZ9ptGle7XGJ6jU/qTVlZuELs1USjRKtEXAoGBAMNF\nG1dEsVHTC6Aa01pndJT1EeL1BDMmzergjg5CBKOAtQHPAqplg1F8F3zSme+p7Tl5\nDAWntr17K/2BCIsWxIukq+kx0YpyqmfvCQgxCaeaB7poDpFw6550dds5Dth4xv4z\nIgnfRhWywJzKBBcCkuljspHoUrwVN132J4f/PeE3AoGBAMO918DIrrHdGyaHSA0E\nK0gEY2dMUuAmaMeDEFtVHoZtugUUC6ZFMOgP4fQIjPnL52igeW6IUs96du2d+GIC\nqdlMb7Tp/lTxvaRGqUcAVhYbYaawonFK7QU8kNygU1IqWljXa+S+nR1O/tCmG2/n\n34ZJZ4VSGVZ/GX9IToAU297e\n-----END PRIVATE KEY-----\n",
-          "client_email": "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/GHpRVvpGCezi\nK33vzeOvzPaVcNL/+U0wrAcyLDQGlaDnY/k/mjeq6XMr0l+IAapukBaI/cFUsx1r\npTnIByGyMJ6ibS9ywHygjk0imuKOtSioiFsxCa7w9cOJe8tHyugIjQWm6vELqGAk\njt9GNy1uIODZVpmeF4qyhBFcCXnbOZFLkKeNKx4V9xQcpZ7gyjvVUuDWnuPT9sLv\n5zwvi+OgBJOiksSZ03ShGgDMKwe+mnfRm/VtzfABlEdaf+hnnEsnVWm22/TVrHEk\nkZMlDH/QFh77Mf3l0bY0I5VhUfG5O/2/R+Z6X8ZWyZo+D9BF2eb2Lr71gP4FBoL/\nxCK64kEhAgMBAAECggEAApHLIl5qQRhk2SKUWpiQBU8FrOXaB5Q2skYRcyWXdQz8\ndMcqIu2UCrYsOGOgVBuCg/D2DJxmqW4esCdNJ3yeZULfNk11w/shgBefFMm0l0dQ\nisDtSd5KduenFOJJI1mojbsaX1pQtsNN1PqtsNN1Pqtfh2nJ0kpOUZ4RTZ7KGXJjKK2NKPY\n/6WFYPpAwpr0h5utvqmVgRvkZ/SZm4dDF2q8v/S+b//Ws1Vd5T4Ng4k/aUDontpT\nwxT3Riy0O3dDO8DETM/jj5FMKNpVByM4ZfbN7fYEz9qeR9x4KdFWSo6L+a5E4PZv\nF+xvLqRcFiLqrcnXiCCViGde13KjqAr0UNmkQC+EDQKBgQDwjs/phhcMuFmEySi3\nK5LT0/6t9R4ii0nC9Uu4NaY9WiNlKAoy9Ne3whl9zOGzmRY+Fe9DAmGPFg1cWyRo\nGyUbuI2w/3fM8Hx3Fix+pT+mGNjn2K0pdy87NtAlTtjyrmWkOfPm+fOdVnBi6+Ml\nugFGxBwBkJ6q6ff0b5fGN4RyRwKBgQDLXNT5NeRnfkyhh2VFifb2YKkzFiWyCyBg\nZBQXaojMoTY5ueBdPbUecGN+G07aRJ2kx08uCY/EQYCEccjHyeB3R+0EjyiaxEnF\n33//tywzxvZ8jjUo2oZuXgO3iPXQ0SEnnIMYAtTJ7SyYsZl7Ala9SC4CIqNiPWKR\n+hdRnve9VwKBgGbeGyiYT5j/6D/xKXkSqAnvWLQY4pcRCyzUalnOj1UjC4nBUoMx\n0mFhHjd+enGroChShusXxJJEctgwnWPrX7X3+Jdc12UK3Z6rG8HYdlxXucGDFaFq\ntwbSTLX3fqxgSVSt94+pCTUZ9ptGle7XGJ6jU/qTVlZuELs1USjRKtEXAoGBAMNF\nG1dEsVHTC6Aa01pndJT1EeL1BDMmzergjg5CBKOAtQHPAqplg1F8F3zSme+p7Tl5\nDAWntr17K/2BCIsWxIukq+kx0YpyqmfvCQgxCaeaB7poDpFw6550dds5Dth4xv4z\nIgnfRhWywJzKBBcCkuljspHoUrwVN132J4f/PeE3AoGBAMO918DIrrHdGyaHSA0E\nK0gEY2dMUuAmaMeDEFtVHoZtugUUC6ZFMOgP4fQIjPnL52igeW6IUs96du2d+GIC\nqdlMb7Tp/lTxvaRGqUcAVhYbYaawonFK7QU8kNygU1IqWljXa+S+nR1O/tCmG2/n\n34ZJZ4VSGVZ/GX9IToAU297e\n-----END PRIVATE KEY-----\n",
+          "client_email":
+              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
           "client_id": "112777526185284576732",
           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
           "token_uri": "https://oauth2.googleapis.com/token",
-          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+          "auth_provider_x509_cert_url":
+              "https://www.googleapis.com/oauth2/v1/certs",
           "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
-          "universe_domain": "googleapis.com"
-
+          "universe_domain": "googleapis.com",
         },
       );
 
@@ -53,7 +52,6 @@ class CourseDetailScreen extends StatelessWidget {
         scopes,
       );
 
-      // 2. Găsim toți elevii aprobați la acest curs
       final enrollments = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('courseId', isEqualTo: courseId)
@@ -91,7 +89,6 @@ class CourseDetailScreen extends StatelessWidget {
           String? fcmToken = uData?['fcmToken'];
 
           if (fcmToken != null && fcmToken.isNotEmpty) {
-            // 3. Trimitere cerere FCM API v1 cu payload corectat
             final response = await client.post(
               Uri.parse(fcmV1Url),
               headers: {'Content-Type': 'application/json'},
@@ -104,25 +101,15 @@ class CourseDetailScreen extends StatelessWidget {
                   },
                   'android': {
                     'priority': 'HIGH',
-                    'notification': {
-                      'sound': 'default',
-                      'default_vibrate_timings': true,
-                    },
+                    'notification': {'sound': 'default'},
                   },
                   'apns': {
                     'headers': {
                       'apns-priority': '10',
-                      'apns-push-type': 'alert', // OBLIGATORIU pentru notificări de tip pop-up
+                      'apns-push-type': 'alert',
                     },
                     'payload': {
-                      'aps': {
-                        'alert': {
-                          'title': 'Lecție nouă în $title 📚',
-                          'body': 'A fost adăugată lecția: "$lessonTitle"',
-                        },
-                        'sound': 'default',
-                        'badge': 1,
-                      },
+                      'aps': {'sound': 'default', 'badge': 1},
                     },
                   },
                   'data': {
@@ -166,10 +153,10 @@ class CourseDetailScreen extends StatelessWidget {
   }
 
   Future<void> _deleteLesson(
-      BuildContext context,
-      String lessonId,
-      String lessonTitle,
-      ) async {
+    BuildContext context,
+    String lessonId,
+    String lessonTitle,
+  ) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -309,12 +296,12 @@ class CourseDetailScreen extends StatelessWidget {
                       .doc(courseId)
                       .collection('lessons')
                       .add({
-                    'title': lTitle,
-                    'content': contentController.text.trim(),
-                    'videoUrl': videoUrlController.text.trim(),
-                    'pdfUrl': pdfUrlController.text.trim(),
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
+                        'title': lTitle,
+                        'content': contentController.text.trim(),
+                        'videoUrl': videoUrlController.text.trim(),
+                        'pdfUrl': pdfUrlController.text.trim(),
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
 
                   // 2. Trimitere Push Notification la toți elevii
                   await _sendPushToStudents(lTitle);
@@ -355,12 +342,12 @@ class CourseDetailScreen extends StatelessWidget {
       ),
       floatingActionButton: role == 'teacher'
           ? FloatingActionButton.extended(
-        onPressed: () => _showAddLessonDialog(context),
-        backgroundColor: const Color(0xff42153e),
-        foregroundColor: Colors.amber,
-        icon: const Icon(Icons.add),
-        label: const Text("Adaugă Lecție"),
-      )
+              onPressed: () => _showAddLessonDialog(context),
+              backgroundColor: const Color(0xff42153e),
+              foregroundColor: Colors.amber,
+              icon: const Icon(Icons.add),
+              label: const Text("Adaugă Lecție"),
+            )
           : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -505,16 +492,16 @@ class CourseDetailScreen extends StatelessWidget {
                         ),
                         trailing: role == 'teacher'
                             ? IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                          ),
-                          onPressed: () => _deleteLesson(
-                            context,
-                            lessonId,
-                            lessonTitle,
-                          ),
-                        )
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _deleteLesson(
+                                  context,
+                                  lessonId,
+                                  lessonTitle,
+                                ),
+                              )
                             : null,
                         children: [
                           Padding(
@@ -562,8 +549,8 @@ class CourseDetailScreen extends StatelessWidget {
                                   UniversalEmbeddedViewer(
                                     viewId: 'pdf_$lessonId',
                                     url:
-                                    pdfUrl.contains('drive.google.com') ||
-                                        pdfUrl.contains('firebasestorage')
+                                        pdfUrl.contains('drive.google.com') ||
+                                            pdfUrl.contains('firebasestorage')
                                         ? 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(pdfUrl)}'
                                         : pdfUrl,
                                     height: 450,
@@ -630,8 +617,8 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
       child: kIsWeb
           ? getWebIframe(widget.viewId, widget.url)
           : (_mobileController != null
-          ? WebViewWidget(controller: _mobileController!)
-          : const Center(child: CircularProgressIndicator())),
+                ? WebViewWidget(controller: _mobileController!)
+                : const Center(child: CircularProgressIndicator())),
     );
   }
 }
