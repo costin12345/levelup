@@ -1,119 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-import 'login_screen.dart';
-//import 'package0:cloud_firestore/cloud_firestore.dart';
-import 'main.dart';
-
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
-
-Future<void> _notifyTeacherAboutNewUser({
-  required String studentName,
-  required String studentEmail,
-}) async {
-  try {
-    final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson({
-      "type": "service_account",
-      "project_id": "level-up-19583",
-      "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
-      "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\n/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\nFQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\nUGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\nSFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
-      "client_email":
-          "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
-      "client_id": "112777526185284576732",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url":
-          "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
-      "universe_domain": "googleapis.com",
-    });
-
-    final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-    final client = await auth.clientViaServiceAccount(
-      serviceAccountCredentials,
-      scopes,
-    );
-
-    // Căutăm profesorii
-    final teachersDocs = await FirebaseFirestore.instance
-        .collection('users')
-        .where('role', whereIn: ['teacher', 'Teacher'])
-        .get();
-
-    if (teachersDocs.docs.isEmpty) {
-      client.close();
-      return;
-    }
-
-    final String fcmV1Url =
-        'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
-
-    for (var teacherDoc in teachersDocs.docs) {
-      var tData = teacherDoc.data();
-      String? teacherFcmToken = tData['fcmToken'];
-      String teacherId = teacherDoc.id;
-
-      // Salvăm notificarea în Firestore pentru profesor
-      await FirebaseFirestore.instance.collection('notifications').add({
-        'userId': teacherId,
-        'title': '👤 Cont nou creat!',
-        'body':
-            '$studentName ($studentEmail) a creat un cont și așteaptă aprobarea.',
-        'isRead': false,
-        'type': 'user_registration',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // Calculăm numărul de notificări necitite
-      final unreadSnap = await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('userId', isEqualTo: teacherId)
-          .where('isRead', isEqualTo: false)
-          .get();
-      int unreadCount = unreadSnap.docs.length;
-
-      // Trimitem Push Notification
-      if (teacherFcmToken != null && teacherFcmToken.isNotEmpty) {
-        await client.post(
-          Uri.parse(fcmV1Url),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'message': {
-              'token': teacherFcmToken,
-              'notification': {
-                'title': '👤 Cont nou creat!',
-                'body':
-                    '$studentName ($studentEmail) așteaptă aprobarea accesului.',
-              },
-              'android': {
-                'priority': 'HIGH',
-                'notification': {'sound': 'default'},
-              },
-              'apns': {
-                'headers': {'apns-priority': '10', 'apns-push-type': 'alert'},
-                'payload': {
-                  'aps': {'sound': 'default', 'badge': unreadCount},
-                },
-              },
-              'data': {
-                'type': 'user_registration',
-                'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-              },
-            },
-          }),
-        );
-      }
-    }
-    client.close();
-  } catch (e) {
-    debugPrint("Eroare la notificarea profesorului pentru cont nou: $e");
-  }
-}
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -123,318 +13,247 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
-
-  String _selectedRole = 'student';
-  bool _isPasswordVisible = false;
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _register() async {
-    String name = _nameController.text.trim();
-    String email = _emailController.text.trim();
-    String password = _passwordController.text;
-    String confirmPassword = _confirmPasswordController.text;
+  // Funcție de notificare Push către profesori pentru cont nou
+  Future<void> _notifyTeacherAboutNewUser({
+    required String studentName,
+    required String studentEmail,
+  }) async {
+    try {
+      final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
+        {
+          "type": "service_account",
+          "project_id": "level-up-19583",
+          "private_key_id": "be2af79dfbe281af83316b25ea293ebfc1beee3a",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/GHpRVvpGCezi\nK33vzeOvzPaVcNL/+U0wrAcyLDQGlaDnY/k/mjeq6XMr0l+IAapukBaI/cFUsx1r\npTnIByGyMJ6ibS9ywHygjk0imuKOtSioiFsxCa7w9cOJe8tHyugIjQWm6vELqGAk\njt9GNy1uIODZVpmeF4qyhBFcCXnbOZFLkKeNKx4V9xQcpZ7gyjvVUuDWnuPT9sLv\n5zwvi+OgBJOiksSZ03ShGgDMKwe+mnfRm/VtzfABlEdaf+hnnEsnVWm22/TVrHEk\nkZMlDH/QFh77Mf3l0bY0I5VhUfG5O/2/R+Z6X8ZWyZo+D9BF2eb2Lr71gP4FBoL/\nxCK64kEhAgMBAAECggEAApHLIl5qQRhk2SKUWpiQBU8FrOXaB5Q2skYRcyWXdQz8\ndMcqIu2UCrYsOGOgVBuCg/D2DJxmqW4esCdNJ3yeZULfNk11w/shgBefFMm0l0dQ\nisDtSd5KduenFOJJI1mojbsaX1pQtsNN1PqtsNN1Pqtfh2nJ0kpOUZ4RTZ7KGXJjKK2NKPY\n/6WFYPpAwpr0h5utvqmVgRvkZ/SZm4dDF2q8v/S+b//Ws1Vd5T4Ng4k/aUDontpT\nwxT3Riy0O3dDO8DETM/jj5FMKNpVByM4ZfbN7fYEz9qeR9x4KdFWSo6L+a5E4PZv\nF+xvLqRcFiLqrcnXiCCViGde13KjqAr0UNmkQC+EDQKBgQDwjs/phhcMuFmEySi3\nK5LT0/6t9R4ii0nC9Uu4NaY9WiNlKAoy9Ne3whl9zOGzmRY+Fe9DAmGPFg1cWyRo\nGyUbuI2w/3fM8Hx3Fix+pT+mGNjn2K0pdy87NtAlTtjyrmWkOfPm+fOdVnBi6+Ml\nugFGxBwBkJ6q6ff0b5fGN4RyRwKBgQDLXNT5NeRnfkyhh2VFifb2YKkzFiWyCyBg\nZBQXaojMoTY5ueBdPbUecGN+G07aRJ2kx08uCY/EQYCEccjHyeB3R+0EjyiaxEnF\n33//tywzxvZ8jjUo2oZuXgO3iPXQ0SEnnIMYAtTJ7SyYsZl7Ala9SC4CIqNiPWKR\n+hdRnve9VwKBgGbeGyiYT5j/6D/xKXkSqAnvWLQY4pcRCyzUalnOj1UjC4nBUoMx\n0mFhHjd+enGroChShusXxJJEctgwnWPrX7X3+Jdc12UK3Z6rG8HYdlxXucGDFaFq\ntwbSTLX3fqxgSVSt94+pCTUZ9ptGle7XGJ6jU/qTVlZuELs1USjRKtEXAoGBAMNF\nG1dEsVHTC6Aa01pndJT1EeL1BDMmzergjg5CBKOAtQHPAqplg1F8F3zSme+p7Tl5\nDAWntr17K/2BCIsWxIukq+kx0YpyqmfvCQgxCaeaB7poDpFw6550dds5Dth4xv4z\nIgnfRhWywJzKBBcCkuljspHoUrwVN132J4f/PeE3AoGBAMO918DIrrHdGyaHSA0E\nK0gEY2dMUuAmaMeDEFtVHoZtugUUC6ZFMOgP4fQIjPnL52igeW6IUs96du2d+GIC\nqdlMb7Tp/lTxvaRGqUcAVhYbYaawonFK7QU8kNygU1IqWljXa+S+nR1O/tCmG2/n\n34ZJZ4VSGVZ/GX9IToAU297e\n-----END PRIVATE KEY-----\n",
+          "client_email":
+              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
+          "client_id": "112777526185284576732",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url":
+              "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
+          "universe_domain": "googleapis.com",
+        },
+      );
 
-    if (name.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
-        confirmPassword.isEmpty) {
-      _showSnackBar('Te rugăm să completezi toate câmpurile!');
-      return;
+      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+      final client = await auth.clientViaServiceAccount(
+        serviceAccountCredentials,
+        scopes,
+      );
+
+      // Căutăm profesorii din Firestore
+      final teachersDocs = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', whereIn: ['teacher', 'Teacher'])
+          .get();
+
+      debugPrint(
+        "🔍 Profesori găsiți la înregistrare: ${teachersDocs.docs.length}",
+      );
+
+      if (teachersDocs.docs.isEmpty) {
+        debugPrint(
+          "⚠️ Nu s-a găsit niciun profesor cu role == 'teacher' în Firestore!",
+        );
+        client.close();
+        return;
+      }
+
+      final String fcmV1Url =
+          'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
+
+      for (var teacherDoc in teachersDocs.docs) {
+        var tData = teacherDoc.data();
+        String? teacherFcmToken = tData['fcmToken'];
+        String teacherId = teacherDoc.id;
+
+        debugPrint(
+          "👨‍🏫 Profesor ID: $teacherId | FCM Token: $teacherFcmToken",
+        );
+
+        // 1. Salvare notificare in-app
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'userId': teacherId,
+          'title': '👤 Cont nou creat!',
+          'body':
+              '$studentName ($studentEmail) a creat un cont și așteaptă aprobarea.',
+          'isRead': false,
+          'type': 'user_registration',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // 2. Calculare badge necitit
+        final unreadSnap = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: teacherId)
+            .where('isRead', isEqualTo: false)
+            .get();
+        int unreadCount = unreadSnap.docs.length;
+
+        // 3. Trimitere Push Notification
+        if (teacherFcmToken != null && teacherFcmToken.isNotEmpty) {
+          final res = await client.post(
+            Uri.parse(fcmV1Url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'message': {
+                'token': teacherFcmToken,
+                'notification': {
+                  'title': '👤 Cont nou creat!',
+                  'body':
+                      '$studentName ($studentEmail) dorește aprobarea contului.',
+                },
+                'android': {
+                  'priority': 'HIGH',
+                  'notification': {'sound': 'default'},
+                },
+                'apns': {
+                  'headers': {'apns-priority': '10', 'apns-push-type': 'alert'},
+                  'payload': {
+                    'aps': {'sound': 'default', 'badge': unreadCount},
+                  },
+                },
+                'data': {
+                  'type': 'user_registration',
+                  'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                },
+              },
+            }),
+          );
+          debugPrint(
+            "🚀 Trimis notificare profesor pentru cont nou! Response status: ${res.statusCode}",
+          );
+        } else {
+          debugPrint(
+            "❌ Profesorul $teacherId NU are câmpul fcmToken salvat în Firestore!",
+          );
+        }
+      }
+      client.close();
+    } catch (e) {
+      debugPrint("Eroare la notificarea profesorului pentru cont nou: $e");
     }
+  }
 
-    if (password != confirmPassword) {
-      _showSnackBar('Parolele introduse nu se potrivesc!');
-      return;
-    }
+  Future<void> _handleRegister() async {
+    final name = _fullNameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (password.length < 6) {
-      _showSnackBar('Parola trebuie să aibă cel puțin 6 caractere!');
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Completează toate câmpurile.')),
+      );
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // 1. Creare cont în Firebase Auth
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
 
-      String uid = userCredential.user!.uid;
+      if (userCredential.user != null) {
+        // Salvare utilizator nou în Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'fullName': name,
+              'email': email,
+              'role': 'student',
+              'hasAccess': false, // Așteaptă aprobarea
+              'createdAt': FieldValue.serverTimestamp(),
+            });
 
-      // 2. Salvare profil în Firestore (Implicit FĂRĂ ACCES 'hasAccess: false')
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'uid': uid,
-        'fullName': name,
-        'email': email,
-        'role': _selectedRole,
-        'hasAccess': false, // Se aprobă manual din consola Firebase sau din panoul profesorului
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+        // TRIMITERE NOTIFICARE PUSH CĂTRE PROFESORI
+        await _notifyTeacherAboutNewUser(
+          studentName: name,
+          studentEmail: email,
+        );
 
-      if (!mounted) return;
-
-      // Intrarea în aplicație
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
-    } on FirebaseAuthException catch (e) {
-      _showSnackBar(e.message ?? 'A apărut o eroare la înregistrare.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Cont creat cu succes! Așteaptă aprobarea profesorului.',
+              ),
+            ),
+          );
+          Navigator.pop(context);
+        }
+      }
     } catch (e) {
-      _showSnackBar('Eroare: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Eroare la înregistrare: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showSnackBar(String message, {bool isError = true}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfffff8dc),
       appBar: AppBar(
+        title: const Text('Înregistrare Elev'),
         backgroundColor: const Color(0xff42153e),
-        toolbarHeight: 85,
-        titleSpacing: 16,
-        title: Row(
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Image.asset(
-                'images/logo.jpg',
-                height: 48,
-                fit: BoxFit.contain,
+            TextField(
+              controller: _fullNameController,
+              decoration: const InputDecoration(
+                labelText: 'Nume Complet',
+                border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(width: 14),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "LEVEL UP",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    letterSpacing: 1.2,
-                  ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Parolă',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _handleRegister,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff42153e),
+                  foregroundColor: Colors.white,
                 ),
-                Text(
-                  "YOUR GRADES",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Creează Cont'),
+              ),
             ),
           ],
-        ),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 450),
-            padding: const EdgeInsets.all(28.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff42153e).withOpacity(0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  "Creează un Cont Nou",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xff42153e),
-                  ),
-                ),
-                const SizedBox(height: 20), // Spațiu sub titlu
-
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'student',
-                      label: Text('Sunt Elev'),
-                      icon: Icon(Icons.school_outlined),
-                    ),
-                    ButtonSegment(
-                      value: 'teacher',
-                      label: Text('Sunt Profesor'),
-                      icon: Icon(Icons.person_outline),
-                    ),
-                  ],
-                  selected: {_selectedRole},
-                  onSelectionChanged: (newSelection) =>
-                      setState(() => _selectedRole = newSelection.first),
-                ),
-                const SizedBox(height: 20), // Spațiu sub selectorul de rol
-
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Nume și Prenume',
-                    prefixIcon: const Icon(
-                      Icons.person_outline,
-                      color: Color(0xff42153e),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16), // Spațiu între Nume și Email
-
-                TextField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Adresă de Email',
-                    prefixIcon: const Icon(
-                      Icons.email_outlined,
-                      color: Color(0xff42153e),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16), // Spațiu între Email și Parolă
-
-                TextField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Parolă',
-                    prefixIcon: const Icon(
-                      Icons.lock_outline,
-                      color: Color(0xff42153e),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () => setState(
-                        () => _isPasswordVisible = !_isPasswordVisible,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(
-                  height: 16,
-                ), // Spațiu între Parolă și Confirmare Parolă
-
-                TextField(
-                  controller: _confirmPasswordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Confirmă Parola',
-                    prefixIcon: const Icon(
-                      Icons.lock_reset,
-                      color: Color(0xff42153e),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28), // Spațiu înainte de buton
-
-                _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xff42153e),
-                        ),
-                      )
-                    : SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _register,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xff42153e),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Creează Contul',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                // --- AICI PUI NOUL SIZEDBOX ȘI ROW-UL PENTRU LOGIN ---
-                const SizedBox(
-                  height: 16,
-                ), // Spațiu între Buton și textul de Login
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      "Ai deja un cont?",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        "Autentifică-te",
-                        style: TextStyle(
-                          color: Color(0xff42153e),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
