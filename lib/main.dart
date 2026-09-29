@@ -6,7 +6,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'notifications_screen.dart';
 import 'courses_screen.dart';
@@ -218,24 +217,31 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ],
             ),
-            // Adaugă importul la începutul fișierului main.dart:
-
-            // În interiorul AppBar-ului din main.dart:
             actions: [
-              // BUTON UNIVERSAL DE NOTIFICĂRI PENTRU TOATE ROLURILE
-
               // BUTON UNIVERSAL DE NOTIFICĂRI ADAPTAT DUPĂ ROL
               if (currentUser != null)
                 StreamBuilder<int>(
                   stream: (() async* {
                     if (userRole == 'teacher') {
-                      // Ascultăm în timp real doar înscrierile în așteptare
-                      await for (var snapshot
+                      // Ascultăm modificările din colecția users pentru a actualiza instant
+                      await for (var _
                           in FirebaseFirestore.instance
-                              .collection('enrollments')
-                              .where('status', isEqualTo: 'pending')
+                              .collection('users')
                               .snapshots()) {
-                        yield snapshot.docs.length;
+                        var pendingUsers = await FirebaseFirestore.instance
+                            .collection('users')
+                            .where('role', isEqualTo: 'student')
+                            .where('hasAccess', isEqualTo: false)
+                            .get();
+
+                        var pendingEnrollments = await FirebaseFirestore
+                            .instance
+                            .collection('enrollments')
+                            .where('status', isEqualTo: 'pending')
+                            .get();
+
+                        yield pendingUsers.docs.length +
+                            pendingEnrollments.docs.length;
                       }
                     } else {
                       // Pentru elevi/părinți, păstrăm notificările obișnuite

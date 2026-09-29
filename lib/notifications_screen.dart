@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:lottie/lottie.dart';
 
 import 'course_detail_screen.dart';
 import 'lesson_detail_page.dart';
@@ -20,10 +21,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
   final TextEditingController _searchController = TextEditingController();
 
+  // 2. Funcție ajutătoare care alege animația Lottie în funcție de tipul notificării
+  Widget _getAnimationForType(String type, bool isRead) {
+    String assetPath = 'assets/animations/homework.json'; // Animație implicită (exemplu pentru teme/lecții)
+
+    if (type == 'user_registration') {
+      assetPath =
+          'assets/animations/user_reg.json'; // Animație pentru conturi noi
+    } else if (type == 'enrollment') {
+      assetPath =
+          'assets/animations/enrollment.json'; // Animație pentru înscrieri
+    }
+
+    return SizedBox(
+      width: 42,
+      height: 42,
+      child: Opacity(
+        opacity: isRead
+            ? 0.5
+            : 1.0, // Dacă e citită, o facem puțin mai transparentă
+        child: Lottie.asset(assetPath, fit: BoxFit.contain),
+      ),
+    );
+  }
+
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
-      // Numărăm strict doar înscrierile/cererile care sunt în așteptare
       QuerySnapshot pendingEnrollmentsSnap = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('status', isEqualTo: 'pending')
@@ -109,7 +133,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  // 🚀 Clic pe notificare: deschide direct pagina dedicată a lecției pe tab-ul corespunzător
   Future<void> _handleStudentNotificationClick(
     DocumentSnapshot notifDoc,
   ) async {
@@ -118,7 +141,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     String courseId = data['courseId'] ?? '';
     String lessonId = data['lessonId'] ?? '';
-    String notifType = data['type'] ?? 'lesson'; // 'lesson' sau 'homework'
+    String notifType = data['type'] ?? 'lesson';
     String notifTitle = data['title'] ?? 'Detalii Lecție';
 
     await FirebaseFirestore.instance
@@ -138,8 +161,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             courseId: courseId,
             lessonId: lessonId,
             lessonTitle: notifTitle,
-            initialTab:
-                notifType, // va selecta automat Tab-ul 'homework' sau 'lesson'
+            initialTab: notifType,
           ),
         ),
       );
@@ -239,12 +261,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         elevation: 2,
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Color(0xff42153e),
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 20,
+                          // Aici poți folosi o animație dedicată pentru conturi noi în panou
+                          leading: SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: Lottie.asset(
+                              'assets/animations/user_reg.json',
                             ),
                           ),
                           title: Text(
@@ -266,26 +288,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 ),
                                 tooltip: 'Aprobă Accesul',
                                 onPressed: () async {
-                                  // 1. Aprobăm accesul utilizatorului
                                   await FirebaseFirestore.instance
                                       .collection('users')
                                       .doc(uId)
                                       .update({'hasAccess': true});
 
-                                  // 2. Ștergem sau marcăm notificările legate de acest student ca citite/rezolvate
                                   var notifs = await FirebaseFirestore.instance
                                       .collection('notifications')
                                       .where(
                                         'userId',
                                         isEqualTo: currentUser!.uid,
-                                      ) // Notificările primite de profesor
-                                      .where(
-                                        'studentId',
-                                        isEqualTo: uId,
-                                      ) // Dacă salvezi studentId în notificare
+                                      )
+                                      .where('studentId', isEqualTo: uId)
                                       .get();
                                   for (var doc in notifs.docs) {
-                                    await doc.reference.delete(); // Sau .update({'isRead': true})
+                                    await doc.reference.delete();
                                   }
 
                                   _updateBadgeForUser();
@@ -299,7 +316,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 ),
                                 tooltip: 'Respinge Contul',
                                 onPressed: () =>
-                                    _confirmAndDeleteUser(uId, name), // Aceasta șterge deja și notificările în funcția ta _confirmAndDeleteUser!
+                                    _confirmAndDeleteUser(uId, name),
                               ),
                             ],
                           ),
@@ -381,6 +398,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 elevation: 2,
                                 margin: const EdgeInsets.only(bottom: 12),
                                 child: ListTile(
+                                  leading: SizedBox(
+                                    width: 36,
+                                    height: 36,
+                                    child: Lottie.asset(
+                                      'assets/animations/enrollment.json',
+                                    ),
+                                  ),
                                   title: Text(
                                     studentName,
                                     style: const TextStyle(
@@ -401,13 +425,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                           size: 30,
                                         ),
                                         onPressed: () async {
-                                          // 1. Actualizăm înscrierea
                                           await FirebaseFirestore.instance
                                               .collection('enrollments')
                                               .doc(reqId)
                                               .update({'status': 'approved'});
 
-                                          // 2. Ștergem notificarea asociată acestei cereri din Firestore
                                           var notifs = await FirebaseFirestore
                                               .instance
                                               .collection('notifications')
@@ -434,13 +456,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                           size: 30,
                                         ),
                                         onPressed: () async {
-                                          // 1. Ștergem cererea de înscriere
                                           await FirebaseFirestore.instance
                                               .collection('enrollments')
                                               .doc(reqId)
                                               .delete();
 
-                                          // 2. Ștergem notificarea corespunzătoare
                                           var notifs = await FirebaseFirestore
                                               .instance
                                               .collection('notifications')
@@ -653,6 +673,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               bool isRead = data['isRead'] ?? false;
               String title = data['title'] ?? 'Notificare';
               String body = data['body'] ?? '';
+              String type =
+                  data['type'] ?? 'homework'; // Tipul notificării din Firestore
 
               return Card(
                 elevation: isRead ? 1 : 3,
@@ -669,17 +691,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  leading: CircleAvatar(
-                    backgroundColor: isRead
-                        ? Colors.grey.shade300
-                        : const Color(0xff42153e),
-                    child: Icon(
-                      isRead
-                          ? Icons.notifications_none
-                          : Icons.notifications_active,
-                      color: isRead ? Colors.grey.shade700 : Colors.amber,
-                    ),
-                  ),
+                  // AICI AM ÎNLOCUIT ICONIȚA CU ANIMAȚIA LOTTIE CORESPUNZĂTOARE TIPULUI
+                  leading: _getAnimationForType(type, isRead),
                   title: Text(
                     title,
                     style: TextStyle(
