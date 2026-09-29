@@ -223,17 +223,46 @@ class _MainScreenState extends State<MainScreen> {
             // În interiorul AppBar-ului din main.dart:
             actions: [
               // BUTON UNIVERSAL DE NOTIFICĂRI PENTRU TOATE ROLURILE
+
               if (currentUser != null)
-                StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('notifications')
-                      .where('userId', isEqualTo: currentUser.uid)
-                      .where('isRead', isEqualTo: false)
-                      .snapshots(),
+                StreamBuilder<int>(
+                  stream: (() async* {
+                    // Dacă este profesor, numărăm cererile active din Tab 1 și Tab 2
+                    if (userRole == 'teacher') {
+                      await for (var _
+                          in FirebaseFirestore.instance
+                              .collection('users')
+                              .where('hasAccess', isEqualTo: false)
+                              .snapshots()) {
+                        var pendingUsers = await FirebaseFirestore.instance
+                            .collection('users')
+                            .where('role', isEqualTo: 'student')
+                            .where('hasAccess', isEqualTo: false)
+                            .get();
+
+                        var pendingEnrollments = await FirebaseFirestore
+                            .instance
+                            .collection('enrollments')
+                            .where('status', isEqualTo: 'pending')
+                            .get();
+
+                        yield pendingUsers.docs.length +
+                            pendingEnrollments.docs.length;
+                      }
+                    } else {
+                      // Pentru elevi/părinți, păstrăm numărătoarea clasică din notificări
+                      await for (var snapshot
+                          in FirebaseFirestore.instance
+                              .collection('notifications')
+                              .where('userId', isEqualTo: currentUser.uid)
+                              .where('isRead', isEqualTo: false)
+                              .snapshots()) {
+                        yield snapshot.docs.length;
+                      }
+                    }
+                  })(),
                   builder: (context, notifSnap) {
-                    int unreadCount = notifSnap.hasData
-                        ? notifSnap.data!.docs.length
-                        : 0;
+                    int unreadCount = notifSnap.data ?? 0;
 
                     return Stack(
                       alignment: Alignment.center,
@@ -254,9 +283,8 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                             );
 
-                            // Dacă profesorul a apăsat pe o notificare de aprobare, deschidem dialogul de aprobări
                             if (result == 'open_approval_center' && mounted) {
-                              _changeTab(1); // Merge pe tab-ul Cursuri
+                              _changeTab(1);
                             }
                           },
                         ),
