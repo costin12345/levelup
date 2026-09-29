@@ -20,6 +20,11 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
   final TextEditingController _searchController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _updateBadgeForUser(); // <--- Adaugă aici
+  }
 
   // 2. Funcție ajutătoare care alege animația Lottie în funcție de tipul notificării
   Widget _getAnimationForType(String type, bool isRead) {
@@ -46,9 +51,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _updateBadgeForUser() async {
+    // Pe Web sau alte platforme non-mobile nu există badge-uri native
     if (kIsWeb || currentUser == null) return;
     try {
-      // Numărăm strict doar notificările necitite ale profesorului din baza de date
+      // Numărăm strict doar notificările necitite ale utilizatorului curent din Firestore
       QuerySnapshot unreadNotifsSnap = await FirebaseFirestore.instance
           .collection('notifications')
           .where('userId', isEqualTo: currentUser!.uid)
