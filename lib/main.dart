@@ -84,6 +84,16 @@ Future<void> setupFCM() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // 👉 Adaugă ștergerea forțată aici, înainte de runApp
+  if (!kIsWeb) {
+    try {
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
+        FlutterAppBadger.removeBadge();
+      }
+    } catch (_) {}
+  }
+
   runApp(const LevelUpApp());
 }
 
