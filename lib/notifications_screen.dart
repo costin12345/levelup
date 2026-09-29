@@ -23,14 +23,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   // 2. Funcție ajutătoare care alege animația Lottie în funcție de tipul notificării
   Widget _getAnimationForType(String type, bool isRead) {
-    String assetPath = 'assets/animations/homework.json'; // Animație implicită (exemplu pentru teme/lecții)
+    String assetPath = 'images/animations/homework.json'; // Animație implicită (exemplu pentru teme/lecții)
 
     if (type == 'user_registration') {
       assetPath =
-          'assets/animations/user_reg.json'; // Animație pentru conturi noi
+          'images/animations/user_reg.json'; // Animație pentru conturi noi
     } else if (type == 'enrollment') {
       assetPath =
-          'assets/animations/enrollment.json'; // Animație pentru înscrieri
+          'images/animations/enrollment.json'; // Animație pentru înscrieri
     }
 
     return SizedBox(
@@ -48,12 +48,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
+      // 1. Numărăm conturile noi (elevi fără acces)
+      QuerySnapshot pendingUsersSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'student')
+          .where('hasAccess', isEqualTo: false)
+          .get();
+
+      // 2. Numărăm înscrierile în așteptare
       QuerySnapshot pendingEnrollmentsSnap = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('status', isEqualTo: 'pending')
           .get();
 
-      int unreadCount = pendingEnrollmentsSnap.docs.length;
+      // Suma totală exactă (fără erori sau +1 în plus)
+      int unreadCount =
+          pendingUsersSnap.docs.length + pendingEnrollmentsSnap.docs.length;
 
       if (await FlutterAppBadger.isAppBadgeSupported()) {
         if (unreadCount > 0) {
