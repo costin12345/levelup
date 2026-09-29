@@ -23,13 +23,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
-      final unreadSnap = await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('userId', isEqualTo: currentUser!.uid)
-          .where('isRead', isEqualTo: false)
+      // 1. Numărăm doar conturile noi de elevi care nu au acces
+      QuerySnapshot pendingUsersSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'student')
+          .where('hasAccess', isEqualTo: false)
           .get();
 
-      int unreadCount = unreadSnap.docs.length;
+      // 2. Numărăm doar înscrierile la cursuri care sunt în așteptare ('pending')
+      QuerySnapshot pendingEnrollmentsSnap = await FirebaseFirestore.instance
+          .collection('enrollments')
+          .where('status', isEqualTo: 'pending')
+          .get();
+
+      // Adunăm doar cererile reale care necesită atenția profesorului
+      int unreadCount =
+          pendingUsersSnap.docs.length + pendingEnrollmentsSnap.docs.length;
 
       if (await FlutterAppBadger.isAppBadgeSupported()) {
         if (unreadCount > 0) {
