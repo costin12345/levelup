@@ -27,10 +27,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (type == 'user_registration') {
       assetPath =
-          'images/animations/user_reg.json'; // Animație pentru conturi noi
+          'images/animations/enrollment.json'; // Animație pentru conturi noi
     } else if (type == 'enrollment') {
       assetPath =
-          'images/animations/enrollment.json'; // Animație pentru înscrieri
+          'images/animations/user_reg.json'; // Animație pentru înscrieri
     }
 
     return SizedBox(
@@ -276,7 +276,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             width: 36,
                             height: 36,
                             child: Lottie.asset(
-                              'assets/animations/user_reg.json',
+                              'images/animations/enrollment.json',
                             ),
                           ),
                           title: Text(
@@ -412,7 +412,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     width: 36,
                                     height: 36,
                                     child: Lottie.asset(
-                                      'assets/animations/enrollment.json',
+                                      'images/animations/enrollment.json',
                                     ),
                                   ),
                                   title: Text(

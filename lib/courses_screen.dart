@@ -636,10 +636,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     return Stack(
                       alignment: Alignment.center,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.notifications_active),
-                          onPressed: _showPendingRequestsDialog,
-                        ),
+                        // IconButton(
+                        //   icon: const Icon(Icons.notifications_active),
+                        //   onPressed: _showPendingRequestsDialog,
+                        // ),
                         if (totalPending > 0)
                           Positioned(
                             right: 8,
