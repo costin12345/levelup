@@ -48,20 +48,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
-      // 1. Numărăm conturile noi (elevi fără acces)
+      // 1. Numărăm doar elevii noi care așteaptă aprobarea (hasAccess: false)
       QuerySnapshot pendingUsersSnap = await FirebaseFirestore.instance
           .collection('users')
           .where('role', isEqualTo: 'student')
           .where('hasAccess', isEqualTo: false)
           .get();
 
-      // 2. Numărăm înscrierile în așteptare
+      // 2. Numărăm doar înscrierile în așteptare la cursuri
       QuerySnapshot pendingEnrollmentsSnap = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('status', isEqualTo: 'pending')
           .get();
 
-      // Suma totală exactă (fără erori sau +1 în plus)
+      // Suma totală exactă (fără userii vechi sau cei din gestiune)
       int unreadCount =
           pendingUsersSnap.docs.length + pendingEnrollmentsSnap.docs.length;
 

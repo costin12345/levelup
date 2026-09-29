@@ -244,7 +244,6 @@ class _MainScreenState extends State<MainScreen> {
                             pendingEnrollments.docs.length;
                       }
                     } else {
-                      // Pentru elevi/părinți, păstrăm notificările obișnuite
                       await for (var snapshot
                           in FirebaseFirestore.instance
                               .collection('notifications')
