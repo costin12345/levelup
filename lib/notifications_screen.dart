@@ -23,7 +23,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
-      // Numărăm exclusiv cererile de înscriere care au statusul 'pending'
+      // Numărăm strict doar înscrierile/cererile care sunt în așteptare
       QuerySnapshot pendingEnrollmentsSnap = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('status', isEqualTo: 'pending')
