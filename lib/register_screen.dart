@@ -177,7 +177,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 'notification': {'title': pushTitle, 'body': pushBody},
                 'android': {
                   'priority': 'HIGH',
-                  'notification': {'sound': 'default'},
+                  'notification': {
+                    'sound': 'default',
+                    'icon': '@images/fundal.jpeg',
+                  },
                 },
                 'apns': {
                   'headers': {'apns-priority': '10', 'apns-push-type': 'alert'},

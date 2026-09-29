@@ -224,33 +224,21 @@ class _MainScreenState extends State<MainScreen> {
             actions: [
               // BUTON UNIVERSAL DE NOTIFICĂRI PENTRU TOATE ROLURILE
 
+              // BUTON UNIVERSAL DE NOTIFICĂRI ADAPTAT DUPĂ ROL
               if (currentUser != null)
                 StreamBuilder<int>(
                   stream: (() async* {
-                    // Dacă este profesor, numărăm cererile active din Tab 1 și Tab 2
                     if (userRole == 'teacher') {
-                      await for (var _
+                      // Ascultăm în timp real doar înscrierile în așteptare
+                      await for (var snapshot
                           in FirebaseFirestore.instance
-                              .collection('users')
-                              .where('hasAccess', isEqualTo: false)
+                              .collection('enrollments')
+                              .where('status', isEqualTo: 'pending')
                               .snapshots()) {
-                        var pendingUsers = await FirebaseFirestore.instance
-                            .collection('users')
-                            .where('role', isEqualTo: 'student')
-                            .where('hasAccess', isEqualTo: false)
-                            .get();
-
-                        var pendingEnrollments = await FirebaseFirestore
-                            .instance
-                            .collection('enrollments')
-                            .where('status', isEqualTo: 'pending')
-                            .get();
-
-                        yield pendingUsers.docs.length +
-                            pendingEnrollments.docs.length;
+                        yield snapshot.docs.length;
                       }
                     } else {
-                      // Pentru elevi/părinți, păstrăm numărătoarea clasică din notificări
+                      // Pentru elevi/părinți, păstrăm notificările obișnuite
                       await for (var snapshot
                           in FirebaseFirestore.instance
                               .collection('notifications')
