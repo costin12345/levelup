@@ -15,12 +15,14 @@ import 'login_screen.dart';
 // --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI ---
 
 Future<void> clearAppBadge() async {
-  // Pe Web sau alte platforme non-mobile nu există badge-uri native
   if (kIsWeb) return;
 
   try {
     if (await FlutterAppBadger.isAppBadgeSupported()) {
-      FlutterAppBadger.removeBadge(); // Șterge bulina roșie de pe logo
+      // Dacă nu avem utilizator logat, ștergem sigur badge-ul să nu rămână resturi
+      if (FirebaseAuth.instance.currentUser == null) {
+        FlutterAppBadger.removeBadge();
+      }
     }
   } catch (e) {
     debugPrint("Eroare la ștergerea badge-ului: $e");
