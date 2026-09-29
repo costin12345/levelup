@@ -266,10 +266,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 ),
                                 tooltip: 'Aprobă Accesul',
                                 onPressed: () async {
+                                  // 1. Aprobăm accesul utilizatorului
                                   await FirebaseFirestore.instance
                                       .collection('users')
                                       .doc(uId)
                                       .update({'hasAccess': true});
+
+                                  // 2. Ștergem sau marcăm notificările legate de acest student ca citite/rezolvate
+                                  var notifs = await FirebaseFirestore.instance
+                                      .collection('notifications')
+                                      .where(
+                                        'userId',
+                                        isEqualTo: currentUser!.uid,
+                                      ) // Notificările primite de profesor
+                                      .where(
+                                        'studentId',
+                                        isEqualTo: uId,
+                                      ) // Dacă salvezi studentId în notificare
+                                      .get();
+                                  for (var doc in notifs.docs) {
+                                    await doc.reference.delete(); // Sau .update({'isRead': true})
+                                  }
+
                                   _updateBadgeForUser();
                                 },
                               ),
@@ -281,7 +299,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 ),
                                 tooltip: 'Respinge Contul',
                                 onPressed: () =>
-                                    _confirmAndDeleteUser(uId, name),
+                                    _confirmAndDeleteUser(uId, name), // Aceasta șterge deja și notificările în funcția ta _confirmAndDeleteUser!
                               ),
                             ],
                           ),
@@ -383,10 +401,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                           size: 30,
                                         ),
                                         onPressed: () async {
+                                          // 1. Actualizăm înscrierea
                                           await FirebaseFirestore.instance
                                               .collection('enrollments')
                                               .doc(reqId)
                                               .update({'status': 'approved'});
+
+                                          // 2. Ștergem notificarea asociată acestei cereri din Firestore
+                                          var notifs = await FirebaseFirestore
+                                              .instance
+                                              .collection('notifications')
+                                              .where(
+                                                'courseId',
+                                                isEqualTo: courseId,
+                                              )
+                                              .where(
+                                                'userId',
+                                                isEqualTo: currentUser!.uid,
+                                              )
+                                              .get();
+                                          for (var doc in notifs.docs) {
+                                            await doc.reference.delete();
+                                          }
+
                                           _updateBadgeForUser();
                                         },
                                       ),
@@ -397,10 +434,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                           size: 30,
                                         ),
                                         onPressed: () async {
+                                          // 1. Ștergem cererea de înscriere
                                           await FirebaseFirestore.instance
                                               .collection('enrollments')
                                               .doc(reqId)
                                               .delete();
+
+                                          // 2. Ștergem notificarea corespunzătoare
+                                          var notifs = await FirebaseFirestore
+                                              .instance
+                                              .collection('notifications')
+                                              .where(
+                                                'courseId',
+                                                isEqualTo: courseId,
+                                              )
+                                              .where(
+                                                'userId',
+                                                isEqualTo: currentUser!.uid,
+                                              )
+                                              .get();
+                                          for (var doc in notifs.docs) {
+                                            await doc.reference.delete();
+                                          }
+
                                           _updateBadgeForUser();
                                         },
                                       ),
