@@ -157,7 +157,9 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         ],
       ),
       content: SizedBox(
-        width: 440,
+        width:
+            MediaQuery.of(context).size.width *
+            0.85, // Se adaptează perfect după ecranul telefonului
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

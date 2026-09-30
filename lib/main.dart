@@ -307,7 +307,23 @@ class _MainScreenState extends State<MainScreen> {
                               .where('userId', isEqualTo: currentUser.uid)
                               .where('isRead', isEqualTo: false)
                               .snapshots()) {
-                        yield snapshot.docs.length;
+                        int unreadCount = snapshot.docs.length;
+
+                        // --- ADĂUGĂM ACEST BLOC PENTRU BADGE-UL TELEFONULUI ---
+                        if (!kIsWeb) {
+                          try {
+                            if (unreadCount > 0) {
+                              FlutterAppBadger.updateBadgeCount(unreadCount);
+                            } else {
+                              FlutterAppBadger.removeBadge();
+                            }
+                          } catch (e) {
+                            debugPrint("Eroare actualizare badge: $e");
+                          }
+                        }
+                        // ---------------------------------------------------
+
+                        yield unreadCount;
                       }
                     }
                   })(),
@@ -539,61 +555,58 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: const [
-                      Icon(Icons.auto_stories, color: Colors.amber, size: 32),
-                      SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Catalogul Virtual",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            "Filtrare avansată pe clase, elevi și note",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
+                      Icon(Icons.auto_stories, color: Colors.amber, size: 28),
+                      SizedBox(width: 10),
+                      Text(
+                        "Catalogul Virtual",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ],
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => const AddGradeDialog(),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: const Color(0xff42153e),
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Filtrare avansată pe clase, elevi și note",
+                    style: TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => const AddGradeDialog(),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: const Color(0xff42153e),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                      icon: const Icon(
+                        Icons.add_circle,
+                        color: Color(0xff42153e),
                       ),
-                    ),
-                    icon: const Icon(
-                      Icons.add_circle,
-                      color: Color(0xff42153e),
-                    ),
-                    label: const Text(
-                      "Adaugă Notă",
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      label: const Text(
+                        "Adaugă Notă",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                   ),
                 ],
