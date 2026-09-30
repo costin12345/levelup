@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import 'main.dart';
 
 class AddGradeDialog extends StatefulWidget {
   const AddGradeDialog({super.key});
@@ -50,6 +53,28 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
     "9",
     "10",
   ];
+  Future<void> _showLocalNotification(String title, String body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'level_up_channel_id',
+          'Level Up Notificări',
+          channelDescription: 'Notificări pentru note și teme',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+        );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      DateTime.now().millisecond,
+      title,
+      body,
+      platformChannelSpecifics,
+    );
+  }
 
   Future<void> _pickDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -118,7 +143,10 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
-
+      await _showLocalNotification(
+        'Notă nouă la $_selectedCourse',
+        'Ai primit nota $_selectedGrade la $_selectedClass!',
+      );
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
