@@ -177,7 +177,7 @@ class _MainScreenState extends State<MainScreen> {
       builder: (context, userSnapshot) {
         String userRole = 'student';
         if (userSnapshot.hasData && userSnapshot.data!.exists) {
-          var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+          var userData = userSnapshot.data!.data() as Map<String, dynamic>;
           userRole = userData?['role'] ?? 'student';
         }
 
@@ -230,41 +230,43 @@ class _MainScreenState extends State<MainScreen> {
               ],
             ),
             actions: [
-              // BUTON UNIVERSAL DE NOTIFICĂRI ADAPTAT DUPĂ ROL
-              if (currentUser != null && userRole == 'teacher')
+              // 1. CLOPOȚELUL DE NOTIFICĂRI (Pus primul în listă să apară mereu în dreapta)
+              if (currentUser != null)
                 StreamBuilder<int>(
                   stream: (() async* {
-                    // Ascultăm modificările ca să actualizăm instant
-                    await for (var _
-                        in FirebaseFirestore.instance
+                    if (userRole == 'teacher') {
+                      await for (var _
+                          in FirebaseFirestore.instance
+                              .collection('users')
+                              .snapshots()) {
+                        var pendingUsers = await FirebaseFirestore.instance
                             .collection('users')
-                            .snapshots()) {
-                      var pendingUsers = await FirebaseFirestore.instance
-                          .collection('users')
-                          .where('role', isEqualTo: 'student')
-                          .where('hasAccess', isEqualTo: false)
-                          .get();
+                            .where('role', isEqualTo: 'student')
+                            .where('hasAccess', isEqualTo: false)
+                            .get();
 
-                      var pendingEnrollments = await FirebaseFirestore.instance
-                          .collection('enrollments')
-                          .where('status', isEqualTo: 'pending')
-                          .get();
+                        var pendingEnrollments = await FirebaseFirestore
+                            .instance
+                            .collection('enrollments')
+                            .where('status', isEqualTo: 'pending')
+                            .get();
 
-                      yield pendingUsers.docs.length +
-                          pendingEnrollments.docs.length;
+                        yield pendingUsers.docs.length +
+                            pendingEnrollments.docs.length;
+                      }
+                    } else {
+                      await for (var snapshot
+                          in FirebaseFirestore.instance
+                              .collection('notifications')
+                              .where('userId', isEqualTo: currentUser.uid)
+                              .where('isRead', isEqualTo: false)
+                              .snapshots()) {
+                        yield snapshot.docs.length;
+                      }
                     }
                   })(),
                   builder: (context, notifSnap) {
                     int unreadCount = notifSnap.data ?? 0;
-
-                    // Actualizăm și badge-ul nativ o dată cu stream-ul din main
-                    if (!kIsWeb && unreadCount >= 0) {
-                      if (unreadCount > 0) {
-                        FlutterAppBadger.updateBadgeCount(unreadCount);
-                      } else {
-                        FlutterAppBadger.removeBadge();
-                      }
-                    }
 
                     return Stack(
                       alignment: Alignment.center,
@@ -275,14 +277,19 @@ class _MainScreenState extends State<MainScreen> {
                             color: Colors.white,
                             size: 26,
                           ),
+                          tooltip: "Notificări",
                           onPressed: () async {
-                            await Navigator.push(
+                            final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
                                     NotificationsScreen(role: userRole),
                               ),
                             );
+
+                            if (result == 'open_approval_center' && mounted) {
+                              _changeTab(1);
+                            }
                           },
                         ),
                         if (unreadCount > 0)
@@ -295,8 +302,13 @@ class _MainScreenState extends State<MainScreen> {
                                 color: Colors.red,
                                 shape: BoxShape.circle,
                               ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
                               child: Text(
                                 '$unreadCount',
+                                textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -310,7 +322,10 @@ class _MainScreenState extends State<MainScreen> {
                   },
                 ),
 
-              // Meniul existent...
+              const SizedBox(
+                width: 8,
+              ), // O mică distanță între clopoțel și meniu
+              // 2. MENIUL DE NAVIGARE EXISTENT (Home, Cursuri, Chat, Profil)
               LayoutBuilder(
                 builder: (context, constraints) {
                   double screenWidth = MediaQuery.of(context).size.width;
@@ -417,7 +432,6 @@ class _MainScreenState extends State<MainScreen> {
                             const PopupMenuItem(
                               value: 4,
                               child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Icon(
                                     Icons.logout,

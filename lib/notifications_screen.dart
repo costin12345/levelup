@@ -20,6 +20,7 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
   final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +86,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       debugPrint("Eroare la actualizarea badge-ului: $e");
     }
   }
+
   /*// Pe Web sau alte platforme non-mobile nu există badge-uri native
     if (kIsWeb || currentUser == null) return;
     try {
@@ -230,6 +232,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
     }
 
+    // ==========================================
+    // 1. DACĂ ESTE PROFESOR -> Are Panoul de Administrare cu 3 Tab-uri
+    // ==========================================
     if (widget.role == 'teacher') {
       return DefaultTabController(
         length: 3,
@@ -302,14 +307,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         elevation: 2,
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
-                          // Aici poți folosi o animație dedicată pentru conturi noi în panou
-                          leading: SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: Lottie.asset(
-                              'images/animations/enrollment.json',
-                            ),
-                          ),
                           title: Text(
                             name,
                             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -333,19 +330,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       .collection('users')
                                       .doc(uId)
                                       .update({'hasAccess': true});
-
-                                  var notifs = await FirebaseFirestore.instance
-                                      .collection('notifications')
-                                      .where(
-                                        'userId',
-                                        isEqualTo: currentUser!.uid,
-                                      )
-                                      .where('studentId', isEqualTo: uId)
-                                      .get();
-                                  for (var doc in notifs.docs) {
-                                    await doc.reference.delete();
-                                  }
-
                                   _updateBadgeForUser();
                                 },
                               ),
@@ -409,43 +393,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             .doc(studentId)
                             .get(),
                         builder: (context, userSnap) {
-                          String studentName = 'Elev';
-                          if (userSnap.hasData && userSnap.data!.exists) {
-                            var uData =
-                                userSnap.data!.data() as Map<String, dynamic>?;
-                            studentName =
-                                uData?['fullName'] ??
-                                uData?['name'] ??
-                                uData?['email'] ??
-                                'Elev';
-                          }
-
+                          String studentName =
+                              userSnap.data?['fullName'] ?? 'Elev';
                           return FutureBuilder<DocumentSnapshot>(
                             future: FirebaseFirestore.instance
                                 .collection('courses')
                                 .doc(courseId)
                                 .get(),
                             builder: (context, courseSnap) {
-                              String courseTitle = 'Curs';
-                              if (courseSnap.hasData &&
-                                  courseSnap.data!.exists) {
-                                var cData =
-                                    courseSnap.data!.data()
-                                        as Map<String, dynamic>?;
-                                courseTitle = cData?['title'] ?? 'Curs';
-                              }
-
+                              String courseTitle =
+                                  courseSnap.data?['title'] ?? 'Curs';
                               return Card(
                                 elevation: 2,
                                 margin: const EdgeInsets.only(bottom: 12),
                                 child: ListTile(
-                                  leading: SizedBox(
-                                    width: 36,
-                                    height: 36,
-                                    child: Lottie.asset(
-                                      'images/animations/enrollment.json',
-                                    ),
-                                  ),
                                   title: Text(
                                     studentName,
                                     style: const TextStyle(
@@ -470,23 +431,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                               .collection('enrollments')
                                               .doc(reqId)
                                               .update({'status': 'approved'});
-
-                                          var notifs = await FirebaseFirestore
-                                              .instance
-                                              .collection('notifications')
-                                              .where(
-                                                'courseId',
-                                                isEqualTo: courseId,
-                                              )
-                                              .where(
-                                                'userId',
-                                                isEqualTo: currentUser!.uid,
-                                              )
-                                              .get();
-                                          for (var doc in notifs.docs) {
-                                            await doc.reference.delete();
-                                          }
-
                                           _updateBadgeForUser();
                                         },
                                       ),
@@ -501,23 +445,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                               .collection('enrollments')
                                               .doc(reqId)
                                               .delete();
-
-                                          var notifs = await FirebaseFirestore
-                                              .instance
-                                              .collection('notifications')
-                                              .where(
-                                                'courseId',
-                                                isEqualTo: courseId,
-                                              )
-                                              .where(
-                                                'userId',
-                                                isEqualTo: currentUser!.uid,
-                                              )
-                                              .get();
-                                          for (var doc in notifs.docs) {
-                                            await doc.reference.delete();
-                                          }
-
                                           _updateBadgeForUser();
                                         },
                                       ),
@@ -562,37 +489,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             .collection('users')
                             .snapshots(),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
+                          if (!snapshot.hasData)
                             return const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xff42153e),
-                              ),
+                              child: CircularProgressIndicator(),
                             );
-                          }
-                          if (!snapshot.hasData ||
-                              snapshot.data!.docs.isEmpty) {
-                            return const Center(
-                              child: Text('Nu s-au găsit utilizatori.'),
-                            );
-                          }
 
                           String query = _searchController.text
                               .toLowerCase()
                               .trim();
-
                           var users = snapshot.data!.docs.where((doc) {
                             var uData = doc.data() as Map<String, dynamic>;
-                            String name =
-                                (uData['fullName'] ?? uData['name'] ?? '')
-                                    .toString()
-                                    .toLowerCase();
+                            String name = (uData['fullName'] ?? '')
+                                .toString()
+                                .toLowerCase();
                             String email = (uData['email'] ?? '')
                                 .toString()
                                 .toLowerCase();
-
                             if (doc.id == currentUser?.uid) return false;
-
                             return name.contains(query) ||
                                 email.contains(query);
                           }).toList();
@@ -602,32 +515,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             itemBuilder: (context, index) {
                               var uDoc = users[index];
                               var uData = uDoc.data() as Map<String, dynamic>;
-                              String uId = uDoc.id;
-                              String name =
-                                  uData['fullName'] ??
-                                  uData['name'] ??
-                                  'Utilizator';
+                              String name = uData['fullName'] ?? 'Utilizator';
                               String email = uData['email'] ?? '';
-                              String role = uData['role'] ?? 'student';
                               bool hasAccess = uData['hasAccess'] ?? false;
 
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: role == 'teacher'
-                                        ? Colors.amber.shade800
-                                        : (role == 'parent'
-                                              ? Colors.blue
-                                              : const Color(0xff42153e)),
-                                    child: Text(
-                                      role.substring(0, 1).toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
                                   title: Text(
                                     name,
                                     style: const TextStyle(
@@ -635,7 +529,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     ),
                                   ),
                                   subtitle: Text(
-                                    '$email • $role ${hasAccess ? '(Activ)' : '(Neaprobat)'}',
+                                    '$email • ${hasAccess ? 'Activ' : 'Neaprobat'}',
                                     style: const TextStyle(fontSize: 12),
                                   ),
                                   trailing: IconButton(
@@ -643,9 +537,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       Icons.delete_forever,
                                       color: Colors.red,
                                     ),
-                                    tooltip: 'Șterge Utilizatorul',
                                     onPressed: () =>
-                                        _confirmAndDeleteUser(uId, name),
+                                        _confirmAndDeleteUser(uDoc.id, name),
                                   ),
                                 ),
                               );
@@ -663,12 +556,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
     }
 
-    // LISTA DE NOTIFICĂRI PENTRU ELEVI / PĂRINȚI
+    // ==========================================
+    // 2. DACĂ ESTE ELEV -> Are UN SINGUR ECAN Simplu cu Notificările Lui Personale
+    // ==========================================
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),
       appBar: AppBar(
         title: const Text(
-          "Notificări",
+          "Notificările Mele",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xff42153e),
@@ -714,8 +609,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               bool isRead = data['isRead'] ?? false;
               String title = data['title'] ?? 'Notificare';
               String body = data['body'] ?? '';
-              String type =
-                  data['type'] ?? 'homework'; // Tipul notificării din Firestore
+              String type = data['type'] ?? 'homework';
 
               return Card(
                 elevation: isRead ? 1 : 3,
@@ -732,7 +626,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  // AICI AM ÎNLOCUIT ICONIȚA CU ANIMAȚIA LOTTIE CORESPUNZĂTOARE TIPULUI
                   leading: _getAnimationForType(type, isRead),
                   title: Text(
                     title,

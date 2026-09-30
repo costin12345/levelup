@@ -19,6 +19,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _childEmailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -66,7 +67,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'fullName': name,
         'email': email,
         'role': _selectedRole,
-        'hasAccess': false, // Se aprobă manual din consola Firebase sau din panoul profesorului
+        'childEmail': _selectedRole == 'parent'
+            ? _childEmailController.text.trim()
+            : null,
+        'hasAccess': true, // Părintele poate avea acces direct aprobat sau false, cum dorești
         'createdAt': FieldValue.serverTimestamp(),
       });
       _notifyTeacherAboutNewUser(rawName: name, userRole: _selectedRole);
@@ -302,13 +306,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       label: Text('Sunt Profesor'),
                       icon: Icon(Icons.person_outline),
                     ),
+                    ButtonSegment(
+                      value: 'parent',
+                      label: Text('Părinte'),
+                      icon: Icon(Icons.family_restroom),
+                    ),
                   ],
                   selected: {_selectedRole},
                   onSelectionChanged: (newSelection) =>
                       setState(() => _selectedRole = newSelection.first),
                 ),
                 const SizedBox(height: 20), // Spațiu sub selectorul de rol
-
+                // 2. Câmpul pentru emailul elevului (afișat doar pentru părinți)
+                if (_selectedRole == 'parent') ...[
+                  TextField(
+                    controller: _childEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Adresa de email a copilului (Elevului)',
+                      prefixIcon: const Icon(
+                        Icons.mark_email_read_outlined,
+                        color: Color(0xff42153e),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 TextField(
                   controller: _nameController,
                   decoration: InputDecoration(
