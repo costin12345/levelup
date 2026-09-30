@@ -160,12 +160,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        final unreadSnap = await FirebaseFirestore.instance
-            .collection('notifications')
-            .where('userId', isEqualTo: teacherId)
-            .where('isRead', isEqualTo: false)
+        // 1. Numărăm strict elevii care așteaptă aprobarea
+        var pendingUsers = await FirebaseFirestore.instance
+            .collection('users')
+            .where('role', isEqualTo: 'student')
+            .where('hasAccess', isEqualTo: false)
             .get();
-        int unreadCount = unreadSnap.docs.length;
+
+        // 2. Numărăm înscrierile la cursuri în așteptare
+        var pendingEnrollments = await FirebaseFirestore.instance
+            .collection('enrollments')
+            .where('status', isEqualTo: 'pending')
+            .get();
+
+        // 3. Suma reală unificată (fără userii vechi din gestionare)
+        int unreadCount =
+            pendingUsers.docs.length + pendingEnrollments.docs.length;
 
         if (teacherFcmToken != null && teacherFcmToken.isNotEmpty) {
           await client.post(
