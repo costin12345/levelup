@@ -231,43 +231,40 @@ class _MainScreenState extends State<MainScreen> {
             ),
             actions: [
               // BUTON UNIVERSAL DE NOTIFICĂRI ADAPTAT DUPĂ ROL
-              if (currentUser != null)
+              if (currentUser != null && userRole == 'teacher')
                 StreamBuilder<int>(
                   stream: (() async* {
-                    if (userRole == 'teacher') {
-                      // Ascultăm modificările din colecția users pentru a actualiza instant
-                      await for (var _
-                          in FirebaseFirestore.instance
-                              .collection('users')
-                              .snapshots()) {
-                        var pendingUsers = await FirebaseFirestore.instance
+                    // Ascultăm modificările ca să actualizăm instant
+                    await for (var _
+                        in FirebaseFirestore.instance
                             .collection('users')
-                            .where('role', isEqualTo: 'student')
-                            .where('hasAccess', isEqualTo: false)
-                            .get();
+                            .snapshots()) {
+                      var pendingUsers = await FirebaseFirestore.instance
+                          .collection('users')
+                          .where('role', isEqualTo: 'student')
+                          .where('hasAccess', isEqualTo: false)
+                          .get();
 
-                        var pendingEnrollments = await FirebaseFirestore
-                            .instance
-                            .collection('enrollments')
-                            .where('status', isEqualTo: 'pending')
-                            .get();
+                      var pendingEnrollments = await FirebaseFirestore.instance
+                          .collection('enrollments')
+                          .where('status', isEqualTo: 'pending')
+                          .get();
 
-                        yield pendingUsers.docs.length +
-                            pendingEnrollments.docs.length;
-                      }
-                    } else {
-                      await for (var snapshot
-                          in FirebaseFirestore.instance
-                              .collection('notifications')
-                              .where('userId', isEqualTo: currentUser.uid)
-                              .where('isRead', isEqualTo: false)
-                              .snapshots()) {
-                        yield snapshot.docs.length;
-                      }
+                      yield pendingUsers.docs.length +
+                          pendingEnrollments.docs.length;
                     }
                   })(),
                   builder: (context, notifSnap) {
                     int unreadCount = notifSnap.data ?? 0;
+
+                    // Actualizăm și badge-ul nativ o dată cu stream-ul din main
+                    if (!kIsWeb && unreadCount >= 0) {
+                      if (unreadCount > 0) {
+                        FlutterAppBadger.updateBadgeCount(unreadCount);
+                      } else {
+                        FlutterAppBadger.removeBadge();
+                      }
+                    }
 
                     return Stack(
                       alignment: Alignment.center,
@@ -278,19 +275,14 @@ class _MainScreenState extends State<MainScreen> {
                             color: Colors.white,
                             size: 26,
                           ),
-                          tooltip: "Notificări",
                           onPressed: () async {
-                            final result = await Navigator.push(
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
                                     NotificationsScreen(role: userRole),
                               ),
                             );
-
-                            if (result == 'open_approval_center' && mounted) {
-                              _changeTab(1);
-                            }
                           },
                         ),
                         if (unreadCount > 0)
@@ -303,13 +295,8 @@ class _MainScreenState extends State<MainScreen> {
                                 color: Colors.red,
                                 shape: BoxShape.circle,
                               ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
                               child: Text(
                                 '$unreadCount',
-                                textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
