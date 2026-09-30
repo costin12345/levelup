@@ -7,10 +7,12 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 
+import 'catalog_screen.dart';
 import 'notifications_screen.dart';
 import 'courses_screen.dart';
 import 'firebase_options.dart';
 import 'login_screen.dart';
+import 'add_grade_dialog.dart';
 
 // --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI ---
 
@@ -19,7 +21,6 @@ Future<void> clearAppBadge() async {
 
   try {
     if (await FlutterAppBadger.isAppBadgeSupported()) {
-      // Dacă nu avem utilizator logat, ștergem sigur badge-ul să nu rămână resturi
       if (FirebaseAuth.instance.currentUser == null) {
         FlutterAppBadger.removeBadge();
       }
@@ -85,7 +86,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 👉 Adaugă ștergerea forțată aici, înainte de runApp
   if (!kIsWeb) {
     try {
       if (await FlutterAppBadger.isAppBadgeSupported()) {
@@ -177,26 +177,79 @@ class _MainScreenState extends State<MainScreen> {
       builder: (context, userSnapshot) {
         String userRole = 'student';
         if (userSnapshot.hasData && userSnapshot.data!.exists) {
-          var userData = userSnapshot.data!.data() as Map<String, dynamic>;
+          var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
           userRole = userData?['role'] ?? 'student';
         }
 
-        final List<Widget> pages = [
-          HomeTab(onGoToCourses: () => _changeTab(1)),
-          CoursesScreen(role: userRole),
-          const Center(
-            child: Text(
-              "Sistemul de Chat va fi activat în curând.",
-              style: TextStyle(color: Color(0xff42153e)),
+        List<Widget> pages = [];
+        List<String> menuTitles = ["Home", "Catalog", "", "Profil"];
+
+        if (userRole == 'teacher') {
+          menuTitles[2] = "Cursuri";
+          pages = [
+            HomeTab(onGoToCourses: () => _changeTab(2)),
+            const TeacherCatalogScreen(), // Ecranul profesorului
+            CoursesScreen(role: userRole),
+            const Center(
+              child: Text(
+                "Profilul Profesorului",
+                style: TextStyle(
+                  color: Color(0xff42153e),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-          const Center(
-            child: Text(
-              "Profilul Tău",
-              style: TextStyle(color: Color(0xff42153e)),
+          ];
+        } else if (userRole == 'parent') {
+          menuTitles[2] = "Copilul Meu";
+          pages = [
+            HomeTab(onGoToCourses: () => _changeTab(1)),
+            const CatalogScreen(
+              role: 'parent',
+            ), // <-- Aici punem catalogul pentru Părinte
+            const Center(
+              child: Text(
+                "Informații despre Copilul Meu",
+                style: TextStyle(
+                  color: Color(0xff42153e),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-        ];
+            const Center(
+              child: Text(
+                "Profilul Părintelui",
+                style: TextStyle(
+                  color: Color(0xff42153e),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ];
+        } else {
+          // Student / Elev
+          menuTitles[2] = "Cursuri";
+          pages = [
+            HomeTab(onGoToCourses: () => _changeTab(2)),
+            const CatalogScreen(
+              role: 'student',
+            ), // <-- Aici punem catalogul pentru Elev
+            CoursesScreen(role: userRole),
+            const Center(
+              child: Text(
+                "Profilul Elevului",
+                style: TextStyle(
+                  color: Color(0xff42153e),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ];
+        }
 
         return Scaffold(
           backgroundColor: const Color(0xfffff8dc),
@@ -220,17 +273,10 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [],
-                  ),
-                ),
+                const Expanded(child: SizedBox()),
               ],
             ),
             actions: [
-              // 1. CLOPOȚELUL DE NOTIFICĂRI (Pus primul în listă să apară mereu în dreapta)
               if (currentUser != null)
                 StreamBuilder<int>(
                   stream: (() async* {
@@ -279,17 +325,13 @@ class _MainScreenState extends State<MainScreen> {
                           ),
                           tooltip: "Notificări",
                           onPressed: () async {
-                            final result = await Navigator.push(
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
                                     NotificationsScreen(role: userRole),
                               ),
                             );
-
-                            if (result == 'open_approval_center' && mounted) {
-                              _changeTab(1);
-                            }
                           },
                         ),
                         if (unreadCount > 0)
@@ -321,11 +363,7 @@ class _MainScreenState extends State<MainScreen> {
                     );
                   },
                 ),
-
-              const SizedBox(
-                width: 8,
-              ), // O mică distanță între clopoțel și meniu
-              // 2. MENIUL DE NAVIGARE EXISTENT (Home, Cursuri, Chat, Profil)
+              const SizedBox(width: 8),
               LayoutBuilder(
                 builder: (context, constraints) {
                   double screenWidth = MediaQuery.of(context).size.width;
@@ -337,7 +375,7 @@ class _MainScreenState extends State<MainScreen> {
                         TextButton(
                           onPressed: () => _changeTab(0),
                           child: Text(
-                            "Home",
+                            menuTitles[0],
                             style: TextStyle(
                               color: _currentIndex == 0
                                   ? Colors.amber
@@ -348,7 +386,7 @@ class _MainScreenState extends State<MainScreen> {
                         TextButton(
                           onPressed: () => _changeTab(1),
                           child: Text(
-                            "Cursuri",
+                            menuTitles[1],
                             style: TextStyle(
                               color: _currentIndex == 1
                                   ? Colors.amber
@@ -359,7 +397,7 @@ class _MainScreenState extends State<MainScreen> {
                         TextButton(
                           onPressed: () => _changeTab(2),
                           child: Text(
-                            "Chat",
+                            menuTitles[2],
                             style: TextStyle(
                               color: _currentIndex == 2
                                   ? Colors.amber
@@ -370,7 +408,7 @@ class _MainScreenState extends State<MainScreen> {
                         TextButton(
                           onPressed: () => _changeTab(3),
                           child: Text(
-                            "Profil",
+                            menuTitles[3],
                             style: TextStyle(
                               color: _currentIndex == 3
                                   ? Colors.amber
@@ -400,32 +438,32 @@ class _MainScreenState extends State<MainScreen> {
                             }
                           },
                           itemBuilder: (context) => [
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 0,
                               child: Text(
-                                "Home",
-                                style: TextStyle(color: Colors.white),
+                                menuTitles[0],
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 1,
                               child: Text(
-                                "Cursuri",
-                                style: TextStyle(color: Colors.white),
+                                menuTitles[1],
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 2,
                               child: Text(
-                                "Chat",
-                                style: TextStyle(color: Colors.white),
+                                menuTitles[2],
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 3,
                               child: Text(
-                                "Profil",
-                                style: TextStyle(color: Colors.white),
+                                menuTitles[3],
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
                             const PopupMenuDivider(),
@@ -455,14 +493,456 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ],
           ),
-          body: pages[_currentIndex],
+          body: pages[_currentIndex < pages.length ? _currentIndex : 0],
         );
       },
     );
   }
 }
 
-// ================= ECRANUL HOME =================
+// ================= ECRAN CATALOG PROFESOR CU FILTRARE AVANSATĂ =================
+class TeacherCatalogScreen extends StatefulWidget {
+  const TeacherCatalogScreen({super.key});
+
+  @override
+  State<TeacherCatalogScreen> createState() => _TeacherCatalogScreenState();
+}
+
+class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
+  String _selectedFilterClass = "Toate";
+  String _selectedFilterCourse = "Toate";
+  String _selectedFilterGrade = "Toate";
+  String _selectedFilterDate = "Toate";
+  String? _selectedSingleStudent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xfffff8dc),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xff42153e), Color(0xff6a2465)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.auto_stories, color: Colors.amber, size: 32),
+                      SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Catalogul Virtual",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            "Filtrare avansată pe clase, elevi și note",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => const AddGradeDialog(),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: const Color(0xff42153e),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.add_circle,
+                      color: Color(0xff42153e),
+                    ),
+                    label: const Text(
+                      "Adaugă Notă",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('grades')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                Set<String> classes = {"Toate"};
+                Set<String> courses = {
+                  "Toate",
+                  "Matematică",
+                  "Informatică",
+                  "Fizică",
+                };
+                Set<String> gradesSet = {"Toate"};
+                Set<String> studentsSet = {"Toți elevii"};
+                Set<String> datesSet = {"Toate"};
+
+                if (snapshot.hasData) {
+                  for (var doc in snapshot.data!.docs) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    if (data['className'] != null)
+                      classes.add(data['className']);
+                    if (data['grade'] != null) gradesSet.add(data['grade']);
+                    if (data['studentName'] != null)
+                      studentsSet.add(data['studentName']);
+                    if (data['date'] != null)
+                      datesSet.add(
+                        data['date'],
+                      ); // <--- Colectăm datele existente
+                  }
+                }
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDropdownFilter(
+                            "Clasa",
+                            _selectedFilterClass,
+                            classes,
+                            (val) =>
+                                setState(() => _selectedFilterClass = val!),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildDropdownFilter(
+                            "Elev",
+                            _selectedSingleStudent ?? "Toți elevii",
+                            studentsSet,
+                            (val) => setState(
+                              () => _selectedSingleStudent =
+                                  val == "Toți elevii" ? null : val,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDropdownFilter(
+                            "Materia",
+                            _selectedFilterCourse,
+                            courses,
+                            (val) =>
+                                setState(() => _selectedFilterCourse = val!),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildDropdownFilter(
+                            "Nota",
+                            _selectedFilterGrade,
+                            gradesSet,
+                            (val) =>
+                                setState(() => _selectedFilterGrade = val!),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Rând nou dedicat filtrului după Dată pe tot ecranul sau jumătate
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDropdownFilter(
+                            "Data",
+                            _selectedFilterDate,
+                            datesSet,
+                            (val) => setState(() => _selectedFilterDate = val!),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('grades')
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xff42153e),
+                      ),
+                    );
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.sentiment_satisfied_alt,
+                            size: 64,
+                            color: Colors.purple.shade200,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            "Nicio notă adăugată momentan.",
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  var allDocs = snapshot.data!.docs;
+
+                  var filteredDocs = allDocs.where((doc) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    String className = data['className'] ?? '';
+                    String studentName = data['studentName'] ?? '';
+                    String courseTitle = data['courseTitle'] ?? '';
+                    String grade = data['grade'] ?? '';
+
+                    bool matchesClass =
+                        _selectedFilterClass == "Toate" ||
+                        className == _selectedFilterClass;
+                    bool matchesStudent =
+                        _selectedSingleStudent == null ||
+                        studentName == _selectedSingleStudent;
+                    bool matchesCourse =
+                        _selectedFilterCourse == "Toate" ||
+                        courseTitle == _selectedFilterCourse;
+                    bool matchesGrade =
+                        _selectedFilterGrade == "Toate" ||
+                        grade == _selectedFilterGrade;
+
+                    return matchesClass &&
+                        matchesStudent &&
+                        matchesCourse &&
+                        matchesGrade;
+                  }).toList();
+
+                  if (filteredDocs.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        "Nu s-au găsit note pentru filtrele selectate.",
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: filteredDocs.length,
+                    itemBuilder: (context, index) {
+                      var data =
+                          filteredDocs[index].data() as Map<String, dynamic>;
+                      String studentName = data['studentName'] ?? 'Elev';
+                      String className = data['className'] ?? 'Fără clasă';
+                      String course = data['courseTitle'] ?? 'Materie';
+                      String grade = data['grade'] ?? '';
+                      String date = data['date'] ?? 'Azi';
+                      String comment = data['comment'] ?? '';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.amber.shade200,
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xff42153e).withOpacity(0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xff42153e)
+                                .withOpacity(0.1),
+                            child: const Icon(
+                              Icons.person,
+                              color: Color(0xff42153e),
+                            ),
+                          ),
+                          title: Text(
+                            "$studentName • $course",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xff42153e),
+                              fontSize: 15,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                "Clasa: $className",
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (comment.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  "Comentariu: $comment",
+                                  style: TextStyle(
+                                    color: Colors.grey.shade800,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 12,
+                                    color: Colors.amber.shade800,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Data: $date",
+                                    style: TextStyle(
+                                      color: Colors.amber.shade900,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.amber,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              grade,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xff42153e),
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownFilter(
+    String label,
+    String currentValue,
+    Set<String> items,
+    ValueChanged<String?> onChanged,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: items.contains(currentValue) ? currentValue : items.first,
+          isExpanded: true,
+          icon: const Icon(Icons.arrow_drop_down, color: Color(0xff42153e)),
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(
+                "$label: $item",
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xff42153e),
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+// ================= ECRANUL HOME COMPLET =================
 class HomeTab extends StatelessWidget {
   final VoidCallback onGoToCourses;
 
@@ -543,10 +1023,8 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              if (!hasAccess)
+              if (!hasAccess && role != 'parent')
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
@@ -557,13 +1035,12 @@ class HomeTab extends StatelessWidget {
                       border: Border.all(color: Colors.amber.shade700),
                     ),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Icon(Icons.info_outline, color: Colors.amber.shade900),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            "Contul tău ($fullName - $role) este în așteptarea aprobării de la profesor.",
+                            "Contul tău ($fullName - $role) este în așteptarea aprobării.",
                             style: TextStyle(
                               color: Colors.amber.shade900,
                               fontSize: 13,
@@ -575,9 +1052,7 @@ class HomeTab extends StatelessWidget {
                     ),
                   ),
                 ),
-
               const SizedBox(height: 20),
-
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: LayoutBuilder(
@@ -589,7 +1064,7 @@ class HomeTab extends StatelessWidget {
                         _buildFeatureCard(
                           Icons.school,
                           "Excelență Academică",
-                          "Materiale structurate de top",
+                          "Materiale structurate",
                           constraints.maxWidth,
                         ),
                         _buildFeatureCard(
@@ -601,7 +1076,7 @@ class HomeTab extends StatelessWidget {
                         _buildFeatureCard(
                           Icons.sports_esports,
                           "Gamification",
-                          "Învățare prin joc și XP",
+                          "Învățare prin joc",
                           constraints.maxWidth,
                         ),
                         _buildFeatureCard(
@@ -615,9 +1090,7 @@ class HomeTab extends StatelessWidget {
                   },
                 ),
               ),
-
               const SizedBox(height: 32),
-
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -634,7 +1107,7 @@ class HomeTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      "Pregătire Adaptată Fiecărui Elev",
+                      "Pregătire Adaptată",
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -647,7 +1120,6 @@ class HomeTab extends StatelessWidget {
                         bool isMobile = constraints.maxWidth < 600;
                         return isMobile
                             ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _buildCategoryCard(
                                     "Gimnaziu",
@@ -662,14 +1134,13 @@ class HomeTab extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 12),
                                   _buildCategoryCard(
-                                    "Evaluarea Națională/Bacalaureat",
+                                    "Bacalaureat",
                                     "Simulări & Teste",
                                     Icons.assignment,
                                   ),
                                 ],
                               )
                             : Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Expanded(
                                     child: _buildCategoryCard(
@@ -701,9 +1172,7 @@ class HomeTab extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(height: 32),
-
               Container(
                 color: const Color(0xff42153e),
                 padding: const EdgeInsets.symmetric(
@@ -738,83 +1207,21 @@ class HomeTab extends StatelessWidget {
                             ? coursesSnapshot.data!.docs.length
                             : 0;
 
-                        return LayoutBuilder(
-                          builder: (context, constraints) {
-                            bool isMobile = constraints.maxWidth < 600;
-                            if (isMobile) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Expanded(
-                                        child: _buildCounterItem(
-                                          "$studentCount",
-                                          "Elevi",
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: _buildCounterItem(
-                                          "$teacherCount",
-                                          "Profesori",
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Expanded(
-                                        child: _buildCounterItem(
-                                          "$coursesCount",
-                                          "Cursuri",
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: _buildCounterItem(
-                                          "24/7",
-                                          "Suport",
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              );
-                            }
-
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildCounterItem(
-                                  "$studentCount",
-                                  "Elevi Înregistrați",
-                                ),
-                                _buildCounterItem(
-                                  "$teacherCount",
-                                  "Profesori Activi",
-                                ),
-                                _buildCounterItem(
-                                  "$coursesCount",
-                                  "Cursuri Disponibile",
-                                ),
-                                _buildCounterItem("24/7", "Suport Platformă"),
-                              ],
-                            );
-                          },
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildCounterItem("$studentCount", "Utilizatori"),
+                            _buildCounterItem("$teacherCount", "Profesori"),
+                            _buildCounterItem("$coursesCount", "Cursuri"),
+                            _buildCounterItem("24/7", "Suport"),
+                          ],
                         );
                       },
                     );
                   },
                 ),
               ),
-
               const SizedBox(height: 30),
-
               Container(
                 color: const Color(0xff2b0c28),
                 padding: const EdgeInsets.symmetric(
@@ -825,7 +1232,6 @@ class HomeTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.all(6),
@@ -846,14 +1252,13 @@ class HomeTab extends StatelessWidget {
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            letterSpacing: 1.2,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "Platformă educațională modernă destinată pregătirii de performanță pentru elevi și profesori.",
+                      "Platformă educațională modernă destinată performanței.",
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.7),
                         fontSize: 12,
@@ -862,57 +1267,12 @@ class HomeTab extends StatelessWidget {
                     const SizedBox(height: 16),
                     const Divider(color: Colors.white24),
                     const SizedBox(height: 12),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        bool isMobile = constraints.maxWidth < 500;
-                        if (isMobile) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                "©Aplicație dezvoltată de Diana Cioroiu. 2026 Level Up App. Toate drepturile rezervate.",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.5),
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                "© 2026 Level Up App. Toate drepturile rezervate.",
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.5),
-                                  fontSize: 11,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: const [
-                                Icon(
-                                  Icons.facebook,
-                                  color: Colors.white70,
-                                  size: 18,
-                                ),
-                                SizedBox(width: 10),
-                                Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white70,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
+                    Text(
+                      "© 2026 Level Up App. Toate drepturile rezervate.",
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -940,7 +1300,6 @@ class HomeTab extends StatelessWidget {
               color: Color(0xff42153e),
               fontWeight: FontWeight.bold,
               fontSize: 10,
-              letterSpacing: 1.1,
             ),
           ),
         ),
@@ -952,18 +1311,11 @@ class HomeTab extends StatelessWidget {
             fontWeight: FontWeight.bold,
             color: Colors.white,
             height: 1.2,
-            shadows: [
-              Shadow(
-                blurRadius: 8,
-                color: Colors.black45,
-                offset: Offset(0, 2),
-              ),
-            ],
           ),
         ),
         const SizedBox(height: 12),
         Text(
-          "La Level Up, ajutăm fiecare elev să își atingă potențialul maxim prin cursuri interactive, profesori dedicați și suport continuu.",
+          "La Level Up, ajutăm fiecare elev și părinte să țină pasul cu performanța.",
           style: TextStyle(
             fontSize: 13,
             color: Colors.white.withOpacity(0.9),
@@ -971,29 +1323,16 @@ class HomeTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ElevatedButton(
-              onPressed: onGoToCourses,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                foregroundColor: const Color(0xff42153e),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                "VEZI CURSURILE",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
-            const SizedBox(width: 10),
-          ],
+        ElevatedButton(
+          onPressed: onGoToCourses,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.amber,
+            foregroundColor: const Color(0xff42153e),
+          ),
+          child: const Text(
+            "VEZI CURSURILE",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
       ],
     );
@@ -1009,8 +1348,8 @@ class HomeTab extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+        children: const [
+          Text(
             "De ce Level Up?",
             style: TextStyle(
               color: Colors.amber,
@@ -1018,43 +1357,13 @@ class HomeTab extends StatelessWidget {
               fontSize: 14,
             ),
           ),
-          const SizedBox(height: 12),
-          _buildHeroFeatureRow(
-            Icons.school_outlined,
-            "Programă Bacalaureat & Evaluare",
-          ),
-          const SizedBox(height: 8),
-          _buildHeroFeatureRow(
-            Icons.person_outline,
-            "Profesori Experți și Mentori",
-          ),
-          const SizedBox(height: 8),
-          _buildHeroFeatureRow(
-            Icons.quiz_outlined,
-            "Teste & Exerciții Interactive",
+          SizedBox(height: 12),
+          Text(
+            "• Monitorizare note în timp real\n• Conexiune părinte-elev\n• Notificări instant",
+            style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeroFeatureRow(IconData icon, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(icon, color: Colors.white, size: 18),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1141,7 +1450,6 @@ class HomeTab extends StatelessWidget {
 
   Widget _buildCounterItem(String count, String label) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           count,
