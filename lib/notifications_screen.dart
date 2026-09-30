@@ -51,7 +51,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _updateBadgeForUser() async {
-    // Pe Web sau alte platforme non-mobile nu există badge-uri native
+    return;
+    /*// Pe Web sau alte platforme non-mobile nu există badge-uri native
     if (kIsWeb || currentUser == null) return;
     try {
       // Numărăm strict doar notificările necitite ale utilizatorului curent din Firestore
@@ -72,7 +73,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     } catch (e) {
       debugPrint("Eroare la actualizarea badge-ului: $e");
-    }
+    }*/
   }
 
   Future<void> _confirmAndDeleteUser(String userId, String userName) async {
