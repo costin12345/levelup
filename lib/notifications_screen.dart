@@ -53,26 +53,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
-      // Să vedem exact ce găsește la notificări
-      QuerySnapshot unreadNotifsSnap = await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('userId', isEqualTo: currentUser!.uid)
-          .where('isRead', isEqualTo: false)
+      // 1. Numărăm elevii care așteaptă aprobarea (hasAccess: false)
+      var pendingUsers = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'student')
+          .where('hasAccess', isEqualTo: false)
           .get();
 
-      debugPrint(
-        "🔍 Număr notificări în colecție: ${unreadNotifsSnap.docs.length}",
-      );
-      for (var doc in unreadNotifsSnap.docs) {
-        debugPrint("   - Notificare ID: ${doc.id}, Titlu: ${doc['title']}");
-      }
+      // 2. Numărăm înscrierile la cursuri în așteptare (status: pending)
+      var pendingEnrollments = await FirebaseFirestore.instance
+          .collection('enrollments')
+          .where('status', isEqualTo: 'pending')
+          .get();
 
-      // Să vedem dacă mai sunt și alte colecții pe care le numără codul tău undeva (dacă a rămas vreo altă interogare veche)
-      int unreadCount = unreadNotifsSnap.docs.length;
+      // Suma totală exactă pe care o folosește și clopoțelul din main.dart
+      int totalPending =
+          pendingUsers.docs.length + pendingEnrollments.docs.length;
+
+      debugPrint(
+        "🔍 Badge actualizat la: $totalPending (Conturi: ${pendingUsers.docs.length}, Înscrieri: ${pendingEnrollments.docs.length})",
+      );
 
       if (await FlutterAppBadger.isAppBadgeSupported()) {
-        if (unreadCount > 0) {
-          FlutterAppBadger.updateBadgeCount(unreadCount);
+        if (totalPending > 0) {
+          FlutterAppBadger.updateBadgeCount(totalPending);
         } else {
           FlutterAppBadger.removeBadge();
         }
