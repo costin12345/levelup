@@ -4,6 +4,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'main.dart';
 
+// Extern din main.dart
+externFlutterLocalNotificationsPlugin() => flutterLocalNotificationsPlugin;
+
 class AddGradeDialog extends StatefulWidget {
   const AddGradeDialog({super.key});
 
@@ -16,7 +19,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
   String? _selectedStudentName;
   String? _selectedStudentEmail;
 
-  // Valori predefinite pentru selecție
   String _selectedClass = "Clasa a IX-a";
   String _selectedCourse = "Matematică";
   String _selectedGrade = "10";
@@ -26,7 +28,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
 
-  // Listele fixe cerute
   final List<String> _classesList = [
     "Clasa a IV-a",
     "Clasa a V-a",
@@ -53,28 +54,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
     "9",
     "10",
   ];
-  Future<void> _showLocalNotification(String title, String body) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-          'level_up_channel_id',
-          'Level Up Notificări',
-          channelDescription: 'Notificări pentru note și teme',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: true,
-        );
-
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-    );
-
-    await flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecond,
-      title,
-      body,
-      platformChannelSpecifics,
-    );
-  }
 
   Future<void> _pickDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -103,6 +82,29 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
     }
   }
 
+  Future<void> _showLocalNotification(String title, String body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'level_up_channel_id',
+          'Level Up Notificări',
+          channelDescription: 'Notificări pentru note și teme',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+        );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      DateTime.now().millisecond,
+      title,
+      body,
+      platformChannelSpecifics,
+    );
+  }
+
   Future<void> _saveGrade() async {
     if (_selectedStudentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -120,7 +122,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
       String formattedDate =
           "${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}";
 
-      // 1. Salvăm nota în colecția 'grades'
+      // 1. Salvăm nota în 'grades'
       await FirebaseFirestore.instance.collection('grades').add({
         'studentId': _selectedStudentId,
         'studentName': _selectedStudentName ?? 'Elev',
@@ -133,7 +135,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. Trimitem notificare elevului
+      // 2. Trimitem în 'notifications' (pentru clopoțel și badge)
       await FirebaseFirestore.instance.collection('notifications').add({
         'userId': _selectedStudentId,
         'title': 'Notă nouă la $_selectedCourse',
@@ -143,11 +145,15 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // 3. Afișăm bannerul local pe ecranul elevului
       await _showLocalNotification(
         'Notă nouă la $_selectedCourse',
         'Ai primit nota $_selectedGrade la $_selectedClass!',
       );
+
       if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 300));
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -180,19 +186,17 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
             style: TextStyle(
               color: Color(0xff42153e),
               fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
           ),
         ],
       ),
       content: SizedBox(
-        width:
-            MediaQuery.of(context).size.width *
-            0.85, // Se adaptează perfect după ecranul telefonului
+        width: MediaQuery.of(context).size.width * 0.85,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 1. Selector Clasa (a IV-a până la a XII-a)
               DropdownButtonFormField<String>(
                 value: _selectedClass,
                 decoration: InputDecoration(
@@ -223,8 +227,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // 2. Selector Nume Elev (din baza de date)
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('users')
@@ -280,8 +282,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // 3. Selector Materie (Matematică, Informatică, Fizică)
               DropdownButtonFormField<String>(
                 value: _selectedCourse,
                 decoration: InputDecoration(
@@ -309,8 +309,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // 4. Nota (1 la 10) & Calendar
               Row(
                 children: [
                   Expanded(
@@ -376,8 +374,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // 5. Observații / Temă
               TextField(
                 controller: _commentController,
                 maxLines: 2,
