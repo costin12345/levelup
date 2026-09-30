@@ -51,8 +51,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _updateBadgeForUser() async {
-    return;
-    /*// Pe Web sau alte platforme non-mobile nu există badge-uri native
+    if (kIsWeb || currentUser == null) return;
+    try {
+      // Să vedem exact ce găsește la notificări
+      QuerySnapshot unreadNotifsSnap = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('userId', isEqualTo: currentUser!.uid)
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      debugPrint(
+        "🔍 Număr notificări în colecție: ${unreadNotifsSnap.docs.length}",
+      );
+      for (var doc in unreadNotifsSnap.docs) {
+        debugPrint("   - Notificare ID: ${doc.id}, Titlu: ${doc['title']}");
+      }
+
+      // Să vedem dacă mai sunt și alte colecții pe care le numără codul tău undeva (dacă a rămas vreo altă interogare veche)
+      int unreadCount = unreadNotifsSnap.docs.length;
+
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
+        if (unreadCount > 0) {
+          FlutterAppBadger.updateBadgeCount(unreadCount);
+        } else {
+          FlutterAppBadger.removeBadge();
+        }
+      }
+    } catch (e) {
+      debugPrint("Eroare la actualizarea badge-ului: $e");
+    }
+  }
+  /*// Pe Web sau alte platforme non-mobile nu există badge-uri native
     if (kIsWeb || currentUser == null) return;
     try {
       // Numărăm strict doar notificările necitite ale utilizatorului curent din Firestore
@@ -74,7 +103,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (e) {
       debugPrint("Eroare la actualizarea badge-ului: $e");
     }*/
-  }
 
   Future<void> _confirmAndDeleteUser(String userId, String userName) async {
     bool? confirm = await showDialog<bool>(
