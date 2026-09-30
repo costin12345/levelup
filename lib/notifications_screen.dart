@@ -124,7 +124,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           await doc.reference.delete();
         }
 
-        _updateBadgeForUser();
+        await _updateBadgeForUser();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
