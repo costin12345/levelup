@@ -122,7 +122,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
       String formattedDate =
           "${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}";
 
-      // 1. Salvăm nota în 'grades'
+      // 1. Salvăm nota în colecția 'grades'
       await FirebaseFirestore.instance.collection('grades').add({
         'studentId': _selectedStudentId,
         'studentName': _selectedStudentName ?? 'Elev',
@@ -135,7 +135,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. Trimitem în 'notifications' (pentru clopoțel și badge)
+      // 2. Salvăm notificarea în 'notifications' (pentru clopoțel și badge)
       await FirebaseFirestore.instance.collection('notifications').add({
         'userId': _selectedStudentId,
         'title': 'Notă nouă la $_selectedCourse',
@@ -146,14 +146,25 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 3. Afișăm bannerul local pe ecranul elevului
-      await _showLocalNotification(
-        'Notă nouă la $_selectedCourse',
-        'Ai primit nota $_selectedGrade la $_selectedClass!',
-      );
+      // 3. Preluăm fcmToken-ul elevului din colecția 'users'
+      var studentDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_selectedStudentId)
+          .get();
+
+      if (studentDoc.exists) {
+        var studentData = studentDoc.data() as Map<String, dynamic>;
+        String? fcmToken = studentData['fcmToken'];
+
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          // Aici avem token-ul elevului pregătit!
+          // (Dacă folosești un Cloud Function legat de Firestore, simpla scriere în 'notifications'
+          // sau 'grades' va prelua acest token și va trimite push-ul pe ecranul blocat).
+          debugPrint("Token FCM găsit pentru elev: $fcmToken");
+        }
+      }
 
       if (mounted) {
-        await Future.delayed(const Duration(milliseconds: 300));
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
