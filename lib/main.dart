@@ -37,7 +37,6 @@ Future<void> initLocalNotifications() async {
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 }
-// --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI ---
 
 Future<void> clearAppBadge() async {
   if (kIsWeb) return;
@@ -69,8 +68,6 @@ Future<void> saveTokenToFirestore(String token) async {
 }
 
 Future<void> setupFCM() async {
-  if (kIsWeb) return;
-
   User? currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser == null) return;
 
@@ -85,19 +82,45 @@ Future<void> setupFCM() async {
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('Mesaj primit în foreground: ${message.data}');
+
+        if (message.data.isNotEmpty) {
+          String title = message.data['title'] ?? 'Notificare Nouă';
+          String body = message.data['body'] ?? '';
+
+          flutterLocalNotificationsPlugin.show(
+            DateTime.now().millisecond,
+            title,
+            body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'level_up_channel_id',
+                'Level Up Notificări',
+                importance: Importance.max,
+                priority: Priority.high,
+              ),
+            ),
+          );
+        }
+      });
+
       messaging.onTokenRefresh.listen((newToken) {
         saveTokenToFirestore(newToken);
       });
 
-      String? fcmToken = await messaging.getToken();
-
-      if (fcmToken == null && defaultTargetPlatform == TargetPlatform.iOS) {
-        await Future.delayed(const Duration(seconds: 3));
-        fcmToken = await messaging.getToken();
+      String? fcmToken;
+      try {
+        if (!kIsWeb) {
+          fcmToken = await messaging.getToken();
+        }
+      } catch (e) {
+        debugPrint("Notă FCM: $e");
       }
 
       if (fcmToken != null && fcmToken.isNotEmpty) {
         await saveTokenToFirestore(fcmToken);
+        debugPrint("SUCCESS: FCM Token salvat cu succes: $fcmToken");
       }
     }
   } catch (e) {
@@ -211,7 +234,7 @@ class _MainScreenState extends State<MainScreen> {
           menuTitles[2] = "Cursuri";
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
-            const TeacherCatalogScreen(), // Ecranul profesorului
+            const TeacherCatalogScreen(),
             CoursesScreen(role: userRole),
             const Center(
               child: Text(
@@ -229,7 +252,6 @@ class _MainScreenState extends State<MainScreen> {
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(1)),
             const CatalogScreen(role: 'parent'),
-            // Aici trimitem corect datele către ProgressScreen pentru părinte
             ProgressScreen(
               role: 'parent',
               currentUserId: currentUser?.uid ?? '',
@@ -250,13 +272,10 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ];
         } else {
-          // Student / Elev
           menuTitles[2] = "Cursuri";
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
-            const CatalogScreen(
-              role: 'student',
-            ), // <-- Aici punem catalogul pentru Elev
+            const CatalogScreen(role: 'student'),
             CoursesScreen(role: userRole),
             const Center(
               child: Text(
@@ -329,7 +348,6 @@ class _MainScreenState extends State<MainScreen> {
                               .snapshots()) {
                         int unreadCount = snapshot.docs.length;
 
-                        // --- ADĂUGĂM ACEST BLOC PENTRU BADGE-UL TELEFONULUI ---
                         if (!kIsWeb) {
                           try {
                             if (unreadCount > 0) {
@@ -341,7 +359,6 @@ class _MainScreenState extends State<MainScreen> {
                             debugPrint("Eroare actualizare badge: $e");
                           }
                         }
-                        // ---------------------------------------------------
 
                         yield unreadCount;
                       }
@@ -536,7 +553,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ================= ECRAN CATALOG PROFESOR CU FILTRARE AVANSATĂ =================
 class TeacherCatalogScreen extends StatefulWidget {
   const TeacherCatalogScreen({super.key});
 
@@ -657,10 +673,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                     if (data['grade'] != null) gradesSet.add(data['grade']);
                     if (data['studentName'] != null)
                       studentsSet.add(data['studentName']);
-                    if (data['date'] != null)
-                      datesSet.add(
-                        data['date'],
-                      ); // <--- Colectăm datele existente
+                    if (data['date'] != null) datesSet.add(data['date']);
                   }
                 }
                 return Column(
@@ -715,7 +728,6 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    // Rând nou dedicat filtrului după Dată pe tot ecranul sau jumătate
                     Row(
                       children: [
                         Expanded(
@@ -975,7 +987,6 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
   }
 }
 
-// ================= ECRANUL HOME COMPLET =================
 class HomeTab extends StatelessWidget {
   final VoidCallback onGoToCourses;
 
@@ -1302,7 +1313,7 @@ class HomeTab extends StatelessWidget {
                     const Divider(color: Colors.white24),
                     const SizedBox(height: 12),
                     Text(
-                      "© 2026 Level Up App. Toate drepturile rezervate.",
+                      "© Dezvoltat de Diana C. 2026 Level Up App. Toate drepturile rezervate.",
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.5),
                         fontSize: 11,
@@ -1374,10 +1385,7 @@ class HomeTab extends StatelessWidget {
 
   Widget _buildHeroCard() {
     return Transform.translate(
-      offset: const Offset(
-        0,
-        -190,
-      ), // <--- Modifică valoarea -30 ca să o urci sau să o cobori
+      offset: const Offset(0, -190),
       child: Container(
         height: 125,
         padding: const EdgeInsets.all(16),
