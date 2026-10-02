@@ -5,6 +5,7 @@ import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:lottie/lottie.dart';
 
+import 'catalog_screen.dart';
 import 'course_detail_screen.dart';
 import 'lesson_detail_page.dart';
 
@@ -185,7 +186,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     String courseId = data['courseId'] ?? '';
     String lessonId = data['lessonId'] ?? '';
     String notifType = data['type'] ?? 'lesson';
-    String notifTitle = data['title'] ?? 'Detalii Lecție';
+    String notifTitle = data['title'] ?? 'Detalii Notificare';
 
     await FirebaseFirestore.instance
         .collection('notifications')
@@ -196,7 +197,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (!mounted) return;
 
-    if (courseId.isNotEmpty && lessonId.isNotEmpty) {
+    if (notifType == 'grade') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CatalogScreen(role: 'student'),
+        ),
+      );
+    } else if (courseId.isNotEmpty && lessonId.isNotEmpty) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -205,6 +213,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             lessonId: lessonId,
             lessonTitle: notifTitle,
             initialTab: notifType,
+            role: 'student',
           ),
         ),
       );
@@ -217,7 +226,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             title: notifTitle,
             category: 'General',
             description: '',
-            role: widget.role,
+            role: 'student',
           ),
         ),
       );

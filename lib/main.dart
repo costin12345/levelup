@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:levelup/progress_screen.dart';
 
 import 'catalog_screen.dart';
 import 'notifications_screen.dart';
@@ -227,18 +228,15 @@ class _MainScreenState extends State<MainScreen> {
           menuTitles[2] = "Copilul Meu";
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(1)),
-            const CatalogScreen(
+            const CatalogScreen(role: 'parent'),
+            // Aici trimitem corect datele către ProgressScreen pentru părinte
+            ProgressScreen(
               role: 'parent',
-            ), // <-- Aici punem catalogul pentru Părinte
-            const Center(
-              child: Text(
-                "Informații despre Copilul Meu",
-                style: TextStyle(
-                  color: Color(0xff42153e),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              currentUserId: currentUser?.uid ?? '',
+              childEmail:
+                  (userSnapshot.data?.data()
+                      as Map<String, dynamic>?)?['childEmail'] ??
+                  '',
             ),
             const Center(
               child: Text(
@@ -1020,6 +1018,7 @@ class HomeTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
+                height: 550,
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   image: DecorationImage(
@@ -1374,30 +1373,37 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildHeroCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xff42153e).withOpacity(0.65),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white24, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            "De ce Level Up?",
-            style: TextStyle(
-              color: Colors.amber,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+    return Transform.translate(
+      offset: const Offset(
+        0,
+        -190,
+      ), // <--- Modifică valoarea -30 ca să o urci sau să o cobori
+      child: Container(
+        height: 125,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xff42153e).withOpacity(0.65),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white24, width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              "De ce Level Up?",
+              style: TextStyle(
+                color: Colors.amber,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
-          ),
-          SizedBox(height: 12),
-          Text(
-            "• Monitorizare note în timp real\n• Conexiune părinte-elev\n• Notificări instant",
-            style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
-          ),
-        ],
+            SizedBox(height: 2),
+            Text(
+              "• Monitorizare note în timp real\n• Conexiune părinte-elev\n• Notificări instant",
+              style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
+            ),
+          ],
+        ),
       ),
     );
   }

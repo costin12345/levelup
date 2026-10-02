@@ -59,6 +59,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   lessonId: widget.targetLessonId!,
                   lessonTitle: lData['title'] ?? 'Lecție',
                   initialTab: widget.initialTab ?? 'lesson',
+                  role: 'student',
                 ),
               ),
             );
@@ -837,6 +838,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                 lessonId: lessonId,
                                 lessonTitle: lessonTitle,
                                 initialTab: 'lesson',
+                                role: 'student',
                               ),
                             ),
                           );

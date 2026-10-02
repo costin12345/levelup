@@ -10,6 +10,7 @@ class LessonDetailPage extends StatefulWidget {
   final String lessonId;
   final String lessonTitle;
   final String initialTab;
+  final String role;
 
   const LessonDetailPage({
     super.key,
@@ -17,6 +18,7 @@ class LessonDetailPage extends StatefulWidget {
     required this.lessonId,
     required this.lessonTitle,
     this.initialTab = 'lesson',
+    required this.role,
   });
 
   @override
