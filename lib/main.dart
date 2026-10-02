@@ -14,6 +14,7 @@ import 'courses_screen.dart';
 import 'firebase_options.dart';
 import 'login_screen.dart';
 import 'add_grade_dialog.dart';
+import 'progress_screen.dart'; // Asigură-te că importi fișierul cu ecranul de progres
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -210,7 +211,7 @@ class _MainScreenState extends State<MainScreen> {
           menuTitles[2] = "Cursuri";
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
-            const TeacherCatalogScreen(), // Ecranul profesorului
+            const TeacherCatalogScreen(),
             CoursesScreen(role: userRole),
             const Center(
               child: Text(
@@ -225,20 +226,28 @@ class _MainScreenState extends State<MainScreen> {
           ];
         } else if (userRole == 'parent') {
           menuTitles[2] = "Copilul Meu";
+
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(1)),
-            const CatalogScreen(
-              role: 'parent',
-            ), // <-- Aici punem catalogul pentru Părinte
-            const Center(
-              child: Text(
-                "Informații despre Copilul Meu",
-                style: TextStyle(
-                  color: Color(0xff42153e),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            const CatalogScreen(role: 'parent'),
+            // 🚀 Preluăm dinamic emailul copilului asociat acestui părinte
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(currentUser!.uid)
+                  .get(),
+              builder: (context, snapshot) {
+                String childEmail = '';
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  var data = snapshot.data!.data() as Map<String, dynamic>;
+                  childEmail = data['childEmail'] ?? '';
+                }
+                return ProgressScreen(
+                  role: 'parent',
+                  currentUserId: currentUser!.uid,
+                  childEmail: childEmail,
+                );
+              },
             ),
             const Center(
               child: Text(
@@ -256,9 +265,7 @@ class _MainScreenState extends State<MainScreen> {
           menuTitles[2] = "Cursuri";
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
-            const CatalogScreen(
-              role: 'student',
-            ), // <-- Aici punem catalogul pentru Elev
+            const CatalogScreen(role: 'student'),
             CoursesScreen(role: userRole),
             const Center(
               child: Text(
@@ -331,7 +338,6 @@ class _MainScreenState extends State<MainScreen> {
                               .snapshots()) {
                         int unreadCount = snapshot.docs.length;
 
-                        // --- ADĂUGĂM ACEST BLOC PENTRU BADGE-UL TELEFONULUI ---
                         if (!kIsWeb) {
                           try {
                             if (unreadCount > 0) {
@@ -343,7 +349,6 @@ class _MainScreenState extends State<MainScreen> {
                             debugPrint("Eroare actualizare badge: $e");
                           }
                         }
-                        // ---------------------------------------------------
 
                         yield unreadCount;
                       }
@@ -654,15 +659,18 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                 if (snapshot.hasData) {
                   for (var doc in snapshot.data!.docs) {
                     var data = doc.data() as Map<String, dynamic>;
-                    if (data['className'] != null)
+                    if (data['className'] != null) {
                       classes.add(data['className']);
-                    if (data['grade'] != null) gradesSet.add(data['grade']);
-                    if (data['studentName'] != null)
+                    }
+                    if (data['grade'] != null) {
+                      gradesSet.add(data['grade']);
+                    }
+                    if (data['studentName'] != null) {
                       studentsSet.add(data['studentName']);
-                    if (data['date'] != null)
-                      datesSet.add(
-                        data['date'],
-                      ); // <--- Colectăm datele existente
+                    }
+                    if (data['date'] != null) {
+                      datesSet.add(data['date']);
+                    }
                   }
                 }
                 return Column(
@@ -717,7 +725,6 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    // Rând nou dedicat filtrului după Dată pe tot ecranul sau jumătate
                     Row(
                       children: [
                         Expanded(
@@ -907,23 +914,87 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                               ),
                             ],
                           ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.amber,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              grade,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xff42153e),
-                                fontSize: 18,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  grade,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xff42153e),
+                                    fontSize: 18,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                  size: 22,
+                                ),
+                                tooltip: "Șterge Nota",
+                                onPressed: () async {
+                                  bool? confirm = await showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text("Șterge Nota"),
+                                      content: const Text(
+                                        "Ești sigur că vrei să ștergi această notă?",
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text("Anulează"),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: const Text(
+                                            "Șterge",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+                                    String gradeId = filteredDocs[index].id;
+                                    await FirebaseFirestore.instance
+                                        .collection('grades')
+                                        .doc(gradeId)
+                                        .delete();
+
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                "Nota a fost ștersă cu succes.",
+                                              ),
+                                            ),
+                                          );
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -1048,10 +1119,17 @@ class HomeTab extends StatelessWidget {
                             )
                           : Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 _buildHeroText(context),
-                                const SizedBox(height: 24),
-                                _buildHeroCard(),
+                                const SizedBox(
+                                  height:
+                                      20, // Spațiu curat împotriva suprapunerii
+                                ),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: _buildHeroCard(),
+                                ),
                               ],
                             );
                     },

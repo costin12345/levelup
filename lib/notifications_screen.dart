@@ -5,6 +5,7 @@ import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:lottie/lottie.dart';
 
+import 'catalog_screen.dart';
 import 'course_detail_screen.dart';
 import 'lesson_detail_page.dart';
 
@@ -24,28 +25,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _updateBadgeForUser(); // <--- Adaugă aici
+    _updateBadgeForUser();
   }
 
-  // 2. Funcție ajutătoare care alege animația Lottie în funcție de tipul notificării
+  // Funcție ajutătoare care alege animația Lottie în funcție de tipul notificării
   Widget _getAnimationForType(String type, bool isRead) {
-    String assetPath = 'images/animations/homework.json'; // Animație implicită (exemplu pentru teme/lecții)
+    String assetPath = 'images/animations/homework.json';
 
     if (type == 'user_registration') {
-      assetPath =
-          'images/animations/enrollment.json'; // Animație pentru conturi noi
+      assetPath = 'images/animations/enrollment.json';
     } else if (type == 'enrollment') {
-      assetPath =
-          'images/animations/user_reg.json'; // Animație pentru înscrieri
+      assetPath = 'images/animations/user_reg.json';
     }
 
     return SizedBox(
       width: 42,
       height: 42,
       child: Opacity(
-        opacity: isRead
-            ? 0.5
-            : 1.0, // Dacă e citită, o facem puțin mai transparentă
+        opacity: isRead ? 0.5 : 1.0,
         child: Lottie.asset(assetPath, fit: BoxFit.contain),
       ),
     );
@@ -54,26 +51,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
-      // 1. Numărăm elevii care așteaptă aprobarea (hasAccess: false)
       var pendingUsers = await FirebaseFirestore.instance
           .collection('users')
           .where('role', isEqualTo: 'student')
           .where('hasAccess', isEqualTo: false)
           .get();
 
-      // 2. Numărăm înscrierile la cursuri în așteptare (status: pending)
       var pendingEnrollments = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('status', isEqualTo: 'pending')
           .get();
 
-      // Suma totală exactă pe care o folosește și clopoțelul din main.dart
       int totalPending =
           pendingUsers.docs.length + pendingEnrollments.docs.length;
-
-      debugPrint(
-        "🔍 Badge actualizat la: $totalPending (Conturi: ${pendingUsers.docs.length}, Înscrieri: ${pendingEnrollments.docs.length})",
-      );
 
       if (await FlutterAppBadger.isAppBadgeSupported()) {
         if (totalPending > 0) {
@@ -86,29 +76,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       debugPrint("Eroare la actualizarea badge-ului: $e");
     }
   }
-
-  /*// Pe Web sau alte platforme non-mobile nu există badge-uri native
-    if (kIsWeb || currentUser == null) return;
-    try {
-      // Numărăm strict doar notificările necitite ale utilizatorului curent din Firestore
-      QuerySnapshot unreadNotifsSnap = await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('userId', isEqualTo: currentUser!.uid)
-          .where('isRead', isEqualTo: false)
-          .get();
-
-      int unreadCount = unreadNotifsSnap.docs.length;
-
-      if (await FlutterAppBadger.isAppBadgeSupported()) {
-        if (unreadCount > 0) {
-          FlutterAppBadger.updateBadgeCount(unreadCount);
-        } else {
-          FlutterAppBadger.removeBadge();
-        }
-      }
-    } catch (e) {
-      debugPrint("Eroare la actualizarea badge-ului: $e");
-    }*/
 
   Future<void> _confirmAndDeleteUser(String userId, String userName) async {
     bool? confirm = await showDialog<bool>(
@@ -185,7 +152,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     String courseId = data['courseId'] ?? '';
     String lessonId = data['lessonId'] ?? '';
     String notifType = data['type'] ?? 'lesson';
-    String notifTitle = data['title'] ?? 'Detalii Lecție';
+    String notifTitle = data['title'] ?? 'Detalii';
 
     await FirebaseFirestore.instance
         .collection('notifications')
@@ -196,7 +163,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (!mounted) return;
 
-    if (courseId.isNotEmpty && lessonId.isNotEmpty) {
+    // 🚀 DACĂ ESTE NOTIFICARE DE NOTĂ
+    if (notifType == 'grade') {
+      // Verificăm rolul utilizatorului curent (elev sau părinte)
+      if (widget.role == 'parent') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: CatalogScreen(
+                role: 'parent',
+              ), // Părintele merge în Catalogul Copiilor Mei
+            ),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: CatalogScreen(
+                role: 'student',
+              ), // Elevul merge în catalogul lui
+            ),
+          ),
+        );
+      }
+    } else if (courseId.isNotEmpty && lessonId.isNotEmpty) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -205,7 +198,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             lessonId: lessonId,
             lessonTitle: notifTitle,
             initialTab: notifType,
-            role: 'student',
+            role: widget.role,
           ),
         ),
       );
@@ -490,10 +483,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             .collection('users')
                             .snapshots(),
                         builder: (context, snapshot) {
-                          if (!snapshot.hasData)
+                          if (!snapshot.hasData) {
                             return const Center(
                               child: CircularProgressIndicator(),
                             );
+                          }
 
                           String query = _searchController.text
                               .toLowerCase()
@@ -558,7 +552,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     // ==========================================
-    // 2. DACĂ ESTE ELEV -> Are UN SINGUR ECAN Simplu cu Notificările Lui Personale
+    // 2. DACĂ ESTE ELEV -> Are UN SINGUR ECRAN Simplu cu Notificările Lui
     // ==========================================
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),

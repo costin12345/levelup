@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -27,11 +28,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
         : widget.role == 'student'
         ? 'Scările Progresului Meu pe Materii'
         : 'Scările Performanței pe Materii (Elevi)';
-
-    String fieldQuery = widget.role == 'parent' ? 'studentEmail' : 'studentId';
-    String valueQuery = widget.role == 'parent'
-        ? (widget.childEmail ?? '')
-        : widget.currentUserId;
 
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),
@@ -82,16 +78,24 @@ class _ProgressScreenState extends State<ProgressScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Lista materiilor, fiecare având scara ei dedicată
+            // Lista materiilor
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: widget.role == 'teacher'
                     ? FirebaseFirestore.instance
                           .collection('grades')
                           .snapshots()
+                    : widget.role == 'student'
+                    ? FirebaseFirestore.instance
+                          .collection('grades')
+                          .where('studentId', isEqualTo: widget.currentUserId)
+                          .snapshots()
                     : FirebaseFirestore.instance
                           .collection('grades')
-                          .where(fieldQuery, isEqualTo: valueQuery)
+                          .where(
+                            'studentEmail',
+                            isEqualTo: widget.childEmail ?? '',
+                          )
                           .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -113,7 +117,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
                   var docs = snapshot.data!.docs;
 
-                  // Grupăm notele pe materii (Course Title)
+                  // Grupăm notele pe materii
                   Map<String, List<GradePoint>> subjectGroups = {};
 
                   for (var doc in docs) {
@@ -167,7 +171,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Titlul materiei și legenda rapidă
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -203,8 +206,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-
-                            // Scara animată dedicată acestei materii
                             SizedBox(
                               height: 130,
                               child: TweenAnimationBuilder<double>(
@@ -243,7 +244,6 @@ class GradePoint {
   GradePoint({required this.grade, required this.date});
 }
 
-// Pictorul pentru scara fiecărei materii în parte
 class SingleSubjectStaircasePainter extends CustomPainter {
   final List<GradePoint> points;
   final double animationProgress;
@@ -290,7 +290,6 @@ class SingleSubjectStaircasePainter extends CustomPainter {
 
     canvas.drawPath(path, paintLine);
 
-    // Punctele, fețele zâmbitoare/triste și notele pe trepte
     for (int i = 0; i < points.length; i++) {
       double x = points.length == 1 ? size.width / 2 : i * dxStep;
       double targetY = mapGradeToY(points[i].grade);
@@ -310,7 +309,6 @@ class SingleSubjectStaircasePainter extends CustomPainter {
         ..style = PaintingStyle.stroke;
       canvas.drawCircle(Offset(x, y), 7, borderPaint);
 
-      // Fața fericită sau tristă
       TextPainter emojiPainter = TextPainter(
         text: TextSpan(
           text: points[i].grade >= 8.0 ? '😊' : '🙁',
@@ -321,7 +319,6 @@ class SingleSubjectStaircasePainter extends CustomPainter {
       emojiPainter.layout();
       emojiPainter.paint(canvas, Offset(x - 8, y - 28));
 
-      // Nota și data dedesubt
       TextPainter textPainter = TextPainter(
         text: TextSpan(
           text: "${points[i].grade} (${points[i].date})",
