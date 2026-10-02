@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:levelup/progress_screen.dart';
 
 import 'catalog_screen.dart';
 import 'notifications_screen.dart';
@@ -37,6 +36,7 @@ Future<void> initLocalNotifications() async {
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 }
+// --- FUNCȚII GLOBALE PENTRU NOTIFICĂRI ---
 
 Future<void> clearAppBadge() async {
   if (kIsWeb) return;
@@ -68,6 +68,8 @@ Future<void> saveTokenToFirestore(String token) async {
 }
 
 Future<void> setupFCM() async {
+  if (kIsWeb) return;
+
   User? currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser == null) return;
 
@@ -82,45 +84,19 @@ Future<void> setupFCM() async {
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        debugPrint('Mesaj primit în foreground: ${message.data}');
-
-        if (message.data.isNotEmpty) {
-          String title = message.data['title'] ?? 'Notificare Nouă';
-          String body = message.data['body'] ?? '';
-
-          flutterLocalNotificationsPlugin.show(
-            DateTime.now().millisecond,
-            title,
-            body,
-            const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'level_up_channel_id',
-                'Level Up Notificări',
-                importance: Importance.max,
-                priority: Priority.high,
-              ),
-            ),
-          );
-        }
-      });
-
       messaging.onTokenRefresh.listen((newToken) {
         saveTokenToFirestore(newToken);
       });
 
-      String? fcmToken;
-      try {
-        if (!kIsWeb) {
-          fcmToken = await messaging.getToken();
-        }
-      } catch (e) {
-        debugPrint("Notă FCM: $e");
+      String? fcmToken = await messaging.getToken();
+
+      if (fcmToken == null && defaultTargetPlatform == TargetPlatform.iOS) {
+        await Future.delayed(const Duration(seconds: 3));
+        fcmToken = await messaging.getToken();
       }
 
       if (fcmToken != null && fcmToken.isNotEmpty) {
         await saveTokenToFirestore(fcmToken);
-        debugPrint("SUCCESS: FCM Token salvat cu succes: $fcmToken");
       }
     }
   } catch (e) {
@@ -234,7 +210,7 @@ class _MainScreenState extends State<MainScreen> {
           menuTitles[2] = "Cursuri";
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
-            const TeacherCatalogScreen(),
+            const TeacherCatalogScreen(), // Ecranul profesorului
             CoursesScreen(role: userRole),
             const Center(
               child: Text(
@@ -251,14 +227,18 @@ class _MainScreenState extends State<MainScreen> {
           menuTitles[2] = "Copilul Meu";
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(1)),
-            const CatalogScreen(role: 'parent'),
-            ProgressScreen(
+            const CatalogScreen(
               role: 'parent',
-              currentUserId: currentUser?.uid ?? '',
-              childEmail:
-                  (userSnapshot.data?.data()
-                      as Map<String, dynamic>?)?['childEmail'] ??
-                  '',
+            ), // <-- Aici punem catalogul pentru Părinte
+            const Center(
+              child: Text(
+                "Informații despre Copilul Meu",
+                style: TextStyle(
+                  color: Color(0xff42153e),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const Center(
               child: Text(
@@ -272,10 +252,13 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ];
         } else {
+          // Student / Elev
           menuTitles[2] = "Cursuri";
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
-            const CatalogScreen(role: 'student'),
+            const CatalogScreen(
+              role: 'student',
+            ), // <-- Aici punem catalogul pentru Elev
             CoursesScreen(role: userRole),
             const Center(
               child: Text(
@@ -348,6 +331,7 @@ class _MainScreenState extends State<MainScreen> {
                               .snapshots()) {
                         int unreadCount = snapshot.docs.length;
 
+                        // --- ADĂUGĂM ACEST BLOC PENTRU BADGE-UL TELEFONULUI ---
                         if (!kIsWeb) {
                           try {
                             if (unreadCount > 0) {
@@ -359,6 +343,7 @@ class _MainScreenState extends State<MainScreen> {
                             debugPrint("Eroare actualizare badge: $e");
                           }
                         }
+                        // ---------------------------------------------------
 
                         yield unreadCount;
                       }
@@ -553,6 +538,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
+// ================= ECRAN CATALOG PROFESOR CU FILTRARE AVANSATĂ =================
 class TeacherCatalogScreen extends StatefulWidget {
   const TeacherCatalogScreen({super.key});
 
@@ -673,7 +659,10 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                     if (data['grade'] != null) gradesSet.add(data['grade']);
                     if (data['studentName'] != null)
                       studentsSet.add(data['studentName']);
-                    if (data['date'] != null) datesSet.add(data['date']);
+                    if (data['date'] != null)
+                      datesSet.add(
+                        data['date'],
+                      ); // <--- Colectăm datele existente
                   }
                 }
                 return Column(
@@ -728,6 +717,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
+                    // Rând nou dedicat filtrului după Dată pe tot ecranul sau jumătate
                     Row(
                       children: [
                         Expanded(
@@ -987,6 +977,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
   }
 }
 
+// ================= ECRANUL HOME COMPLET =================
 class HomeTab extends StatelessWidget {
   final VoidCallback onGoToCourses;
 
@@ -1029,7 +1020,6 @@ class HomeTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                height: 550,
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   image: DecorationImage(
@@ -1313,7 +1303,7 @@ class HomeTab extends StatelessWidget {
                     const Divider(color: Colors.white24),
                     const SizedBox(height: 12),
                     Text(
-                      "© Dezvoltat de Diana C. 2026 Level Up App. Toate drepturile rezervate.",
+                      "© 2026 Level Up App. Toate drepturile rezervate.",
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.5),
                         fontSize: 11,
@@ -1384,34 +1374,30 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildHeroCard() {
-    return Transform.translate(
-      offset: const Offset(0, -190),
-      child: Container(
-        height: 125,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xff42153e).withOpacity(0.65),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white24, width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              "De ce Level Up?",
-              style: TextStyle(
-                color: Colors.amber,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xff42153e).withOpacity(0.65),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white24, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text(
+            "De ce Level Up?",
+            style: TextStyle(
+              color: Colors.amber,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
             ),
-            SizedBox(height: 2),
-            Text(
-              "• Monitorizare note în timp real\n• Conexiune părinte-elev\n• Notificări instant",
-              style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
-            ),
-          ],
-        ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            "• Monitorizare note în timp real\n• Conexiune părinte-elev\n• Notificări instant",
+            style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
+          ),
+        ],
       ),
     );
   }

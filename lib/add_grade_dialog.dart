@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:googleapis_auth/auth_io.dart' as auth_io;
+import 'package:googleapis_auth/auth_io.dart' as auth;
 
 class AddGradeDialog extends StatefulWidget {
   const AddGradeDialog({super.key});
@@ -16,6 +16,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
   String? _selectedStudentName;
   String? _selectedStudentEmail;
 
+  // Valori predefinite pentru selecție
   String _selectedClass = "Clasa a IX-a";
   String _selectedCourse = "Matematică";
   String _selectedGrade = "10";
@@ -25,6 +26,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
 
+  // Listele fixe cerute
   final List<String> _classesList = [
     "Clasa a IV-a",
     "Clasa a V-a",
@@ -113,8 +115,8 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
       String pushBody =
           'Ai primit nota $_selectedGrade la $_selectedClass. Data: $formattedDate';
 
-      // 2. Colectăm ID-urile destinatarilor într-o listă simplă
-      List<String> recipientIds = [_selectedStudentId!];
+      // 2. Colectăm ID-urile destinatarilor (Elevul + Părinții asociați)
+      Set<String> recipientIds = {_selectedStudentId!};
 
       if (_selectedStudentEmail != null && _selectedStudentEmail!.isNotEmpty) {
         var parentQuery = await FirebaseFirestore.instance
@@ -124,39 +126,13 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
             .get();
 
         for (var parentDoc in parentQuery.docs) {
-          if (!recipientIds.contains(parentDoc.id)) {
-            recipientIds.add(parentDoc.id);
-          }
+          recipientIds.add(parentDoc.id);
         }
       }
 
-      // GARANȚIE: Eliminăm orice ID duplicat din listă
-      List<String> uniqueRecipients = recipientIds.toSet().toList();
+      List<String> uniqueRecipients = recipientIds.toList();
 
-      // 3. Autentificare pentru FCM v1
-      final serviceAccountCredentials =
-          auth_io.ServiceAccountCredentials.fromJson({
-            "type": "service_account",
-            "project_id": "level-up-19583",
-            "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
-            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\n/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\nFQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\nUGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\nSFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
-            "client_email": "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
-            "client_id": "112777526185284576732",
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url":
-                "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
-            "universe_domain": "googleapis.com",
-          });
-
-      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-      final client = await auth_io.clientViaServiceAccount(
-        serviceAccountCredentials,
-        scopes,
-      );
-
-      // 4. Trimitere unică pe fiecare ID curat din listă
+      // 3. Salvăm în Firestore pentru TOȚI destinatarii (istoric + clopoțel + badge)
       for (String userId in uniqueRecipients) {
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': userId,
@@ -166,10 +142,48 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
           'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
+      }
+
+      // 4. Trimitem mesajul fizic (push notification) DOAR CĂTRE PRIMUL UTILIZATOR din listă
+      // Astfel, baza de date știe de amândoi, dar telefonul primește un singur semnal vizual.
+      if (uniqueRecipients.isNotEmpty) {
+        String targetUserId = uniqueRecipients.first;
+
+        final serviceAccountCredentials =
+            auth.ServiceAccountCredentials.fromJson({
+              "type": "service_account",
+              "project_id": "level-up-19583",
+              "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
+              "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\FQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\UGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\nSFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
+              "client_email": "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
+              "client_id": "112777526185284576732",
+              "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+              "token_uri": "https://oauth2.googleapis.com/token",
+              "auth_provider_x509_cert_url":
+                  "https://www.googleapis.com/oauth2/v1/certs",
+              "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
+              "universe_domain": "googleapis.com",
+            });
+
+        final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+        final client = await auth.clientViaServiceAccount(
+          serviceAccountCredentials,
+          scopes,
+        );
+
+        final String fcmV1Url =
+            'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
+
+        final unreadSnap = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: targetUserId)
+            .where('isRead', isEqualTo: false)
+            .get();
+        int unreadCount = unreadSnap.docs.length;
 
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
-            .doc(userId)
+            .doc(targetUserId)
             .get();
 
         if (userDoc.exists) {
@@ -177,23 +191,13 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
           String? fcmToken = uData?['fcmToken'];
 
           if (fcmToken != null && fcmToken.isNotEmpty) {
-            final unreadSnap = await FirebaseFirestore.instance
-                .collection('notifications')
-                .where('userId', isEqualTo: userId)
-                .where('isRead', isEqualTo: false)
-                .get();
-            int unreadCount = unreadSnap.docs.length;
-
-            final String fcmV1Url =
-                'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
-
             await client.post(
               Uri.parse(fcmV1Url),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({
                 'message': {
                   'token': fcmToken,
-                  // Am scos complet blocul 'notification' de aici pentru a preveni dublarea automată
+                  'notification': {'title': pushTitle, 'body': pushBody},
                   'android': {
                     'priority': 'HIGH',
                     'notification': {'sound': 'default'},
@@ -207,10 +211,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                       'aps': {'sound': 'default', 'badge': unreadCount},
                     },
                   },
-                  // Folosim strict 'data' pentru a trimite titlul și corpul în siguranță
                   'data': {
-                    'title': pushTitle,
-                    'body': pushBody,
                     'notificationType': 'grade',
                     'click_action': 'FLUTTER_NOTIFICATION_CLICK',
                   },
@@ -219,22 +220,20 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
             );
           }
         }
+        client.close();
       }
-      client.close();
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              '🎉 Nota a fost adăugată și notificarea a fost trimisă!',
-            ),
+            content: Text('🎉 Nota a fost adăugată și notificarea trimisă!'),
             backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
-      debugPrint("Eroare la trimiterea notiței / FCM v1: $e");
+      debugPrint("Eroare la trimiterea notificării FCM v1 pentru note: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -257,7 +256,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
             style: TextStyle(
               color: Color(0xff42153e),
               fontWeight: FontWeight.bold,
-              fontSize: 18,
             ),
           ),
         ],
@@ -268,6 +266,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 1. Selector Clasa
               DropdownButtonFormField<String>(
                 value: _selectedClass,
                 decoration: InputDecoration(
@@ -298,6 +297,8 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // 2. Selector Nume Elev
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('users')
@@ -353,6 +354,8 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // 3. Selector Materie
               DropdownButtonFormField<String>(
                 value: _selectedCourse,
                 decoration: InputDecoration(
@@ -380,6 +383,8 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // 4. Nota & Calendar
               Row(
                 children: [
                   Expanded(
@@ -445,6 +450,8 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 ],
               ),
               const SizedBox(height: 16),
+
+              // 5. Observații / Temă
               TextField(
                 controller: _commentController,
                 maxLines: 2,
