@@ -26,6 +26,9 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
 
+  // 🚀 Nou: Flag pentru a marca dacă nota este de la o simulare / evaluare oficială
+  bool _isSimulation = false;
+
   // Listele fixe cerute
   final List<String> _classesList = [
     "Clasa a IV-a",
@@ -98,7 +101,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
       String formattedDate =
           "${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}";
 
-      // 1. Salvăm nota în colecția 'grades'
+      // 1. Salvăm nota în colecția 'grades' (inclusiv flag-ul isSimulation pentru a doua scară)
       await FirebaseFirestore.instance.collection('grades').add({
         'studentId': _selectedStudentId,
         'studentName': _selectedStudentName ?? 'Elev',
@@ -108,12 +111,17 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         'grade': _selectedGrade,
         'comment': _commentController.text.trim(),
         'date': formattedDate,
+        'isSimulation':
+            _isSimulation, // 🚀 Aici salvăm opțiunea pentru scară secundară
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      String pushTitle = '🌟 Notă Nouă la $_selectedCourse';
+      String gradeTypeLabel = _isSimulation
+          ? 'Simulare / Evaluare'
+          : 'Notă Nouă';
+      String pushTitle = '🌟 $gradeTypeLabel la $_selectedCourse';
       String pushBody =
-          'Ai primit nota $_selectedGrade la $_selectedClass. Data: $formattedDate';
+          'Ai primit nota $_selectedGrade ($gradeTypeLabel) la $_selectedClass. Data: $formattedDate';
 
       // 2. Colectăm ID-urile destinatarilor (Elevul + Părinții asociați)
       Set<String> recipientIds = {_selectedStudentId!};
@@ -132,7 +140,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
 
       List<String> uniqueRecipients = recipientIds.toList();
 
-      // 3. Salvăm în Firestore pentru TOȚI destinatarii (istoric + clopoțel + badge)
+      // 3. Salvăm în Firestore pentru TOȚI destinatarii
       for (String userId in uniqueRecipients) {
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': userId,
@@ -144,8 +152,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         });
       }
 
-      // 4. Trimitem mesajul fizic (push notification) DOAR CĂTRE PRIMUL UTILIZATOR din listă
-      // Astfel, baza de date știe de amândoi, dar telefonul primește un singur semnal vizual.
+      // 4. Trimitem notificarea push FCM v1
       if (uniqueRecipients.isNotEmpty) {
         String targetUserId = uniqueRecipients.first;
 
@@ -154,7 +161,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
               "type": "service_account",
               "project_id": "level-up-19583",
               "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
-              "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\FQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\UGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\nSFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
+              "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\FQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\UGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\SFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
               "client_email": "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
               "client_id": "112777526185284576732",
               "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -466,6 +473,50 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                   ),
                   filled: true,
                   fillColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 🚀 6. SECȚIUNEA SPECIALĂ: Checkbox pentru Simulare / Evaluare Oficială
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _isSimulation
+                        ? Colors.orange.shade400
+                        : Colors.grey.shade300,
+                    width: _isSimulation ? 2 : 1,
+                  ),
+                ),
+                child: CheckboxListTile(
+                  title: const Text(
+                    "Aceasta este o Simulare / Evaluare",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff42153e),
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    "Va apărea pe scara specială de simulări",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  secondary: Icon(
+                    Icons.military_tech,
+                    color: _isSimulation ? Colors.orange : Colors.grey,
+                    size: 26,
+                  ),
+                  activeColor: Colors.orange,
+                  value: _isSimulation,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _isSimulation = value ?? false;
+                    });
+                  },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
