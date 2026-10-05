@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 
 import 'course_detail_screen.dart';
@@ -20,55 +19,105 @@ class CoursesScreen extends StatefulWidget {
 
 class _CoursesScreenState extends State<CoursesScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
-  // Metodă pentru reîmprospătarea badge-ului profesorului
-  Future<void> _refreshTeacherBadge() async {
-    if (kIsWeb) return;
-    try {
-      final unapprovedUsersSnap = await FirebaseFirestore.instance
-          .collection('users')
-          .where('role', isEqualTo: 'student')
-          .where('hasAccess', isEqualTo: false)
-          .get();
+  String? _selectedClass; // Nivelul 2: Dacă este selectată o clasă, afișăm grupele din acea clasă
 
-      final pendingEnrollmentsSnap = await FirebaseFirestore.instance
-          .collection('enrollments')
-          .where('status', isEqualTo: 'pending')
-          .get();
+  // ================= DIALOGURI PENTRU CLASE (NIVELUL 1) =================
+  void _showAddOrEditClassDialog({String? oldClassName}) {
+    final classNameController = TextEditingController(text: oldClassName ?? '');
 
-      int remaining =
-          unapprovedUsersSnap.docs.length + pendingEnrollmentsSnap.docs.length;
-
-      if (await FlutterAppBadger.isAppBadgeSupported()) {
-        if (remaining > 0) {
-          FlutterAppBadger.updateBadgeCount(remaining);
-        } else {
-          FlutterAppBadger.removeBadge();
-        }
-      }
-    } catch (e) {
-      debugPrint("Eroare la actualizarea badge-ului: $e");
-    }
-  }
-
-  // 1. Ștergere curs (pentru profesor)
-  Future<void> _deleteCourse(String courseId, String courseTitle) async {
-    final bool? confirm = await showDialog<bool>(
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Ștergere "$courseTitle"'),
-        content: const Text(
-          'Ești sigur că vrei să ștergi acest curs cu toate lecțiile asociate? Acțiunea este ireversibilă.',
+        title: Text(
+          oldClassName == null
+              ? 'Adaugă Clasă Nouă'
+              : 'Editează Denumirea Clasei',
+        ),
+        content: TextField(
+          controller: classNameController,
+          decoration: const InputDecoration(
+            labelText: 'Nume Clasă (ex: Clasa a V-a)',
+            border: OutlineInputBorder(),
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff42153e),
+            ),
+            onPressed: () async {
+              String newName = classNameController.text.trim();
+              if (newName.isEmpty) return;
+
+              if (oldClassName == null) {
+                // Adăugăm un curs inițial în această clasă pentru a o crea în baza de date
+                await FirebaseFirestore.instance.collection('courses').add({
+                  'title': 'Prima Grupă / Curs',
+                  'className': newName,
+                  'category': newName,
+                  'description': 'Grupă generată automat pentru clasa $newName',
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+              } else {
+                // Actualizăm denumirea clasei pentru toate cursurile care aparțineau vechii clase
+                var snapshot = await FirebaseFirestore.instance
+                    .collection('courses')
+                    .where('className', isEqualTo: oldClassName)
+                    .get();
+
+                for (var doc in snapshot.docs) {
+                  await doc.reference.update({'className': newName});
+                }
+              }
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      oldClassName == null
+                          ? 'Clasa a fost adăugată!'
+                          : 'Clasa a fost actualizată!',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Salvează',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteClass(
+    String className,
+    List<QueryDocumentSnapshot> allDocs,
+  ) async {
+    bool? confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Șterge clasa "$className"?'),
+        content: const Text(
+          'Această acțiune va șterge clasa și toate grupele/cursurile asociate ei!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Anulează'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text(
-              'Șterge Cursul',
+              'Șterge Tot',
               style: TextStyle(color: Colors.white),
             ),
           ),
@@ -77,524 +126,166 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
 
     if (confirm == true) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('courses')
-            .doc(courseId)
-            .delete();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cursul a fost ștearsă cu succes!')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Eroare la ștergerea cursului: $e')),
-          );
-        }
+      var coursesToDelete = allDocs.where((doc) {
+        var data = doc.data() as Map<String, dynamic>;
+        return (data['className'] ?? data['category'] ?? 'Clasa Generală') ==
+            className;
+      }).toList();
+
+      for (var doc in coursesToDelete) {
+        await doc.reference.delete();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Clasa "$className" a fost ștersă.')),
+        );
       }
     }
   }
 
-  // 2. Notificare profesor la o cerere nouă de înscriere
-  Future<void> _notifyTeacherAboutEnrollment({
-    required String courseTitle,
-    required String studentName,
-  }) async {
-    try {
-      final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
-        {
-          "type": "service_account",
-          "project_id": "level-up-19583",
-          "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\n/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\nFQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\nUGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\nSFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
-          "client_email":
-              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
-          "client_id": "112777526185284576732",
-          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-          "token_uri": "https://oauth2.googleapis.com/token",
-          "auth_provider_x509_cert_url":
-              "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
-          "universe_domain": "googleapis.com",
-        },
-      );
+  // ================= DIALOGURI PENTRU GRUPE / CURSURI (NIVELUL 2) =================
+  void _showAddOrEditGroupDialog({DocumentSnapshot? existingCourse}) {
+    var data = existingCourse?.data() as Map<String, dynamic>?;
 
-      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-      final client = await auth.clientViaServiceAccount(
-        serviceAccountCredentials,
-        scopes,
-      );
+    final titleController = TextEditingController(text: data?['title'] ?? '');
+    final descriptionController = TextEditingController(
+      text: data?['description'] ?? '',
+    );
 
-      final teachersDocs = await FirebaseFirestore.instance
-          .collection('users')
-          .where('role', whereIn: ['teacher', 'Teacher'])
-          .get();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          existingCourse == null
+              ? 'Adaugă Grupă Nouă în $_selectedClass'
+              : 'Editează Grupa',
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Nume Grupă / Curs (ex: Grupa 5A, Matematică)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descriptionController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Descriere scurtă',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff42153e),
+            ),
+            onPressed: () async {
+              String title = titleController.text.trim();
+              if (title.isEmpty) return;
 
-      if (teachersDocs.docs.isEmpty) {
-        client.close();
-        return;
+              if (existingCourse == null) {
+                await FirebaseFirestore.instance.collection('courses').add({
+                  'title': title,
+                  'className': _selectedClass!,
+                  'category': _selectedClass!,
+                  'description': descriptionController.text.trim(),
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+              } else {
+                await existingCourse.reference.update({
+                  'title': title,
+                  'description': descriptionController.text.trim(),
+                });
+              }
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Grupa a fost salvată cu succes!'),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Salvează',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteGroup(String courseId, String courseTitle) async {
+    bool? confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Șterge grupa "$courseTitle"?'),
+        content: const Text(
+          'Această acțiune va șterge grupa și toate lecțiile din ea.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Șterge', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FirebaseFirestore.instance
+          .collection('courses')
+          .doc(courseId)
+          .delete();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text(' Grupa a fost ștearsă.')));
       }
-
-      final String fcmV1Url =
-          'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
-
-      for (var teacherDoc in teachersDocs.docs) {
-        var tData = teacherDoc.data();
-        String? teacherFcmToken = tData['fcmToken'];
-        String teacherId = teacherDoc.id;
-
-        await FirebaseFirestore.instance.collection('notifications').add({
-          'userId': teacherId,
-          'title': '🙋‍♂️ Solicitare nouă de înscriere!',
-          'body': '$studentName dorește să se înscrie la "$courseTitle".',
-          'isRead': false,
-          'type': 'enrollment_request',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-
-        final unreadSnap = await FirebaseFirestore.instance
-            .collection('notifications')
-            .where('userId', isEqualTo: teacherId)
-            .where('isRead', isEqualTo: false)
-            .get();
-        int unreadCount = unreadSnap.docs.length;
-
-        if (teacherFcmToken != null && teacherFcmToken.isNotEmpty) {
-          await client.post(
-            Uri.parse(fcmV1Url),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'message': {
-                'token': teacherFcmToken,
-                'notification': {
-                  'title': '🙋‍♂️ Solicitare nouă de înscriere!',
-                  'body':
-                      '$studentName dorește să se înscrie la "$courseTitle".',
-                },
-                'android': {
-                  'priority': 'HIGH',
-                  'notification': {'sound': 'default'},
-                },
-                'apns': {
-                  'headers': {'apns-priority': '10', 'apns-push-type': 'alert'},
-                  'payload': {
-                    'aps': {'sound': 'default', 'badge': unreadCount},
-                  },
-                },
-                'data': {
-                  'type': 'enrollment_request',
-                  'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-                },
-              },
-            }),
-          );
-        }
-      }
-      client.close();
-    } catch (e) {
-      debugPrint("Eroare la notificarea profesorului: $e");
     }
   }
 
-  // 3. Trimitere cerere înscriere la curs de către elev
+  // Solicitare înscriere elev
   Future<void> _requestEnrollment(String courseId, String courseTitle) async {
     if (currentUser == null) return;
-
     try {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser!.uid)
-          .get();
-
-      String studentName = 'Un elev';
-      if (userDoc.exists) {
-        var uData = userDoc.data() as Map<String, dynamic>?;
-        studentName =
-            uData?['fullName'] ??
-            uData?['name'] ??
-            uData?['email'] ??
-            'Un elev';
-      }
-
       await FirebaseFirestore.instance.collection('enrollments').add({
         'userId': currentUser!.uid,
         'courseId': courseId,
         'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
       });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Solicitarea a fost trimisă! Așteaptă aprobarea profesorului.',
-            ),
+            content: Text('Solicitarea de înscriere a fost trimisă!'),
           ),
         );
       }
-
-      await _notifyTeacherAboutEnrollment(
-        courseTitle: courseTitle,
-        studentName: studentName,
-      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Eroare la trimiterea solicitării: $e')),
-        );
-      }
+      debugPrint("Eroare înscriere: $e");
     }
-  }
-
-  // 4. Centru de Aprobări la Clopoțel (Conturi noi + Înscrieri cursuri)
-  void _showPendingRequestsDialog() {
-    // Curățăm notificările vechi/orfane ale profesorului la deschiderea clopoțelului
-    User? currentTeacher = FirebaseAuth.instance.currentUser;
-    if (currentTeacher != null) {
-      FirebaseFirestore.instance
-          .collection('notifications')
-          .where('userId', isEqualTo: currentTeacher.uid)
-          .where('isRead', isEqualTo: false)
-          .get()
-          .then((snapshot) {
-            for (var doc in snapshot.docs) {
-              doc.reference.update({'isRead': true});
-            }
-          });
-    }
-    showDialog(
-      context: context,
-      builder: (context) {
-        return DefaultTabController(
-          length: 2,
-          child: AlertDialog(
-            backgroundColor: Colors.white,
-            title: const Text(
-              'Centru de Aprobări',
-              style: TextStyle(
-                color: Color(0xff42153e),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: SizedBox(
-              width: 500,
-              height: 400,
-              child: Column(
-                children: [
-                  const TabBar(
-                    labelColor: Color(0xff42153e),
-                    unselectedLabelColor: Colors.grey,
-                    indicatorColor: Color(0xff42153e),
-                    tabs: [
-                      Tab(
-                        icon: Icon(Icons.person_add, size: 18),
-                        text: "Conturi Noi",
-                      ),
-                      Tab(
-                        icon: Icon(Icons.school, size: 18),
-                        text: "Înscrieri Curs",
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        // TAB 1: CONTURI NOI NEAPROBATE
-                        // TAB 1: CONTURI NOI NEAPROBATE
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('users')
-                              .where('role', isEqualTo: 'student')
-                              .where('hasAccess', isEqualTo: false)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
-                            if (!snapshot.hasData ||
-                                snapshot.data!.docs.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  'Nu există conturi noi în așteptare.',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              );
-                            }
-
-                            var unapprovedUsers = snapshot.data!.docs;
-
-                            return ListView.builder(
-                              itemCount: unapprovedUsers.length,
-                              itemBuilder: (context, index) {
-                                var uDoc = unapprovedUsers[index];
-                                var uData = uDoc.data() as Map<String, dynamic>;
-                                String uId = uDoc.id;
-                                String name =
-                                    uData['fullName'] ??
-                                    uData['name'] ??
-                                    'Elev';
-                                String email = uData['email'] ?? '';
-
-                                return ListTile(
-                                  leading: const CircleAvatar(
-                                    backgroundColor: Color(0xff42153e),
-                                    child: Icon(
-                                      Icons.person,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    email,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // BUTON APROBARE CONT
-                                      // BUTON APROBARE CONT
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.check_circle,
-                                          color: Colors.green,
-                                          size: 28,
-                                        ),
-                                        tooltip: 'Aprobă Accesul',
-                                        onPressed: () async {
-                                          // 1. Aprobăm contul în Firestore
-                                          await FirebaseFirestore.instance
-                                              .collection('users')
-                                              .doc(uId)
-                                              .update({'hasAccess': true});
-
-                                          // 2. Marchează notificările necitite ale profesorului legate de conturi ca fiind citite
-                                          if (currentUser != null) {
-                                            var notifs = await FirebaseFirestore
-                                                .instance
-                                                .collection('notifications')
-                                                .where(
-                                                  'userId',
-                                                  isEqualTo: currentUser!.uid,
-                                                )
-                                                .where(
-                                                  'isRead',
-                                                  isEqualTo: false,
-                                                )
-                                                .get();
-
-                                            for (var doc in notifs.docs) {
-                                              String bodyText =
-                                                  doc.data()['body'] ?? '';
-                                              if (bodyText.contains(email) ||
-                                                  bodyText.contains(name)) {
-                                                await doc.reference.update({
-                                                  'isRead': true,
-                                                });
-                                              }
-                                            }
-                                          }
-
-                                          // 3. Actualizăm badge-ul nativ
-                                          _refreshTeacherBadge();
-                                        },
-                                      ),
-
-                                      // BUTON RESPINGERE/ȘTERGERE CONT
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.cancel,
-                                          color: Colors.red,
-                                          size: 28,
-                                        ),
-                                        tooltip: 'Respinge Contul',
-                                        onPressed: () async {
-                                          // 1. Ștergem contul neaprobat
-                                          await FirebaseFirestore.instance
-                                              .collection('users')
-                                              .doc(uId)
-                                              .delete();
-
-                                          // 2. 👈 Ștergem și notificările generate pentru acest utilizator
-                                          var userNotifs =
-                                              await FirebaseFirestore.instance
-                                                  .collection('notifications')
-                                                  .get();
-
-                                          for (var doc in userNotifs.docs) {
-                                            String bodyText =
-                                                doc.data()['body'] ?? '';
-                                            if (bodyText.contains(email) ||
-                                                bodyText.contains(name)) {
-                                              await doc.reference.delete();
-                                            }
-                                          }
-
-                                          // 3. Actualizăm badge-ul profesorului
-                                          _refreshTeacherBadge();
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                        // TAB 2: ÎNSCRIERI PENDING LA CURSURI
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('enrollments')
-                              .where('status', isEqualTo: 'pending')
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
-                            if (!snapshot.hasData ||
-                                snapshot.data!.docs.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  'Nu există solicitări de curs în așteptare.',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              );
-                            }
-
-                            var requests = snapshot.data!.docs;
-
-                            return ListView.builder(
-                              itemCount: requests.length,
-                              itemBuilder: (context, index) {
-                                var reqDoc = requests[index];
-                                var reqData =
-                                    reqDoc.data() as Map<String, dynamic>;
-                                String reqId = reqDoc.id;
-                                String studentId = reqData['userId'];
-                                String courseId = reqData['courseId'];
-
-                                return FutureBuilder<DocumentSnapshot>(
-                                  future: FirebaseFirestore.instance
-                                      .collection('users')
-                                      .doc(studentId)
-                                      .get(),
-                                  builder: (context, userSnap) {
-                                    String studentName = 'Elev';
-                                    if (userSnap.hasData &&
-                                        userSnap.data!.exists) {
-                                      var uData =
-                                          userSnap.data!.data()
-                                              as Map<String, dynamic>?;
-                                      studentName =
-                                          uData?['fullName'] ??
-                                          uData?['name'] ??
-                                          uData?['email'] ??
-                                          'Elev';
-                                    }
-
-                                    return FutureBuilder<DocumentSnapshot>(
-                                      future: FirebaseFirestore.instance
-                                          .collection('courses')
-                                          .doc(courseId)
-                                          .get(),
-                                      builder: (context, courseSnap) {
-                                        String courseTitle = 'Curs';
-                                        if (courseSnap.hasData &&
-                                            courseSnap.data!.exists) {
-                                          var cData =
-                                              courseSnap.data!.data()
-                                                  as Map<String, dynamic>?;
-                                          courseTitle =
-                                              cData?['title'] ?? 'Curs';
-                                        }
-
-                                        return ListTile(
-                                          title: Text(
-                                            studentName,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            'Curs: $courseTitle',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                          trailing: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(
-                                                  Icons.check_circle,
-                                                  color: Colors.green,
-                                                  size: 28,
-                                                ),
-                                                onPressed: () async {
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection('enrollments')
-                                                      .doc(reqId)
-                                                      .update({
-                                                        'status': 'approved',
-                                                      });
-                                                },
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(
-                                                  Icons.cancel,
-                                                  color: Colors.red,
-                                                  size: 28,
-                                                ),
-                                                onPressed: () async {
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection('enrollments')
-                                                      .doc(reqId)
-                                                      .delete();
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Închide'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -604,69 +295,18 @@ class _CoursesScreenState extends State<CoursesScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xff42153e),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Cursuri Disponibile',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          _selectedClass == null
+              ? 'Clase Disponibile'
+              : 'Grupe: $_selectedClass',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: [
-          if (widget.role == 'teacher')
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .where('role', isEqualTo: 'student')
-                  .where('hasAccess', isEqualTo: false)
-                  .snapshots(),
-              builder: (context, unapprovedSnap) {
-                int unapprovedAccountsCount = unapprovedSnap.hasData
-                    ? unapprovedSnap.data!.docs.length
-                    : 0;
-
-                return StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('enrollments')
-                      .where('status', isEqualTo: 'pending')
-                      .snapshots(),
-                  builder: (context, pendingEnrollSnap) {
-                    int pendingEnrollmentsCount = pendingEnrollSnap.hasData
-                        ? pendingEnrollSnap.data!.docs.length
-                        : 0;
-                    int totalPending =
-                        unapprovedAccountsCount + pendingEnrollmentsCount;
-
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // IconButton(
-                        //   icon: const Icon(Icons.notifications_active),
-                        //   onPressed: _showPendingRequestsDialog,
-                        // ),
-                        if (totalPending > 0)
-                          Positioned(
-                            right: 8,
-                            top: 8,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '$totalPending',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-        ],
+        leading: _selectedClass != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _selectedClass = null),
+              )
+            : null,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('courses').snapshots(),
@@ -677,187 +317,411 @@ class _CoursesScreenState extends State<CoursesScreen> {
             );
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text(
-                'Nu există cursuri adăugate în bază.',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+          var allDocs = snapshot.hasData ? snapshot.data!.docs : [];
+
+          // ================= NIVELUL 1: AFIȘARE CLASE =================
+          if (_selectedClass == null) {
+            Set<String> uniqueClasses = {};
+            for (var doc in allDocs) {
+              var data = doc.data() as Map<String, dynamic>;
+              String className =
+                  data['className'] ?? data['category'] ?? 'Clasa Generală';
+              uniqueClasses.add(className);
+            }
+            var classList = uniqueClasses.toList();
+
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.role == 'teacher') ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showAddOrEditClassDialog(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber,
+                          foregroundColor: const Color(0xff42153e),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.add_circle,
+                          color: Color(0xff42153e),
+                        ),
+                        label: const Text(
+                          'Adaugă Clasă Nouă',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Selectează o clasă:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xff42153e),
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Expanded(
+                    child: classList.isEmpty
+                        ? const Center(
+                            child: Text(
+                              "Nu există clase adăugate.",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: classList.length,
+                            itemBuilder: (context, index) {
+                              String className = classList[index];
+                              return Card(
+                                elevation: 3,
+                                margin: const EdgeInsets.only(bottom: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
+                                  leading: const CircleAvatar(
+                                    backgroundColor: Color(0xff42153e),
+                                    child: Icon(
+                                      Icons.school,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    className,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xff42153e),
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    'Apasă pentru a vedea grupele',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (widget.role == 'teacher') ...[
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            color: Colors.blue,
+                                            size: 22,
+                                          ),
+                                          tooltip: 'Editează Clasa',
+                                          onPressed: () =>
+                                              _showAddOrEditClassDialog(
+                                                oldClassName: className,
+                                              ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.red,
+                                            size: 22,
+                                          ),
+                                          tooltip: 'Șterge Clasa',
+                                          onPressed: () => _deleteClass(
+                                            className,
+                                            allDocs
+                                                as List<QueryDocumentSnapshot>,
+                                          ),
+                                        ),
+                                      ],
+                                      const Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                        color: Colors.grey,
+                                      ),
+                                    ],
+                                  ),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedClass = className;
+                                    });
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             );
           }
 
-          var courses = snapshot.data!.docs;
+          // ================= NIVELUL 2: AFIȘARE GRUPE DIN CLASA SELECTATĂ =================
+          var filteredGroups = allDocs.where((doc) {
+            var data = doc.data() as Map<String, dynamic>;
+            String className =
+                data['className'] ?? data['category'] ?? 'Clasa Generală';
+            return className == _selectedClass;
+          }).toList();
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: courses.length,
-            itemBuilder: (context, index) {
-              var courseDoc = courses[index];
-              var courseData = courseDoc.data() as Map<String, dynamic>;
-              String courseId = courseDoc.id;
-              String title = courseData['title'] ?? 'Curs fără titlu';
-              String category = courseData['category'] ?? 'General';
-              String description = courseData['description'] ?? '';
-
-              return Card(
-                elevation: 3,
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.shade100,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              category,
-                              style: TextStyle(
-                                color: Colors.amber.shade900,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                          if (widget.role == 'teacher')
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.red,
-                              ),
-                              tooltip: 'Șterge Cursul',
-                              onPressed: () => _deleteCourse(courseId, title),
-                            ),
-                        ],
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (widget.role == 'teacher') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showAddOrEditGroupDialog(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: const Color(0xff42153e),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
+                      icon: const Icon(
+                        Icons.add_circle,
+                        color: Color(0xff42153e),
+                      ),
+                      label: const Text(
+                        'Adaugă Grupă Nouă',
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Color(0xff42153e),
+                          fontSize: 15,
                         ),
                       ),
-                      if (description.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.grey.shade700,
-                            fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Expanded(
+                  child: filteredGroups.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "Nu există grupe în această clasă.",
+                            style: TextStyle(color: Colors.grey),
                           ),
-                        ),
-                      ],
-                      const SizedBox(height: 14),
+                        )
+                      : ListView.builder(
+                          itemCount: filteredGroups.length,
+                          itemBuilder: (context, index) {
+                            var groupDoc = filteredGroups[index];
+                            var groupData =
+                                groupDoc.data() as Map<String, dynamic>;
+                            String courseId = groupDoc.id;
+                            String title =
+                                groupData['title'] ?? 'Grupă fără titlu';
+                            String description = groupData['description'] ?? '';
 
-                      if (widget.role == 'teacher')
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CourseDetailScreen(
-                                  courseId: courseId,
-                                  title: title,
-                                  category: category,
-                                  description: description,
-                                  role: widget.role,
+                            return Card(
+                              elevation: 3,
+                              margin: const EdgeInsets.only(bottom: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xff42153e),
+                                          ),
+                                        ),
+                                        if (widget.role == 'teacher')
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit_outlined,
+                                                  color: Colors.blue,
+                                                  size: 22,
+                                                ),
+                                                tooltip: 'Editează Grupa',
+                                                onPressed: () =>
+                                                    _showAddOrEditGroupDialog(
+                                                      existingCourse: groupDoc,
+                                                    ),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete_outline,
+                                                  color: Colors.red,
+                                                  size: 22,
+                                                ),
+                                                tooltip: 'Șterge Grupa',
+                                                onPressed: () => _deleteGroup(
+                                                  courseId,
+                                                  title,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                      ],
+                                    ),
+                                    if (description.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        description,
+                                        style: TextStyle(
+                                          color: Colors.grey.shade700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 14),
+                                    if (widget.role == 'teacher')
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  CourseDetailScreen(
+                                                    courseId: courseId,
+                                                    title: title,
+                                                    category: _selectedClass!,
+                                                    description: description,
+                                                    role: widget.role,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xff42153e,
+                                          ),
+                                          foregroundColor: Colors.amber,
+                                        ),
+                                        icon: const Icon(Icons.menu_book),
+                                        label: const Text(
+                                          'Administrează Lecțiile',
+                                        ),
+                                      )
+                                    else
+                                      StreamBuilder<QuerySnapshot>(
+                                        stream: FirebaseFirestore.instance
+                                            .collection('enrollments')
+                                            .where(
+                                              'courseId',
+                                              isEqualTo: courseId,
+                                            )
+                                            .where(
+                                              'userId',
+                                              isEqualTo: currentUser?.uid,
+                                            )
+                                            .snapshots(),
+                                        builder: (context, enrollSnap) {
+                                          if (!enrollSnap.hasData ||
+                                              enrollSnap.data!.docs.isEmpty) {
+                                            return ElevatedButton.icon(
+                                              onPressed: () =>
+                                                  _requestEnrollment(
+                                                    courseId,
+                                                    title,
+                                                  ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(
+                                                  0xff42153e,
+                                                ),
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              icon: const Icon(
+                                                Icons.add_circle_outline,
+                                              ),
+                                              label: const Text(
+                                                'Solicită înscriere',
+                                              ),
+                                            );
+                                          }
+
+                                          var enrollData =
+                                              enrollSnap.data!.docs.first.data()
+                                                  as Map<String, dynamic>;
+                                          String status =
+                                              enrollData['status'] ?? 'pending';
+
+                                          if (status == 'approved') {
+                                            return ElevatedButton.icon(
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        CourseDetailScreen(
+                                                          courseId: courseId,
+                                                          title: title,
+                                                          category:
+                                                              _selectedClass!,
+                                                          description:
+                                                              description,
+                                                          role: widget.role,
+                                                        ),
+                                                  ),
+                                                );
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              icon: const Icon(
+                                                Icons.play_circle_fill,
+                                              ),
+                                              label: const Text(
+                                                'Intră la Curs',
+                                              ),
+                                            );
+                                          } else {
+                                            return OutlinedButton.icon(
+                                              onPressed: null,
+                                              icon: const Icon(
+                                                Icons.hourglass_top,
+                                                color: Colors.orange,
+                                              ),
+                                              label: const Text(
+                                                'Solicitare în așteptare...',
+                                                style: TextStyle(
+                                                  color: Colors.orange,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                  ],
                                 ),
                               ),
                             );
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xff42153e),
-                            foregroundColor: Colors.amber,
-                          ),
-                          icon: const Icon(Icons.edit),
-                          label: const Text('Gestionează Cursul'),
-                        )
-                      else
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('enrollments')
-                              .where('courseId', isEqualTo: courseId)
-                              .where('userId', isEqualTo: currentUser?.uid)
-                              .snapshots(),
-                          builder: (context, enrollSnap) {
-                            if (!enrollSnap.hasData ||
-                                enrollSnap.data!.docs.isEmpty) {
-                              return ElevatedButton.icon(
-                                onPressed: () =>
-                                    _requestEnrollment(courseId, title),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xff42153e),
-                                  foregroundColor: Colors.white,
-                                ),
-                                icon: const Icon(Icons.add_circle_outline),
-                                label: const Text('Solicită înscriere'),
-                              );
-                            }
-
-                            var enrollData =
-                                enrollSnap.data!.docs.first.data()
-                                    as Map<String, dynamic>;
-                            String status = enrollData['status'] ?? 'pending';
-
-                            if (status == 'approved') {
-                              return ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => CourseDetailScreen(
-                                        courseId: courseId,
-                                        title: title,
-                                        category: category,
-                                        description: description,
-                                        role: widget.role,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                ),
-                                icon: const Icon(Icons.play_circle_fill),
-                                label: const Text('Intră la Curs'),
-                              );
-                            } else {
-                              return OutlinedButton.icon(
-                                onPressed: null,
-                                icon: const Icon(
-                                  Icons.hourglass_top,
-                                  color: Colors.orange,
-                                ),
-                                label: const Text(
-                                  'Solicitare în așteptare...',
-                                  style: TextStyle(color: Colors.orange),
-                                ),
-                              );
-                            }
-                          },
                         ),
-                    ],
-                  ),
                 ),
-              );
-            },
+              ],
+            ),
           );
         },
       ),

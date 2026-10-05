@@ -280,7 +280,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       text: data?['homeworkContent'] ?? '',
     );
 
-    // Preluare liste existente (compatibilitate cu versiunile vechi)
+    // Preluare liste existente de video-uri
     List<String> videoUrls = [];
     if (data?['videoUrls'] != null) {
       videoUrls = List<String>.from(data!['videoUrls']);
@@ -289,6 +289,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       videoUrls = [data['videoUrl']];
     }
 
+    // Preluare liste existente de PDF-uri
     List<String> pdfUrls = [];
     if (data?['pdfUrls'] != null) {
       pdfUrls = List<String>.from(data!['pdfUrls']);
@@ -299,7 +300,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
     final newVideoController = TextEditingController();
     final newPdfController = TextEditingController();
-    String notificationType = 'lesson';
 
     showDialog(
       context: context,
@@ -315,8 +315,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               ),
               title: Text(
                 existingLesson == null
-                    ? "Adaugă Lecție Nouă"
-                    : "Editează Lecția / Tema",
+                    ? "Adaugă Lecție Nouă (Video & PDF)"
+                    : "Editează Lecția",
                 style: const TextStyle(
                   color: Color(0xff42153e),
                   fontWeight: FontWeight.bold,
@@ -336,54 +336,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      if (existingLesson == null) ...[
-                        const Text(
-                          "Tipul notificării trimise elevilor:",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: Color(0xff42153e),
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: RadioListTile<String>(
-                                contentPadding: EdgeInsets.zero,
-                                title: const Text(
-                                  "📚 Lecție / Teorie",
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                                value: 'lesson',
-                                groupValue: notificationType,
-                                onChanged: (val) => setDialogState(
-                                  () => notificationType = val!,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: RadioListTile<String>(
-                                contentPadding: EdgeInsets.zero,
-                                title: const Text(
-                                  "📝 Temă",
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                                value: 'homework',
-                                groupValue: notificationType,
-                                onChanged: (val) => setDialogState(
-                                  () => notificationType = val!,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                      ],
+                      const SizedBox(height: 16),
 
-                      // SECȚIUNEA 1: TEORIE
+                      // ================= SECȚIUNEA 1: TEORIE & VIDEO =================
                       const Text(
-                        "--- SECȚIUNEA 1: TEORIE & LECȚIE ---",
+                        "--- SECȚIUNEA 1: TEORIE & VIDEO (Apare în Tab-ul Lecție) ---",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
@@ -440,7 +397,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             child: TextField(
                               controller: newVideoController,
                               decoration: const InputDecoration(
-                                hintText: "Adaugă URL Video Bunny Embed...",
+                                hintText: "Adaugă URL Video Embed...",
                                 isDense: true,
                               ),
                             ),
@@ -462,11 +419,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
-                      // SECȚIUNEA 2: TEMĂ
+                      // ================= SECȚIUNEA 2: TEMĂ & PDF =================
                       const Text(
-                        "--- SECȚIUNEA 2: TEMĂ PENTRU ACASĂ ---",
+                        "--- SECȚIUNEA 2: TEMĂ & PDF (Apare în Tab-ul Temă) ---",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
@@ -484,7 +441,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        "Fișiere PDF încărcate (Bunny / CDN):",
+                        "Fișiere PDF încărcate:",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -523,7 +480,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             child: TextField(
                               controller: newPdfController,
                               decoration: const InputDecoration(
-                                hintText: "Lipește link-ul PDF de pe Bunny...",
+                                hintText: "Lipește link-ul PDF...",
                                 isDense: true,
                               ),
                             ),
@@ -560,7 +517,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    // Când apăsăm pe Salvează, dacă profesorul a scris un link în câmp dar nu a apăsat "+", îl adăugăm automat
                     if (newPdfController.text.trim().isNotEmpty) {
                       pdfUrls.add(newPdfController.text.trim());
                     }
@@ -574,13 +530,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         'title': lTitle,
                         'content': contentController.text.trim(),
                         'videoUrls': videoUrls,
-                        'videoUrl': videoUrls.isNotEmpty ? videoUrls.first : '',
                         'homeworkContent': homeworkContentController.text
                             .trim(),
                         'pdfUrls': pdfUrls,
-                        'pdfUrl': pdfUrls.isNotEmpty
-                            ? pdfUrls.first
-                            : '', // 👈 Compatibilitate dublă
                         'updatedAt': FieldValue.serverTimestamp(),
                       };
 
@@ -596,11 +548,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
                         await _sendPushToStudents(
                           lessonTitle: lTitle,
-                          notificationType: notificationType,
+                          notificationType: 'lesson',
                           lessonId: docRef.id,
                         );
                       } else {
-                        // 🚀 Salvăm DIRECT în documentul existent din Firestore
                         await existingLesson.reference.update(lessonPayload);
                       }
 
@@ -715,6 +666,113 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            // 🚀 1. SECȚIUNEA DE REMINDER / ANUNȚ GLOBAL DEASUPRA LECȚIILor
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('courses')
+                  .doc(widget.courseId)
+                  .snapshots(),
+              builder: (context, courseSnapshot) {
+                if (!courseSnapshot.hasData || !courseSnapshot.data!.exists)
+                  return const SizedBox.shrink();
+
+                var courseData =
+                    courseSnapshot.data!.data() as Map<String, dynamic>;
+                String reminderText = courseData['generalReminder'] ?? '';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Dacă există un reminder SAU dacă e profesor (ca să aibă buton de adăugare/editare)
+                    if (reminderText.isNotEmpty ||
+                        widget.role == 'teacher') ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.amber.shade700,
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.campaign,
+                                      color: Colors.amber.shade900,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Anunț / Reminder Important",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Colors.amber.shade900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (widget.role == 'teacher')
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      size: 18,
+                                      color: Color(0xff42153e),
+                                    ),
+                                    tooltip: "Editează Reminderul",
+                                    onPressed: () => _showEditReminderDialog(
+                                      context,
+                                      reminderText,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (reminderText.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                reminderText,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ] else if (widget.role == 'teacher') ...[
+                              const SizedBox(height: 4),
+                              const Text(
+                                "Niciun reminder setat. Apasă pe creion pentru a adăuga un mesaj vizibil pentru elevi.",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ],
+                );
+              },
+            ),
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('courses')
@@ -851,6 +909,55 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showEditReminderDialog(BuildContext context, String currentReminder) {
+    final reminderController = TextEditingController(text: currentReminder);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Editează Anunțul / Reminderul"),
+        content: TextField(
+          controller: reminderController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: "Scrie un anunț important pentru toți elevii...",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Anulează"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff42153e),
+            ),
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('courses')
+                  .doc(widget.courseId)
+                  .update({'generalReminder': reminderController.text.trim()});
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Reminderul a fost actualizat!"),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              "Salvează",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }

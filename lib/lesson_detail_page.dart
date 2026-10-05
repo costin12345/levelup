@@ -206,34 +206,87 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                         const SizedBox(height: 10),
                         ...pdfUrls.asMap().entries.map((entry) {
                           String pdfUrl = entry.value;
-                          String embedUrl =
-                              (pdfUrl.contains('drive.google.com') ||
-                                  pdfUrl.contains('firebasestorage'))
-                              ? 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(pdfUrl)}'
-                              : pdfUrl;
+
+                          // 🚀 Adăugăm parametrii care ascund bara de unelte (download, print, etc.)
+                          String embedUrl = pdfUrl;
+                          if (pdfUrl.contains('drive.google.com')) {
+                            // Pentru Google Drive, fortăm modul fără bară sau adăugăm parametrii de vizualizare
+                            embedUrl = pdfUrl.contains('&embedded=true')
+                                ? pdfUrl
+                                : '$pdfUrl&embedded=true';
+                          } else {
+                            // Pentru fișiere directe / link-uri web, adăugăm hashtag-ul care ascunde toolbar-ul în viewer-ul nativ PDF al browserului
+                            if (!embedUrl.contains('#toolbar=0')) {
+                              embedUrl = '$embedUrl#toolbar=0';
+                            }
+                          }
+
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 20.0),
-                            child: UniversalEmbeddedViewer(
-                              viewId: 'pdf_${widget.lessonId}_${entry.key}',
-                              url: embedUrl,
-                              height: 520,
+                            padding: const EdgeInsets.only(bottom: 24.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xff42153e)
+                                        .withOpacity(0.08),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                                border: Border.all(
+                                  color: Colors.amber.shade200,
+                                  width: 1.5,
+                                ),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Antet elegant
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    color: const Color(0xff42153e),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.picture_as_pdf,
+                                          color: Colors.amber,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            "Fișă de lucru #${entry.key + 1}",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Vizualizatorul cu zoom activ, dar fără butoane de download
+                                  SizedBox(
+                                    height: 520,
+                                    child: UniversalEmbeddedViewer(
+                                      viewId:
+                                          'pdf_${widget.lessonId}_${entry.key}',
+                                      url: embedUrl,
+                                      height: 520,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         }),
-                      ] else if (homeworkContent.isEmpty) ...[
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.only(top: 60),
-                            child: Text(
-                              "Nu a fost adăugată nicio temă (text sau PDF) pentru această lecție.",
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontStyle: FontStyle.italic,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ],
                   ),
