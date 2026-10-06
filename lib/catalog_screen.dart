@@ -12,8 +12,7 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
-  String?
-  _selectedChildEmail; // Emailul copilului selectat curent de către părinte
+  String? _selectedChildEmail;
 
   @override
   Widget build(BuildContext context) {
@@ -26,19 +25,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
       );
     }
 
+    const Color primaryDark = Color(0xff42153e);
+
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Antet prietenos
+            // --- ANTET ---
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xff42153e), Color(0xff6a2465)],
+                  colors: [primaryDark, Color(0xff6a2465)],
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
@@ -60,7 +61,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         Text(
                           widget.role == 'parent'
                               ? "Catalogul Copiilor Mei"
-                              : "Catalogul Meu Academic",
+                              : "Catalogul Virtual • Progres Academic",
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -68,7 +69,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           ),
                         ),
                         const Text(
-                          "Vizualizează notele și progresul în timp real",
+                          "Vizualizează notele centralizate pe rânduri, exact ca într-un catalog modern",
                           style: TextStyle(fontSize: 12, color: Colors.white70),
                         ),
                       ],
@@ -79,295 +80,241 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Dacă este PĂRINTE, afișăm un selector de copii (dacă are mai mulți)
-            if (widget.role == 'parent')
-              StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(currentUser.uid)
-                    .snapshots(),
-                builder: (context, parentSnap) {
-                  if (!parentSnap.hasData || !parentSnap.data!.exists) {
-                    return const SizedBox();
-                  }
-
-                  var parentData =
-                      parentSnap.data!.data() as Map<String, dynamic>;
-
-                  // Putem stoca copiii ca o listă 'childrenEmails' sau un singur 'childEmail'
-                  List<dynamic> childrenList =
-                      parentData['childrenEmails'] ?? [];
-                  if (childrenList.isEmpty &&
-                      parentData['childEmail'] != null) {
-                    childrenList = [parentData['childEmail']];
-                  }
-
-                  if (childrenList.isEmpty) {
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade100,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        "Nu ai setat niciun copil în profilul tău de părinte.",
-                        style: TextStyle(
-                          color: Color(0xff42153e),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    );
-                  }
-
-                  // Dacă nu e selectat niciunul, îl setăm pe primul din listă implicit
-                  if (_selectedChildEmail == null ||
-                      !childrenList.contains(_selectedChildEmail)) {
-                    _selectedChildEmail = childrenList.first;
-                  }
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
+            // --- STREAM PENTRU NOTE ȘI GRUPARE PE ELEVI (STIL KINDERPEDIA) ---
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('grades')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, gradesSnapshot) {
+                if (gradesSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: CircularProgressIndicator(color: primaryDark),
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.amber.shade300,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedChildEmail,
-                        isExpanded: true,
-                        icon: const Icon(
-                          Icons.arrow_drop_down,
-                          color: Color(0xff42153e),
-                        ),
-                        items: childrenList.map((email) {
-                          return DropdownMenuItem<String>(
-                            value: email.toString(),
-                            child: Text(
-                              "Copil selectat: $email",
-                              style: const TextStyle(
-                                color: Color(0xff42153e),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedChildEmail = val;
-                          });
-                        },
+                  );
+                }
+
+                if (!gradesSnapshot.hasData ||
+                    gradesSnapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Text(
+                        "Nu există note înregistrate momentan.",
+                        style: TextStyle(color: Colors.grey),
                       ),
                     ),
                   );
-                },
-              ),
+                }
 
-            // Stream pentru preluarea notelor
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('grades')
-                    .orderBy('createdAt', descending: true)
-                    .snapshots(),
-                builder: (context, gradesSnapshot) {
-                  if (gradesSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xff42153e),
-                      ),
-                    );
+                var allDocs = gradesSnapshot.data!.docs;
+
+                // Filtrare după rol
+                var filteredDocs = allDocs.where((doc) {
+                  var data = doc.data() as Map<String, dynamic>;
+                  if (widget.role == 'parent') {
+                    return data['studentEmail'] == _selectedChildEmail;
+                  } else {
+                    return data['studentId'] == currentUser.uid ||
+                        data['studentEmail'] == currentUser.email;
                   }
+                }).toList();
 
-                  if (!gradesSnapshot.hasData ||
-                      gradesSnapshot.data!.docs.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.sentiment_satisfied_alt,
-                            size: 64,
-                            color: Colors.purple.shade200,
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            "Nu există note înregistrate momentan.",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                if (filteredDocs.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Text(
+                        "Nu s-au găsit note.",
+                        style: TextStyle(color: Colors.grey),
                       ),
-                    );
+                    ),
+                  );
+                }
+
+                // Grupare dinamică pe elev (cum ar fi Nume Elev -> Listă de note)
+                Map<String, List<Map<String, dynamic>>> studentMap = {};
+                for (var doc in filteredDocs) {
+                  var data = doc.data() as Map<String, dynamic>;
+                  String studentName = data['studentName'] ?? 'Elev necunoscut';
+                  String grade = data['grade']?.toString() ?? '-';
+                  String course = data['courseTitle'] ?? 'Materie';
+                  String className = data['className'] ?? '';
+
+                  if (!studentMap.containsKey(studentName)) {
+                    studentMap[studentName] = [];
                   }
+                  studentMap[studentName]!.add({
+                    'id': doc.id,
+                    'grade': grade,
+                    'course': course,
+                    'className': className,
+                  });
+                }
 
-                  var allGrades = gradesSnapshot.data!.docs;
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: studentMap.keys.length,
+                  itemBuilder: (context, index) {
+                    String studentName = studentMap.keys.elementAt(index);
+                    List<Map<String, dynamic>> studentGrades =
+                        studentMap[studentName]!;
+                    String className = studentGrades.isNotEmpty
+                        ? studentGrades[0]['className']
+                        : '';
 
-                  // Filtrăm notele în funcție de rol și de copilul selectat
-                  var myGrades = allGrades.where((doc) {
-                    var data = doc.data() as Map<String, dynamic>;
-                    if (widget.role == 'parent') {
-                      return data['studentEmail'] == _selectedChildEmail;
-                    } else {
-                      return data['studentId'] == currentUser.uid ||
-                          data['studentEmail'] == currentUser.email;
+                    // Calcul medie simplă pe elev
+                    double sum = 0;
+                    int count = 0;
+                    for (var item in studentGrades) {
+                      double? val = double.tryParse(item['grade']);
+                      if (val != null) {
+                        sum += val;
+                        count++;
+                      }
                     }
-                  }).toList();
+                    String average = count > 0
+                        ? (sum / count).toStringAsFixed(1)
+                        : "-";
 
-                  if (myGrades.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.menu_book,
-                            size: 64,
-                            color: Colors.amber.shade300,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            widget.role == 'parent'
-                                ? "Nu s-au găsit note pentru copilul: ${_selectedChildEmail ?? 'N/A'}"
-                                : "Nu ai primit nicio notă încă.",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.amber.shade300,
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryDark.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: myGrades.length,
-                    itemBuilder: (context, index) {
-                      var data = myGrades[index].data() as Map<String, dynamic>;
-                      String course = data['courseTitle'] ?? 'Materie';
-                      String grade = data['grade'] ?? '';
-                      String className = data['className'] ?? '';
-                      String date = data['date'] ?? 'Azi';
-                      String comment = data['comment'] ?? '';
-                      String studentName = data['studentName'] ?? '';
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.amber.shade200,
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xff42153e).withOpacity(0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xff42153e)
-                                .withOpacity(0.1),
-                            child: const Icon(Icons.star, color: Colors.amber),
-                          ),
-                          title: Text(
-                            widget.role == 'parent'
-                                ? "$studentName • $course"
-                                : course,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xff42153e),
-                              fontSize: 16,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              if (className.isNotEmpty)
-                                Text(
-                                  "Clasa: $className",
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
+                      child: Row(
+                        children: [
+                          // 1. Avatar și Nume Elev
+                          Expanded(
+                            flex: 3,
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: primaryDark.withOpacity(0.1),
+                                  child: Text(
+                                    studentName.isNotEmpty
+                                        ? studentName[0].toUpperCase()
+                                        : "E",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryDark,
+                                    ),
                                   ),
                                 ),
-                              if (comment.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  "Comentariu / Temă: $comment",
-                                  style: TextStyle(
-                                    color: Colors.grey.shade800,
-                                    fontSize: 13,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        studentName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                          color: primaryDark,
+                                        ),
+                                      ),
+                                      if (className.isNotEmpty)
+                                        Text(
+                                          "Clasa: $className",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ],
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 12,
-                                    color: Colors.amber.shade800,
+                            ),
+                          ),
+
+                          // 2. Notele înșiruite orizontal (Stil Kinderpedia)
+                          Expanded(
+                            flex: 5,
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: studentGrades.map((item) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "Data: $date",
-                                    style: TextStyle(
-                                      color: Colors.amber.shade900,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.amber.shade200,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
+                                  child: Text(
+                                    item['grade'],
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: primaryDark,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ),
-                          trailing: Container(
+
+                          // 3. Media încheiată
+                          Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
-                              vertical: 10,
+                              vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xff42153e),
+                              color: primaryDark,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(
-                              grade,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber,
-                                fontSize: 18,
-                              ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  "Medie",
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                Text(
+                                  average,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.amber,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),

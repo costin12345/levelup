@@ -18,6 +18,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
 
   // Valori predefinite pentru selecție
   String _selectedClass = "Clasa a IX-a";
+  String _selectedGroup = "Grupa A"; // NOU: Valoare predefinită pentru grupă
   String _selectedCourse = "Matematică";
   String _selectedGrade = "10";
 
@@ -26,10 +27,8 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
 
-  // 🚀 Nou: Flag pentru a marca dacă nota este de la o simulare / evaluare oficială
   bool _isSimulation = false;
 
-  // Listele fixe cerute
   final List<String> _classesList = [
     "Clasa a IV-a",
     "Clasa a V-a",
@@ -40,6 +39,17 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
     "Clasa a X-a",
     "Clasa a XI-a",
     "Clasa a XII-a",
+  ];
+
+  // Listă orientativă de grupe (poate fi adaptată sau scrisă liber)
+  final List<String> _groupsList = [
+    "Grupa A",
+    "Grupa B",
+    "Grupa C",
+    "5A",
+    "5B",
+    "9A",
+    "9B",
   ];
 
   final List<String> _coursesList = ["Matematică", "Informatică", "Fizică"];
@@ -101,18 +111,18 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
       String formattedDate =
           "${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}";
 
-      // 1. Salvăm nota în colecția 'grades' (inclusiv flag-ul isSimulation pentru a doua scară)
+      // 1. Salvăm nota în colecția 'grades' incluzând și 'groupName'
       await FirebaseFirestore.instance.collection('grades').add({
         'studentId': _selectedStudentId,
         'studentName': _selectedStudentName ?? 'Elev',
         'studentEmail': _selectedStudentEmail ?? '',
         'className': _selectedClass,
+        'groupName': _selectedGroup, // <--- Salvăm grupa selectată
         'courseTitle': _selectedCourse,
         'grade': _selectedGrade,
         'comment': _commentController.text.trim(),
         'date': formattedDate,
-        'isSimulation':
-            _isSimulation, // 🚀 Aici salvăm opțiunea pentru scară secundară
+        'isSimulation': _isSimulation,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -121,9 +131,8 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
           : 'Notă Nouă';
       String pushTitle = '🌟 $gradeTypeLabel la $_selectedCourse';
       String pushBody =
-          'Ai primit nota $_selectedGrade ($gradeTypeLabel) la $_selectedClass. Data: $formattedDate';
+          'Ai primit nota $_selectedGrade ($gradeTypeLabel) la $_selectedClass ($_selectedGroup). Data: $formattedDate';
 
-      // 2. Colectăm ID-urile destinatarilor (Elevul + Părinții asociați)
       Set<String> recipientIds = {_selectedStudentId!};
 
       if (_selectedStudentEmail != null && _selectedStudentEmail!.isNotEmpty) {
@@ -140,7 +149,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
 
       List<String> uniqueRecipients = recipientIds.toList();
 
-      // 3. Salvăm în Firestore pentru TOȚI destinatarii
       for (String userId in uniqueRecipients) {
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': userId,
@@ -152,7 +160,6 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         });
       }
 
-      // 4. Trimitem notificarea push FCM v1
       if (uniqueRecipients.isNotEmpty) {
         String targetUserId = uniqueRecipients.first;
 
@@ -300,6 +307,35 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
                 onChanged: (val) {
                   setState(() {
                     _selectedClass = val!;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // 🚀 1.1. NOU: Selector Grupa (ex: 5A, 5B, Grupa A etc.)
+              DropdownButtonFormField<String>(
+                value: _selectedGroup,
+                decoration: InputDecoration(
+                  labelText: 'Selectează Grupa',
+                  prefixIcon: const Icon(Icons.group, color: Color(0xff42153e)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                items: _groupsList.map((String groupName) {
+                  return DropdownMenuItem<String>(
+                    value: groupName,
+                    child: Text(
+                      groupName,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedGroup = val!;
                   });
                 },
               ),
@@ -477,7 +513,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
               ),
               const SizedBox(height: 16),
 
-              // 🚀 6. SECȚIUNEA SPECIALĂ: Checkbox pentru Simulare / Evaluare Oficială
+              // 6. Checkbox pentru Simulare / Evaluare
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,

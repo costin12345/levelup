@@ -91,6 +91,7 @@ flutter:
   assets:
     - images/logo.jpg
     - images/spatiu.jpeg
+    - images/info.png
     - images/animations/user_reg.json
     - images/animations/enrollment.json
     - images/animations/homework.json
