@@ -37,7 +37,7 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0; // 1 este "Catalog" setat implicit
+  int _currentIndex = 0; // 0 = Home
 
   late final List<Widget> _screens;
 
@@ -138,7 +138,6 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // User? currentUser = FirebaseAuth.instance.currentUser;
     const Color primaryDark = Color(0xff1e1b4b);
     const Color accentLila = Color(0xff7c4dff);
 
@@ -149,7 +148,6 @@ class HomeTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- SECȚIUNEA SUPERIOARĂ (CU DEGRADE ȘI FORMULE) ---
             ClipPath(
               clipper: _VeeClipper(),
               child: Container(
@@ -316,7 +314,6 @@ class HomeTab extends StatelessWidget {
               ),
             ),
 
-            // --- WHITEBOARD DISPLAY ---
             Transform.translate(
               offset: const Offset(0, -110),
               child: Padding(
@@ -419,7 +416,6 @@ class HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // --- DESPRE NOI ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Center(
@@ -525,7 +521,6 @@ class HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 80),
 
-            // --- CARDURI FACILITĂȚI ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Center(
@@ -575,7 +570,6 @@ class HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 60),
 
-            // --- STATISTICI DIN FIREBASE ---
             Container(
               color: primaryDark,
               padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 20),
@@ -634,7 +628,6 @@ class HomeTab extends StatelessWidget {
               ),
             ),
 
-            // --- FOOTER ---
             Container(
               color: const Color(0xff0f172a),
               padding: const EdgeInsets.symmetric(vertical: 35, horizontal: 24),
@@ -751,7 +744,6 @@ class HomeTab extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // <-- Fără 'const'
                     Text(
                       "Excelență",
                       style: TextStyle(
@@ -884,6 +876,9 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
   String _activeCatalogMenu = "Note și Absențe";
   String _reportScope = "Pe Grupe";
 
+  bool _isArhivaTestExpanded = false;
+  String? _selectedClassTab;
+
   @override
   Widget build(BuildContext context) {
     const Color primaryIndigo = Color(0xff1e1b4b);
@@ -891,6 +886,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
 
     bool isMediiPeGrupa = _activeCatalogMenu == "Medii pe Grupă";
     bool isRapoarte = _activeCatalogMenu == "Rapoarte Academice";
+    bool isArhivadTeste = _activeCatalogMenu == "Arhivă Teste";
 
     return Scaffold(
       backgroundColor: const Color(0xfff8fafc),
@@ -952,11 +948,118 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                   accentLila,
                   primaryIndigo,
                 ),
-                _buildSidebarItem(
-                  "Arhivă Teste",
-                  Icons.folder_shared_outlined,
-                  accentLila,
-                  primaryIndigo,
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _isArhivaTestExpanded = !_isArhivaTestExpanded;
+                          if (_isArhivaTestExpanded &&
+                              _selectedClassTab == null) {
+                            _selectedClassTab = "Clasa a 4-a";
+                            _activeCatalogMenu = "Arhivă Teste";
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isArhivadTeste
+                              ? accentLila.withOpacity(0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.folder_shared_outlined,
+                              size: 18,
+                              color: isArhivadTeste
+                                  ? accentLila
+                                  : Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                "Arhivă Teste",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isArhivadTeste
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  color: isArhivadTeste
+                                      ? primaryIndigo
+                                      : Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              _isArhivaTestExpanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_isArhivaTestExpanded)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: List.generate(9, (index) {
+                            int gradeNumber = index + 4;
+                            String className = "Clasa a ${gradeNumber}-a";
+                            bool isClassSelected =
+                                isArhivadTeste &&
+                                _selectedClassTab == className;
+
+                            return InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _activeCatalogMenu = "Arhivă Teste";
+                                  _selectedClassTab = className;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                  horizontal: 8,
+                                ),
+                                margin: const EdgeInsets.only(bottom: 4),
+                                decoration: BoxDecoration(
+                                  color: isClassSelected
+                                      ? accentLila.withOpacity(0.15)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  className,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isClassSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isClassSelected
+                                        ? primaryIndigo
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -970,7 +1073,6 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- ANTET SAAS MODERN ---
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -995,7 +1097,9 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _activeCatalogMenu,
+                              isArhivadTeste
+                                  ? "Arhivă Teste (${_selectedClassTab ?? 'Clasa a 4-a'})"
+                                  : _activeCatalogMenu,
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
@@ -1009,6 +1113,8 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                                   ? "Situația mediilor centralizate pe fiecare clasă și grupă în parte"
                                   : isRapoarte
                                   ? "Statistici vizuale și rapoarte de performanță academică"
+                                  : isArhivadTeste
+                                  ? "Gestionarea folderelor și a testelor încărcate pe clase"
                                   : "Managementul avansat al notelor, absențelor și progresului pe rânduri",
                               style: const TextStyle(
                                 fontSize: 12,
@@ -1017,7 +1123,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                             ),
                           ],
                         ),
-                        if (!isMediiPeGrupa && !isRapoarte)
+                        if (!isMediiPeGrupa && !isRapoarte && !isArhivadTeste)
                           Row(
                             children: [
                               ElevatedButton.icon(
@@ -1083,8 +1189,8 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // --- FILTRE (APAR DOAR LA NOTE ȘI ABSENȚE) ---
-                  if (!isMediiPeGrupa && !isRapoarte)
+                  // --- FILTRE ---
+                  if (!isMediiPeGrupa && !isRapoarte && !isArhivadTeste)
                     StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
                           .collection('grades')
@@ -1217,14 +1323,16 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                         );
                       },
                     ),
-                  if (!isMediiPeGrupa && !isRapoarte)
+                  if (!isMediiPeGrupa && !isRapoarte && !isArhivadTeste)
                     const SizedBox(height: 16),
 
-                  // --- CONȚINUT DINAMIC DUPĂ TABUL ACTIV ---
+                  // --- CONȚINUT DINAMIC ---
                   isMediiPeGrupa
                       ? _buildMediiPeGrupaView(primaryIndigo, accentLila)
                       : isRapoarte
                       ? _buildRapoarteAcademiceView(primaryIndigo, accentLila)
+                      : isArhivadTeste
+                      ? _buildArhivaTesteView(primaryIndigo, accentLila)
                       : _buildNoteSiAbsenteView(accentLila, primaryIndigo),
                 ],
               ),
@@ -1232,6 +1340,854 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // --- DIALOG ADAUGARE ABSENȚĂ ---
+  void _showAddAbsenceDialog(BuildContext context) {
+    String? selectedStudent;
+    String groupName = "9A";
+    String date =
+        "${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}";
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Adaugă Absență"),
+              content: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('grades')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  Set<String> studentsList = {};
+                  if (snapshot.hasData) {
+                    for (var doc in snapshot.data!.docs) {
+                      var data = doc.data() as Map<String, dynamic>;
+                      if (data['studentName'] != null) {
+                        studentsList.add(data['studentName']);
+                      }
+                    }
+                  }
+
+                  List<String> students = studentsList.toList();
+
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: selectedStudent,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: "Selectează Elevul",
+                        ),
+                        items: students.map((String student) {
+                          return DropdownMenuItem<String>(
+                            value: student,
+                            child: Text(student),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedStudent = val;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: "Grupa (ex: 9A, 9B)",
+                        ),
+                        controller: TextEditingController(text: groupName),
+                        onChanged: (val) => groupName = val,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: "Data (ex: 05.10.2026)",
+                        ),
+                        controller: TextEditingController(text: date),
+                        onChanged: (val) => date = val,
+                      ),
+                    ],
+                  );
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Anulează"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff7c4dff),
+                  ),
+                  onPressed: () async {
+                    if (selectedStudent != null &&
+                        selectedStudent!.isNotEmpty) {
+                      await FirebaseFirestore.instance
+                          .collection('absences')
+                          .add({
+                            'studentName': selectedStudent,
+                            'groupName': groupName,
+                            'courseTitle': 'Absență Generală',
+                            'date': date,
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  },
+                  child: const Text(
+                    "Salvează Absența",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // --- VIZUALIZARE NOTE ȘI ABSENȚE ---
+  Widget _buildNoteSiAbsenteView(Color accentLila, Color primaryIndigo) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('grades').snapshots(),
+      builder: (context, gradesSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('absences').snapshots(),
+          builder: (context, absencesSnapshot) {
+            if (gradesSnapshot.connectionState == ConnectionState.waiting) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: CircularProgressIndicator(color: accentLila),
+                ),
+              );
+            }
+
+            Set<String> allStudents = {};
+            Map<String, List<Map<String, dynamic>>> studentGrades = {};
+            Map<String, List<Map<String, dynamic>>> studentAbsences = {};
+            Map<String, String> studentClasses = {};
+
+            if (gradesSnapshot.hasData &&
+                _selectedFilterType != "Doar Absențe") {
+              for (var doc in gradesSnapshot.data!.docs) {
+                var data = doc.data() as Map<String, dynamic>;
+                String name = data['studentName'] ?? 'Elev';
+
+                if (_selectedFilterClass != "Toate" &&
+                    data['className'] != _selectedFilterClass)
+                  continue;
+                if (_selectedFilterGroup != "Toate" &&
+                    data['groupName'] != _selectedFilterGroup)
+                  continue;
+                if (_selectedSingleStudent != null &&
+                    name != _selectedSingleStudent)
+                  continue;
+                if (_selectedFilterCourse != "Toate" &&
+                    data['courseTitle'] != _selectedFilterCourse)
+                  continue;
+                if (_selectedFilterGrade != "Toate" &&
+                    data['grade'] != _selectedFilterGrade)
+                  continue;
+
+                allStudents.add(name);
+                studentClasses[name] =
+                    "${data['className'] ?? ''} (${data['groupName'] ?? 'Grupă'})";
+
+                if (!studentGrades.containsKey(name)) studentGrades[name] = [];
+                studentGrades[name]!.add({
+                  'id': doc.id,
+                  'grade': data['grade'] ?? '',
+                  'course': data['courseTitle'] ?? 'Materie',
+                  'date': data['date'] ?? 'Azi',
+                });
+              }
+            }
+
+            if (absencesSnapshot.hasData &&
+                _selectedFilterType != "Doar Note") {
+              for (var doc in absencesSnapshot.data!.docs) {
+                var data = doc.data() as Map<String, dynamic>;
+                String name = data['studentName'] ?? 'Elev';
+
+                if (_selectedFilterGroup != "Toate" &&
+                    data['groupName'] != _selectedFilterGroup)
+                  continue;
+                if (_selectedSingleStudent != null &&
+                    name != _selectedSingleStudent)
+                  continue;
+
+                allStudents.add(name);
+
+                if (!studentAbsences.containsKey(name))
+                  studentAbsences[name] = [];
+                studentAbsences[name]!.add({
+                  'id': doc.id,
+                  'course': data['courseTitle'] ?? 'Absență',
+                  'date': data['date'] ?? 'Azi',
+                });
+              }
+            }
+
+            if (allStudents.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Text(
+                    "Nicio înregistrare găsită pentru filtrele selectate.",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                ),
+              );
+            }
+
+            List<String> studentList = allStudents.toList();
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: studentList.length,
+              itemBuilder: (context, index) {
+                String studentName = studentList[index];
+                List<Map<String, dynamic>> grades =
+                    studentGrades[studentName] ?? [];
+                List<Map<String, dynamic>> absences =
+                    studentAbsences[studentName] ?? [];
+                String classInfo = studentClasses[studentName] ?? '';
+
+                double sum = 0;
+                int count = 0;
+                for (var item in grades) {
+                  double? val = double.tryParse(item['grade']);
+                  if (val != null) {
+                    sum += val;
+                    count++;
+                  }
+                }
+
+                String? average = count > 0
+                    ? (sum / count).toStringAsFixed(1)
+                    : null;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: accentLila.withOpacity(0.12),
+                              child: Text(
+                                studentName.isNotEmpty
+                                    ? studentName[0].toUpperCase()
+                                    : "E",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: accentLila,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    studentName,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: primaryIndigo,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    classInfo.isNotEmpty
+                                        ? classInfo
+                                        : "Fără detalii",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        flex: 6,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (grades.isNotEmpty)
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: grades.map((item) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: accentLila.withOpacity(0.06),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: accentLila.withOpacity(0.2),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item['course'],
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  item['grade'],
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                    color: primaryIndigo,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  "(${item['date']})",
+                                                  style: TextStyle(
+                                                    fontSize: 9,
+                                                    color: Colors.grey.shade500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        InkWell(
+                                          onTap: () async {
+                                            await FirebaseFirestore.instance
+                                                .collection('grades')
+                                                .doc(item['id'])
+                                                .delete();
+                                          },
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 12,
+                                            color: Colors.red.shade400,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            if (absences.isNotEmpty) ...[
+                              if (grades.isNotEmpty) const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: absences.map((abs) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xfff1f5f9),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              abs['course'],
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.event_busy,
+                                                  size: 11,
+                                                  color: Colors.grey,
+                                                ),
+                                                const SizedBox(width: 3),
+                                                const Text(
+                                                  "Absență",
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 11,
+                                                    color: Color(0xff475569),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  "(${abs['date']})",
+                                                  style: TextStyle(
+                                                    fontSize: 9,
+                                                    color: Colors.grey.shade500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        InkWell(
+                                          onTap: () async {
+                                            await FirebaseFirestore.instance
+                                                .collection('absences')
+                                                .doc(abs['id'])
+                                                .delete();
+                                          },
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 12,
+                                            color: Colors.red.shade400,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      if (average != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentLila.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "Medie",
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentLila,
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                average,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: accentLila,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildArhivaTesteView(Color primaryIndigo, Color accentLila) {
+    String currentClass = _selectedClassTab ?? "Clasa a 4-a";
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Foldere și Teste - $currentClass",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: primaryIndigo,
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _showAddFolderDialog(context, currentClass),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentLila,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.create_new_folder, size: 16),
+              label: const Text("Adaugă Folder"),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('test_folders')
+              .where('className', isEqualTo: currentClass)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(30),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: const Text(
+                  "Niciun folder creat pentru această clasă. Apasă pe „Adaugă Folder”.",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              );
+            }
+
+            var folders = snapshot.data!.docs;
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: folders.length,
+              itemBuilder: (context, index) {
+                var folderDoc = folders[index];
+                var folderData = folderDoc.data() as Map<String, dynamic>;
+                String folderName = folderData['folderName'] ?? 'Folder';
+                String folderId = folderDoc.id;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.folder,
+                                color: Colors.amber,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                folderName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: primaryIndigo,
+                                ),
+                              ),
+                            ],
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                _showUploadTestDialog(context, folderId),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: accentLila),
+                            ),
+                            icon: Icon(
+                              Icons.upload_file,
+                              size: 16,
+                              color: accentLila,
+                            ),
+                            label: Text(
+                              "Încarcă Test",
+                              style: TextStyle(color: accentLila, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 24),
+
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('test_folders')
+                            .doc(folderId)
+                            .collection('tests')
+                            .snapshots(),
+                        builder: (context, testSnapshot) {
+                          if (!testSnapshot.hasData ||
+                              testSnapshot.data!.docs.isEmpty) {
+                            return const Text(
+                              "Nu există teste încărcate în acest folder.",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            );
+                          }
+
+                          var tests = testSnapshot.data!.docs;
+
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: tests.map((testDoc) {
+                              var testData =
+                                  testDoc.data() as Map<String, dynamic>;
+                              String testTitle = testData['title'] ?? 'Test';
+                              String testDate = testData['date'] ?? '';
+
+                              return Chip(
+                                avatar: const Icon(
+                                  Icons.insert_drive_file,
+                                  size: 14,
+                                  color: Colors.deepPurple,
+                                ),
+                                label: Text(
+                                  "$testTitle ($testDate)",
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                deleteIcon: const Icon(Icons.close, size: 14),
+                                onDeleted: () async {
+                                  await testDoc.reference.delete();
+                                },
+                                backgroundColor: Colors.grey.shade100,
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showAddFolderDialog(BuildContext context, String className) {
+    String folderName = "";
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Adaugă Folder Nou pentru $className"),
+          content: TextField(
+            decoration: const InputDecoration(
+              labelText: "Nume Folder (ex: Teste Semestrul 1)",
+            ),
+            onChanged: (val) => folderName = val,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Anulează"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff7c4dff),
+              ),
+              onPressed: () async {
+                if (folderName.isNotEmpty) {
+                  await FirebaseFirestore.instance
+                      .collection('test_folders')
+                      .add({
+                        'className': className,
+                        'folderName': folderName,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text(
+                "Creează",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showUploadTestDialog(BuildContext context, String folderId) {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController linkController = TextEditingController();
+    String date =
+        "${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}";
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Încarcă Teste în Folder"),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Poți adăuga linkuri multiple (ex: Bunny.net, PDF, Google Drive) pentru testele din acest folder.",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: "Titlu Test (ex: Test Unitar 1 - Matematică)",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: linkController,
+                  decoration: const InputDecoration(
+                    labelText: "Link Bunny.net / Fișier (URL)",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.link),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: "Data",
+                    border: OutlineInputBorder(),
+                  ),
+                  controller: TextEditingController(text: date),
+                  onChanged: (val) => date = val,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Închide"),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff7c4dff),
+              ),
+              icon: const Icon(Icons.add, color: Colors.white, size: 16),
+              label: const Text(
+                "Adaugă și altul",
+                style: TextStyle(color: Colors.white),
+              ),
+              onPressed: () async {
+                if (titleController.text.isNotEmpty &&
+                    linkController.text.isNotEmpty) {
+                  await FirebaseFirestore.instance
+                      .collection('test_folders')
+                      .doc(folderId)
+                      .collection('tests')
+                      .add({
+                        'title': titleController.text,
+                        'details': linkController.text,
+                        'date': date,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+                  titleController.clear();
+                  linkController.clear();
+                }
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff1e1b4b),
+              ),
+              onPressed: () async {
+                if (titleController.text.isNotEmpty &&
+                    linkController.text.isNotEmpty) {
+                  await FirebaseFirestore.instance
+                      .collection('test_folders')
+                      .doc(folderId)
+                      .collection('tests')
+                      .add({
+                        'title': titleController.text,
+                        'details': linkController.text,
+                        'date': date,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text(
+                "Salvează și Gata",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1714,476 +2670,6 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
     );
   }
 
-  Widget _buildNoteSiAbsenteView(Color accentLila, Color primaryIndigo) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('grades').snapshots(),
-      builder: (context, gradesSnapshot) {
-        return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('absences').snapshots(),
-          builder: (context, absencesSnapshot) {
-            if (gradesSnapshot.connectionState == ConnectionState.waiting) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: CircularProgressIndicator(color: accentLila),
-                ),
-              );
-            }
-
-            Set<String> allStudents = {};
-            Map<String, List<Map<String, dynamic>>> studentGrades = {};
-            Map<String, List<Map<String, dynamic>>> studentAbsences = {};
-            Map<String, String> studentClasses = {};
-
-            if (gradesSnapshot.hasData &&
-                _selectedFilterType != "Doar Absențe") {
-              for (var doc in gradesSnapshot.data!.docs) {
-                var data = doc.data() as Map<String, dynamic>;
-                String name = data['studentName'] ?? 'Elev';
-
-                if (_selectedFilterClass != "Toate" &&
-                    data['className'] != _selectedFilterClass)
-                  continue;
-                if (_selectedFilterGroup != "Toate" &&
-                    data['groupName'] != _selectedFilterGroup)
-                  continue;
-                if (_selectedSingleStudent != null &&
-                    name != _selectedSingleStudent)
-                  continue;
-                if (_selectedFilterCourse != "Toate" &&
-                    data['courseTitle'] != _selectedFilterCourse)
-                  continue;
-                if (_selectedFilterGrade != "Toate" &&
-                    data['grade'] != _selectedFilterGrade)
-                  continue;
-
-                allStudents.add(name);
-                studentClasses[name] =
-                    "${data['className'] ?? ''} (${data['groupName'] ?? 'Grupă'})";
-
-                if (!studentGrades.containsKey(name)) studentGrades[name] = [];
-                studentGrades[name]!.add({
-                  'id': doc.id,
-                  'grade': data['grade'] ?? '',
-                  'course': data['courseTitle'] ?? 'Materie',
-                  'date': data['date'] ?? 'Azi',
-                });
-              }
-            }
-
-            if (absencesSnapshot.hasData &&
-                _selectedFilterType != "Doar Note") {
-              for (var doc in absencesSnapshot.data!.docs) {
-                var data = doc.data() as Map<String, dynamic>;
-                String name = data['studentName'] ?? 'Elev';
-
-                if (_selectedFilterGroup != "Toate" &&
-                    data['groupName'] != _selectedFilterGroup)
-                  continue;
-                if (_selectedSingleStudent != null &&
-                    name != _selectedSingleStudent)
-                  continue;
-                if (_selectedFilterCourse != "Toate" &&
-                    data['courseTitle'] != _selectedFilterCourse)
-                  continue;
-
-                allStudents.add(name);
-
-                if (!studentAbsences.containsKey(name))
-                  studentAbsences[name] = [];
-                studentAbsences[name]!.add({
-                  'id': doc.id,
-                  'course': data['courseTitle'] ?? 'Materie',
-                  'date': data['date'] ?? 'Azi',
-                });
-              }
-            }
-
-            if (allStudents.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Text(
-                    "Nicio înregistrare găsită pentru filtrele selectate.",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                  ),
-                ),
-              );
-            }
-
-            List<String> studentList = allStudents.toList();
-
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: studentList.length,
-              itemBuilder: (context, index) {
-                String studentName = studentList[index];
-                List<Map<String, dynamic>> grades =
-                    studentGrades[studentName] ?? [];
-                List<Map<String, dynamic>> absences =
-                    studentAbsences[studentName] ?? [];
-                String classInfo = studentClasses[studentName] ?? '';
-
-                double sum = 0;
-                int count = 0;
-                for (var item in grades) {
-                  double? val = double.tryParse(item['grade']);
-                  if (val != null) {
-                    sum += val;
-                    count++;
-                  }
-                }
-                String average = count > 0
-                    ? (sum / count).toStringAsFixed(1)
-                    : "-";
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundColor: accentLila.withOpacity(0.12),
-                              child: Text(
-                                studentName.isNotEmpty
-                                    ? studentName[0].toUpperCase()
-                                    : "E",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: accentLila,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    studentName,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: primaryIndigo,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    classInfo.isNotEmpty
-                                        ? classInfo
-                                        : "Fără detalii",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex: 6,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (grades.isNotEmpty)
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: grades.map((item) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: accentLila.withOpacity(0.06),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: accentLila.withOpacity(0.2),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item['course'],
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  item['grade'],
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 12,
-                                                    color: primaryIndigo,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  "(${item['date']})",
-                                                  style: TextStyle(
-                                                    fontSize: 9,
-                                                    color: Colors.grey.shade500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        InkWell(
-                                          onTap: () async {
-                                            await FirebaseFirestore.instance
-                                                .collection('grades')
-                                                .doc(item['id'])
-                                                .delete();
-                                          },
-                                          child: Icon(
-                                            Icons.close,
-                                            size: 12,
-                                            color: Colors.red.shade400,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            if (absences.isNotEmpty) ...[
-                              if (grades.isNotEmpty) const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: absences.map((abs) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xfff1f5f9),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              abs['course'],
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                            Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.event_busy,
-                                                  size: 11,
-                                                  color: Colors.grey,
-                                                ),
-                                                const SizedBox(width: 3),
-                                                const Text(
-                                                  "Absență",
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 11,
-                                                    color: Color(0xff475569),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  "(${abs['date']})",
-                                                  style: TextStyle(
-                                                    fontSize: 9,
-                                                    color: Colors.grey.shade500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        InkWell(
-                                          onTap: () async {
-                                            await FirebaseFirestore.instance
-                                                .collection('absences')
-                                                .doc(abs['id'])
-                                                .delete();
-                                          },
-                                          child: Icon(
-                                            Icons.close,
-                                            size: 12,
-                                            color: Colors.red.shade400,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: accentLila.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              "Medie",
-                              style: TextStyle(
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                                color: accentLila,
-                              ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              average,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                color: accentLila,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showAddAbsenceDialog(BuildContext context) {
-    String studentName = "";
-    String groupName = "9A";
-    String courseTitle = "Matematică";
-    String date =
-        "${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}";
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Adaugă Absență"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: "Nume Elev"),
-                onChanged: (val) => studentName = val,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: "Grupa (ex: 9A, 9B)",
-                ),
-                onChanged: (val) => groupName = val,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: "Materie (ex: Matematică)",
-                ),
-                onChanged: (val) => courseTitle = val,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: "Data (ex: 05.10.2026)",
-                ),
-                controller: TextEditingController(text: date),
-                onChanged: (val) => date = val,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Anulează"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xff7c4dff),
-              ),
-              onPressed: () async {
-                if (studentName.isNotEmpty) {
-                  await FirebaseFirestore.instance.collection('absences').add({
-                    'studentName': studentName,
-                    'groupName': groupName,
-                    'courseTitle': courseTitle,
-                    'date': date,
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
-                  if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text(
-                "Salvează Absența",
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildSidebarItem(
     String title,
     IconData icon,
@@ -2264,7 +2750,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
 }
 
 // ==========================================
-// --- ADD GRADE DIALOG ---
+// --- ADD GRADE DIALOG (CU LISTĂ DE ELEVI DIN DB) ---
 // ==========================================
 class AddGradeDialog extends StatefulWidget {
   const AddGradeDialog({super.key});
@@ -2274,7 +2760,7 @@ class AddGradeDialog extends StatefulWidget {
 }
 
 class _AddGradeDialogState extends State<AddGradeDialog> {
-  String studentName = "";
+  String? studentName;
   String className = "9A";
   String groupName = "Grupa 1";
   String courseTitle = "Matematică";
@@ -2289,48 +2775,81 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
     return AlertDialog(
       title: const Text("Adaugă Notă Nouă"),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: const InputDecoration(labelText: "Nume Elev"),
-              onChanged: (val) => studentName = val,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: "Clasa (ex: 9A, 10B)",
-              ),
-              controller: TextEditingController(text: className),
-              onChanged: (val) => className = val,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: "Grupa (ex: Grupa 1)",
-              ),
-              controller: TextEditingController(text: groupName),
-              onChanged: (val) => groupName = val,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              decoration: const InputDecoration(labelText: "Materie"),
-              controller: TextEditingController(text: courseTitle),
-              onChanged: (val) => courseTitle = val,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              decoration: const InputDecoration(labelText: "Nota (ex: 9, 10)"),
-              controller: TextEditingController(text: grade),
-              onChanged: (val) => grade = val,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              decoration: const InputDecoration(labelText: "Data"),
-              controller: TextEditingController(text: date),
-              onChanged: (val) => date = val,
-            ),
-          ],
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('grades').snapshots(),
+          builder: (context, snapshot) {
+            Set<String> studentsList = {};
+            if (snapshot.hasData) {
+              for (var doc in snapshot.data!.docs) {
+                var data = doc.data() as Map<String, dynamic>;
+                if (data['studentName'] != null) {
+                  studentsList.add(data['studentName']);
+                }
+              }
+            }
+
+            List<String> students = studentsList.toList();
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: studentName,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: "Selectează Elevul",
+                  ),
+                  items: students.map((String student) {
+                    return DropdownMenuItem<String>(
+                      value: student,
+                      child: Text(student),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      studentName = val;
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: "Clasa (ex: 9A, 10B)",
+                  ),
+                  controller: TextEditingController(text: className),
+                  onChanged: (val) => className = val,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: "Grupa (ex: Grupa 1)",
+                  ),
+                  controller: TextEditingController(text: groupName),
+                  onChanged: (val) => groupName = val,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  decoration: const InputDecoration(labelText: "Materie"),
+                  controller: TextEditingController(text: courseTitle),
+                  onChanged: (val) => courseTitle = val,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: "Nota (ex: 9, 10)",
+                  ),
+                  controller: TextEditingController(text: grade),
+                  onChanged: (val) => grade = val,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  decoration: const InputDecoration(labelText: "Data"),
+                  controller: TextEditingController(text: date),
+                  onChanged: (val) => date = val,
+                ),
+              ],
+            );
+          },
         ),
       ),
       actions: [
@@ -2341,7 +2860,7 @@ class _AddGradeDialogState extends State<AddGradeDialog> {
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: accentLila),
           onPressed: () async {
-            if (studentName.isNotEmpty) {
+            if (studentName != null && studentName!.isNotEmpty) {
               await FirebaseFirestore.instance.collection('grades').add({
                 'studentName': studentName,
                 'className': className,
