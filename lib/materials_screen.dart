@@ -233,7 +233,11 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                   ),
                   const SizedBox(height: 16),
                   _activeTab == "Arhivă Teste"
-                      ? _buildArhivaTesteView(primaryIndigo, accentLila)
+                      ? _buildArhivaTesteView(
+                          primaryIndigo,
+                          accentLila,
+                          isMobile,
+                        )
                       : _activeTab == "Bacalaureat"
                       ? _buildExamView("Bacalaureat", primaryIndigo, accentLila)
                       : _buildExamView(
@@ -293,18 +297,23 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
     );
   }
 
-  Widget _buildArhivaTesteView(Color primaryIndigo, Color accentLila) {
+  Widget _buildArhivaTesteView(
+    Color primaryIndigo,
+    Color accentLila,
+    bool isMobile,
+  ) {
     String currentClass = _selectedClassTab ?? "Clasa a 4-a";
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 🚀 Antet cu titlu și butonul de adăugare folder vizibil clar pentru profesori
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
               child: Text(
-                "Foldere și Teste - $currentClass",
+                "Foldere - $currentClass",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -320,12 +329,12 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                   backgroundColor: accentLila,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
+                    horizontal: 14,
                     vertical: 10,
                   ),
                 ),
                 icon: const Icon(Icons.create_new_folder, size: 16),
-                label: const Text("Folder"),
+                label: const Text("Adaugă Folder"),
               ),
           ],
         ),
@@ -407,7 +416,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(color: accentLila),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
+                                  horizontal: 10,
                                 ),
                               ),
                               icon: Icon(
@@ -416,7 +425,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                                 color: accentLila,
                               ),
                               label: Text(
-                                "Încarcă",
+                                "Încarcă Test",
                                 style: TextStyle(
                                   color: accentLila,
                                   fontSize: 12,

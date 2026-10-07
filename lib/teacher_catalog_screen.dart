@@ -21,6 +21,8 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
   String _reportScope = "Pe Grupe";
   String _selectedFilterStudent = "Toate";
 
+  bool _isFiltersExpanded = false; // 🚀 Controlăm afișarea filtrelor pe telefon
+
   final List<String> _monthsList = [
     "Toate",
     "Sept",
@@ -44,7 +46,6 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
     bool isRapoarte = _activeCatalogMenu == "Rapoarte Academice";
     bool isMobile = MediaQuery.of(context).size.width < 750;
 
-    // Conținutul meniului lateral (folosit în Drawer pe telefon sau Row pe desktop)
     Widget catalogSidebarContent = Container(
       width: 240,
       color: Colors.white,
@@ -159,7 +160,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                                       ),
                                     ),
                                     const Text(
-                                      "Managementul notelor, mediilor și rapoartelor",
+                                      "Managementul notelor și rapoartelor",
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: Colors.white70,
@@ -207,7 +208,6 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                       ],
                     ),
                   ),
-                  // Pe telefon, butoanele de adăugare le punem sub antet pentru spațiu optim
                   if (!isMediiPeGrupa && !isRapoarte && isMobile) ...[
                     const SizedBox(height: 12),
                     Row(
@@ -246,115 +246,190 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                       ],
                     ),
                   ],
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+
+                  // 🚀 Panou de filtre compact și pliabil pe telefon
                   Container(
-                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.grey.shade200),
                     ),
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('grades')
-                          .snapshots(),
-                      builder: (context, studentSnapshot) {
-                        List<String> studentList = ["Toate"];
-                        if (studentSnapshot.hasData) {
-                          Set<String> uniqueStudents = {};
-                          for (var doc in studentSnapshot.data!.docs) {
-                            var data = doc.data() as Map<String, dynamic>;
-                            String sName = data['studentName'] ?? '';
-                            if (sName.isNotEmpty) {
-                              if (_selectedFilterClass != "Toate" &&
-                                  data['className'] != _selectedFilterClass)
-                                continue;
-                              if (_selectedFilterGroup != "Toate" &&
-                                  data['groupName'] != _selectedFilterGroup)
-                                continue;
-                              uniqueStudents.add(sName);
-                            }
-                          }
-                          studentList.addAll(uniqueStudents);
-                        }
-                        if (!studentList.contains(_selectedFilterStudent)) {
-                          _selectedFilterStudent = "Toate";
-                        }
-
-                        return Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            _buildDropdownFilter(
-                              "Clasă",
-                              [
-                                "Toate",
-                                "9A",
-                                "9B",
-                                "10A",
-                                "11A",
-                                "Clasa a IX-a",
-                              ],
-                              _selectedFilterClass,
-                              (val) =>
-                                  setState(() => _selectedFilterClass = val!),
+                    child: Column(
+                      children: [
+                        InkWell(
+                          onTap: () => setState(
+                            () => _isFiltersExpanded = !_isFiltersExpanded,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
-                            _buildDropdownFilter(
-                              "Grupă",
-                              [
-                                "Toate",
-                                "Grupa 1",
-                                "Grupa 2",
-                                "Grupa A",
-                                "Grupa B",
-                              ],
-                              _selectedFilterGroup,
-                              (val) =>
-                                  setState(() => _selectedFilterGroup = val!),
-                            ),
-                            _buildDropdownFilter(
-                              "Materie",
-                              ["Toate", "Matematică", "Informatică", "Fizică"],
-                              _selectedFilterCourse,
-                              (val) =>
-                                  setState(() => _selectedFilterCourse = val!),
-                            ),
-                            _buildDropdownFilter(
-                              "Lună",
-                              _monthsList,
-                              _selectedFilterMonth,
-                              (val) =>
-                                  setState(() => _selectedFilterMonth = val!),
-                            ),
-                            if (!isMediiPeGrupa && !isRapoarte) ...[
-                              _buildDropdownFilter(
-                                "Tip",
-                                ["Toate", "Notă", "Absență"],
-                                _selectedFilterType,
-                                (val) =>
-                                    setState(() => _selectedFilterType = val!),
-                              ),
-                            ],
-                            if (isRapoarte) ...[
-                              _buildDropdownFilter(
-                                "Nivel Raport",
-                                ["Pe Grupe", "Individual Elev"],
-                                _reportScope,
-                                (val) => setState(() => _reportScope = val!),
-                              ),
-                              if (_reportScope == "Individual Elev")
-                                _buildDropdownFilter(
-                                  "Elev",
-                                  studentList,
-                                  _selectedFilterStudent,
-                                  (val) => setState(
-                                    () => _selectedFilterStudent = val!,
-                                  ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.filter_list,
+                                      color: accentLila,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      "Filtre Active & Căutare",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: primaryIndigo,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                            ],
-                          ],
-                        );
-                      },
+                                Icon(
+                                  _isFiltersExpanded
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                  color: Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_isFiltersExpanded || !isMobile) ...[
+                          const Divider(height: 1, color: Colors.black12),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('grades')
+                                  .snapshots(),
+                              builder: (context, studentSnapshot) {
+                                List<String> studentList = ["Toate"];
+                                if (studentSnapshot.hasData) {
+                                  Set<String> uniqueStudents = {};
+                                  for (var doc in studentSnapshot.data!.docs) {
+                                    var data =
+                                        doc.data() as Map<String, dynamic>;
+                                    String sName = data['studentName'] ?? '';
+                                    if (sName.isNotEmpty) {
+                                      if (_selectedFilterClass != "Toate" &&
+                                          data['className'] !=
+                                              _selectedFilterClass)
+                                        continue;
+                                      if (_selectedFilterGroup != "Toate" &&
+                                          data['groupName'] !=
+                                              _selectedFilterGroup)
+                                        continue;
+                                      uniqueStudents.add(sName);
+                                    }
+                                  }
+                                  studentList.addAll(uniqueStudents);
+                                }
+                                if (!studentList.contains(
+                                  _selectedFilterStudent,
+                                )) {
+                                  _selectedFilterStudent = "Toate";
+                                }
+
+                                return Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: [
+                                    _buildDropdownFilter(
+                                      "Clasă",
+                                      [
+                                        "Toate",
+                                        "9A",
+                                        "9B",
+                                        "10A",
+                                        "11A",
+                                        "Clasa a IX-a",
+                                      ],
+                                      _selectedFilterClass,
+                                      (val) => setState(
+                                        () => _selectedFilterClass = val!,
+                                      ),
+                                      isMobile,
+                                    ),
+                                    _buildDropdownFilter(
+                                      "Grupă",
+                                      [
+                                        "Toate",
+                                        "Grupa 1",
+                                        "Grupa 2",
+                                        "Grupa A",
+                                        "Grupa B",
+                                      ],
+                                      _selectedFilterGroup,
+                                      (val) => setState(
+                                        () => _selectedFilterGroup = val!,
+                                      ),
+                                      isMobile,
+                                    ),
+                                    _buildDropdownFilter(
+                                      "Materie",
+                                      [
+                                        "Toate",
+                                        "Matematică",
+                                        "Informatică",
+                                        "Fizică",
+                                      ],
+                                      _selectedFilterCourse,
+                                      (val) => setState(
+                                        () => _selectedFilterCourse = val!,
+                                      ),
+                                      isMobile,
+                                    ),
+                                    _buildDropdownFilter(
+                                      "Lună",
+                                      _monthsList,
+                                      _selectedFilterMonth,
+                                      (val) => setState(
+                                        () => _selectedFilterMonth = val!,
+                                      ),
+                                      isMobile,
+                                    ),
+                                    if (!isMediiPeGrupa && !isRapoarte) ...[
+                                      _buildDropdownFilter(
+                                        "Tip",
+                                        ["Toate", "Notă", "Absență"],
+                                        _selectedFilterType,
+                                        (val) => setState(
+                                          () => _selectedFilterType = val!,
+                                        ),
+                                        isMobile,
+                                      ),
+                                    ],
+                                    if (isRapoarte) ...[
+                                      _buildDropdownFilter(
+                                        "Nivel Raport",
+                                        ["Pe Grupe", "Individual Elev"],
+                                        _reportScope,
+                                        (val) =>
+                                            setState(() => _reportScope = val!),
+                                        isMobile,
+                                      ),
+                                      if (_reportScope == "Individual Elev")
+                                        _buildDropdownFilter(
+                                          "Elev",
+                                          studentList,
+                                          _selectedFilterStudent,
+                                          (val) => setState(
+                                            () => _selectedFilterStudent = val!,
+                                          ),
+                                          isMobile,
+                                        ),
+                                    ],
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -377,9 +452,10 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
     List<String> items,
     String currentVal,
     ValueChanged<String?> onChanged,
+    bool isMobile,
   ) {
     return SizedBox(
-      width: 150,
+      width: isMobile ? double.infinity : 150, // Pe telefon dropdown-ul ocupă toată lățimea compact, pe desktop 150px
       child: DropdownButtonFormField<String>(
         value: items.contains(currentVal) ? currentVal : "Toate",
         decoration: InputDecoration(
