@@ -21,106 +21,114 @@ class _CoursesScreenState extends State<CoursesScreen> {
   Widget build(BuildContext context) {
     const Color primaryIndigo = Color(0xff1e1b4b);
     const Color accentLila = Color(0xff7c4dff);
+    bool isMobile = MediaQuery.of(context).size.width < 750;
+
+    // Conținutul meniului lateral (folosit fie în Row pe desktop, fie în Drawer pe telefon)
+    Widget subjectsDrawerContent = Container(
+      width: 240,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accentLila.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.menu_book, color: accentLila, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Materii Cursuri",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: primaryIndigo,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Divider(color: Colors.black12, height: 1),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _subjects.length,
+              itemBuilder: (context, index) {
+                String subject = _subjects[index];
+                bool isSelected = _selectedSubject == subject;
+
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedSubject = subject;
+                      _selectedCourseDoc = null;
+                    });
+                    if (isMobile)
+                      Navigator.pop(
+                        context,
+                      ); // Închide drawer-ul pe telefon la selecție
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? accentLila.withOpacity(0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.book_outlined,
+                          size: 18,
+                          color: isSelected ? accentLila : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          subject,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? primaryIndigo
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xfff8fafc),
+      // 🚀 Pe telefon, meniul lateral devine un Drawer retractabil
+      drawer: isMobile ? Drawer(child: subjectsDrawerContent) : null,
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Meniu lateral cu materii
-          Container(
-            width: 240,
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: accentLila.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.menu_book,
-                        color: accentLila,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      "Materii Cursuri",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: primaryIndigo,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Divider(color: Colors.black12, height: 1),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _subjects.length,
-                    itemBuilder: (context, index) {
-                      String subject = _subjects[index];
-                      bool isSelected = _selectedSubject == subject;
-
-                      return InkWell(
-                        onTap: () => setState(() {
-                          _selectedSubject = subject;
-                          _selectedCourseDoc = null; // Resetează cursul selectat la schimbarea materiei
-                        }),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? accentLila.withOpacity(0.1)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.book_outlined,
-                                size: 18,
-                                color: isSelected
-                                    ? accentLila
-                                    : Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                subject,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? primaryIndigo
-                                      : Colors.grey.shade700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const VerticalDivider(width: 1, color: Colors.black12),
+          // Pe desktop afișăm meniul direct în stânga
+          if (!isMobile) ...[
+            subjectsDrawerContent,
+            const VerticalDivider(width: 1, color: Colors.black12),
+          ],
 
           // Conținut Principal
           Expanded(
@@ -135,6 +143,19 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       Expanded(
                         child: Row(
                           children: [
+                            // 🚀 Buton de meniu pe telefon pentru a deschide materiile lateral
+                            if (isMobile)
+                              Builder(
+                                builder: (context) => IconButton(
+                                  icon: const Icon(
+                                    Icons.menu,
+                                    color: primaryIndigo,
+                                  ),
+                                  onPressed: () =>
+                                      Scaffold.of(context).openDrawer(),
+                                  tooltip: "Meniu Materii",
+                                ),
+                              ),
                             if (_selectedCourseDoc != null)
                               IconButton(
                                 icon: const Icon(Icons.arrow_back),
@@ -146,9 +167,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               child: Text(
                                 _selectedCourseDoc != null
                                     ? "Clasa: ${_selectedCourseDoc!['title']} ($_selectedSubject)"
-                                    : "Cursuri & Materiale - $_selectedSubject",
+                                    : "Cursuri - $_selectedSubject",
                                 style: const TextStyle(
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w900,
                                   color: primaryIndigo,
                                 ),
@@ -158,22 +179,21 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           ],
                         ),
                       ),
-                      // 🚀 Aici adăugăm butonul vizibil în dreapta sus
                       if (widget.role == 'teacher')
                         Padding(
-                          padding: const EdgeInsets.only(left: 16.0),
+                          padding: const EdgeInsets.only(left: 8.0),
                           child: ElevatedButton.icon(
                             onPressed: () => _showAddCourseDialog(context),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: accentLila,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                                horizontal: 12,
+                                vertical: 10,
                               ),
                             ),
                             icon: const Icon(Icons.add, size: 16),
-                            label: const Text("Adaugă Curs / Clasă"),
+                            label: const Text("Adaugă Curs"),
                           ),
                         ),
                     ],
@@ -181,7 +201,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   const SizedBox(height: 20),
                   Expanded(
                     child: _selectedCourseDoc == null
-                        ? _buildCoursesList(accentLila, primaryIndigo)
+                        ? _buildCoursesList(accentLila, primaryIndigo, isMobile)
                         : _buildCourseGroupsWithTabs(
                             _selectedCourseDoc!.id,
                             accentLila,
@@ -197,8 +217,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // 1. Lista de Cursuri/Clase
-  Widget _buildCoursesList(Color accentLila, Color primaryIndigo) {
+  // 1. Lista de Cursuri/Clase (adaptată responsive)
+  Widget _buildCoursesList(
+    Color accentLila,
+    Color primaryIndigo,
+    bool isMobile,
+  ) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('courses')
@@ -216,11 +240,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
         }
 
         return GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: isMobile
+                ? 1
+                : 3, // 1 coloană pe telefon, 3 pe desktop
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 2.5,
+            childAspectRatio: isMobile ? 3.5 : 2.5,
           ),
           itemCount: docs.length,
           itemBuilder: (context, index) {
@@ -238,19 +264,24 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.school, color: accentLila),
-                        const SizedBox(width: 12),
-                        Text(
-                          data['title'] ?? '',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: primaryIndigo,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(Icons.school, color: accentLila),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(
+                              data['title'] ?? '',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: primaryIndigo,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     if (widget.role == 'teacher')
                       IconButton(
@@ -271,7 +302,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // 2. Afișează Grupele sub formă de TAB-uri în partea de sus, cu opțiune de ștergere pentru profesori
+  // 2. Afișează Grupele sub formă de TAB-uri în partea de sus
   Widget _buildCourseGroupsWithTabs(
     String courseId,
     Color accentLila,
@@ -313,7 +344,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Bara de Tab-uri pentru Grupe
                   Expanded(
                     child: Container(
                       height: 45,
@@ -340,7 +370,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     ),
                   ),
                   if (widget.role == 'teacher') ...[
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () => _showAddGroupDialog(context, courseId),
                       style: ElevatedButton.styleFrom(
@@ -348,14 +378,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         foregroundColor: Colors.white,
                       ),
                       icon: const Icon(Icons.group_add, size: 16),
-                      label: const Text("Adaugă Grupă"),
+                      label: const Text("Grupă"),
                     ),
                   ],
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Conținutul corespunzător fiecărui tab de grupă (Lecțiile grupei respective)
               Expanded(
                 child: TabBarView(
                   children: groupDocs.map((groupDoc) {
@@ -372,23 +400,21 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             Row(
                               children: [
                                 Text(
-                                  "Lecții pentru: $groupName",
+                                  "Lecții: $groupName",
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                     color: primaryIndigo,
                                   ),
                                 ),
-                                // Buton de ștergere grupă vizibil doar pentru profesori
                                 if (widget.role == 'teacher') ...[
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 4),
                                   IconButton(
                                     icon: const Icon(
                                       Icons.delete_outline,
                                       color: Colors.red,
-                                      size: 20,
+                                      size: 18,
                                     ),
-                                    tooltip: "Șterge grupa curentă",
                                     onPressed: () => _confirmAndDeleteGroup(
                                       context,
                                       courseId,
@@ -406,10 +432,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                 icon: Icon(
                                   Icons.add,
                                   color: accentLila,
-                                  size: 18,
+                                  size: 16,
                                 ),
                                 label: Text(
-                                  "Adaugă Lecție în această grupă",
+                                  "Adaugă Lecție",
                                   style: TextStyle(color: accentLila),
                                 ),
                               ),
@@ -435,79 +461,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // Metodă de confirmare și ștergere a grupei și a lecțiilor din interiorul ei
-  Future<void> _confirmAndDeleteGroup(
-    BuildContext context,
-    String courseId,
-    String groupId,
-    String groupName,
-  ) async {
-    bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Ștergere grupă "$groupName"'),
-        content: const Text(
-          'Ești sigur că vrei să ștergi această grupă? Toate lecțiile și materialele asociate acestei grupe vor fi eliminate definitiv.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Anulează'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Șterge', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      try {
-        // 1. Ștergem lecțiile din subcolecția 'lessons' a grupei
-        var lessonsSnap = await FirebaseFirestore.instance
-            .collection('course_groups')
-            .doc(groupId)
-            .collection('lessons')
-            .get();
-
-        for (var doc in lessonsSnap.docs) {
-          await doc.reference.delete();
-        }
-
-        // 2. Ștergem referința din colecția globală 'course_groups'
-        await FirebaseFirestore.instance
-            .collection('course_groups')
-            .doc(groupId)
-            .delete();
-
-        // 3. Ștergem documentul grupei din curs ('courses/{courseId}/groups/{groupId}')
-        await FirebaseFirestore.instance
-            .collection('courses')
-            .doc(courseId)
-            .collection('groups')
-            .doc(groupId)
-            .delete();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Grupa "$groupName" a fost ștersă cu succes.'),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Eroare la ștergerea grupei: $e')),
-          );
-        }
-      }
-    }
-  }
-
-  // 3. Lista de lecții pentru grupa curentă
+  // 3. Lista de lecții
   Widget _buildLessonsList(
     String groupId,
     Color accentLila,
@@ -571,74 +525,27 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       children: [
                         Expanded(
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              Icon(Icons.play_lesson, color: accentLila),
+                              const SizedBox(width: 12),
                               Expanded(
-                                child: Row(
-                                  children: [
-                                    if (_selectedCourseDoc != null)
-                                      IconButton(
-                                        icon: const Icon(Icons.arrow_back),
-                                        onPressed: () => setState(() {
-                                          _selectedCourseDoc = null;
-                                        }),
-                                      ),
-                                    Flexible(
-                                      child: Text(
-                                        _selectedCourseDoc != null
-                                            ? "Clasa: ${_selectedCourseDoc!['title']} ($_selectedSubject)"
-                                            : "Cursuri & Materiale - $_selectedSubject",
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w900,
-                                          color: Color(0xff1e1b4b),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // 🚀 Forțăm afișarea butonului să vedem dacă se randează acum
-                              Padding(
-                                padding: const EdgeInsets.only(left: 16.0),
-                                child: ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _showAddCourseDialog(context),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xff7c4dff),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
+                                child: Text(
+                                  data['title'] ?? 'Lecție fără titlu',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: primaryIndigo,
                                   ),
-                                  icon: const Icon(Icons.add, size: 16),
-                                  label: Text("Adaugă Curs (${widget.role})"), // Afișează și rolul să vedem ce valoare are
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        // 🚀 Butonul de adăugare curs vizibil clar pentru profesor când nu este selectată o clasă
-                        if (widget.role == 'teacher' &&
-                            _selectedCourseDoc == null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0),
-                            child: ElevatedButton.icon(
-                              onPressed: () => _showAddCourseDialog(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xff7c4dff),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text("Adaugă Curs / Clasă"),
-                            ),
-                          ),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
                       ],
                     ),
                   ),
@@ -651,7 +558,62 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // Dialog adăugare curs
+  Future<void> _confirmAndDeleteGroup(
+    BuildContext context,
+    String courseId,
+    String groupId,
+    String groupName,
+  ) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ștergere grupă "$groupName"'),
+        content: const Text(
+          'Ești sigur că vrei să ștergi această grupă? Toate lecțiile vor fi eliminate.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Anulează'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Șterge', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        var lessonsSnap = await FirebaseFirestore.instance
+            .collection('course_groups')
+            .doc(groupId)
+            .collection('lessons')
+            .get();
+
+        for (var doc in lessonsSnap.docs) {
+          await doc.reference.delete();
+        }
+
+        await FirebaseFirestore.instance
+            .collection('course_groups')
+            .doc(groupId)
+            .delete();
+
+        await FirebaseFirestore.instance
+            .collection('courses')
+            .doc(courseId)
+            .collection('groups')
+            .doc(groupId)
+            .delete();
+      } catch (e) {
+        debugPrint("Eroare la ștergerea grupei: $e");
+      }
+    }
+  }
+
   void _showAddCourseDialog(BuildContext context) {
     String title = "";
     String description = "";
@@ -700,7 +662,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // Dialog adăugare grupă
   void _showAddGroupDialog(BuildContext context, String courseId) {
     String groupName = "";
     String description = "";
@@ -782,7 +743,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               title: const Text(
-                "Adaugă Lecție Nouă (Video & PDF)",
+                "Adaugă Lecție Nouă",
                 style: TextStyle(
                   color: Color(0xff1e1b4b),
                   fontWeight: FontWeight.bold,
@@ -803,15 +764,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        "--- SECȚIUNEA 1: TEORIE & VIDEO ---",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
                       TextField(
                         controller: contentController,
                         maxLines: 3,
@@ -820,149 +772,14 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "Link-uri Video Bunny (iframe embed):",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      ...videoUrls.asMap().entries.map((entry) {
-                        int idx = entry.key;
-                        String url = entry.value;
-                        return ListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.video_library,
-                            color: Colors.purple,
-                          ),
-                          title: Text(
-                            url,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Colors.red,
-                              size: 20,
-                            ),
-                            onPressed: () =>
-                                setDialogState(() => videoUrls.removeAt(idx)),
-                          ),
-                        );
-                      }),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: newVideoController,
-                              decoration: const InputDecoration(
-                                hintText: "Adaugă URL Video Embed...",
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.add_circle,
-                              color: Color(0xff1e1b4b),
-                            ),
-                            onPressed: () {
-                              String url = newVideoController.text.trim();
-                              if (url.isNotEmpty) {
-                                setDialogState(() {
-                                  videoUrls.add(url);
-                                  newVideoController.clear();
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        "--- SECȚIUNEA 2: TEMĂ & PDF ---",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 16),
                       TextField(
                         controller: homeworkContentController,
-                        maxLines: 3,
+                        maxLines: 2,
                         decoration: const InputDecoration(
-                          labelText: "Cerințe / Exerciții Temă (Text)",
+                          labelText: "Cerințe Temă",
                           border: OutlineInputBorder(),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "Fișiere PDF încărcate:",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      ...pdfUrls.asMap().entries.map((entry) {
-                        int idx = entry.key;
-                        String url = entry.value;
-                        return ListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.picture_as_pdf,
-                            color: Colors.red,
-                          ),
-                          title: Text(
-                            url,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Colors.red,
-                              size: 20,
-                            ),
-                            onPressed: () =>
-                                setDialogState(() => pdfUrls.removeAt(idx)),
-                          ),
-                        );
-                      }),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: newPdfController,
-                              decoration: const InputDecoration(
-                                hintText: "Lipește link-ul PDF...",
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.add_circle,
-                              color: Color(0xff1e1b4b),
-                            ),
-                            onPressed: () {
-                              String url = newPdfController.text.trim();
-                              if (url.isNotEmpty) {
-                                setDialogState(() {
-                                  pdfUrls.add(url);
-                                  newPdfController.clear();
-                                });
-                              }
-                            },
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -971,25 +788,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    "Anulează",
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  child: const Text("Anulează"),
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if (newPdfController.text.trim().isNotEmpty) {
-                      pdfUrls.add(newPdfController.text.trim());
-                    }
-                    if (newVideoController.text.trim().isNotEmpty) {
-                      videoUrls.add(newVideoController.text.trim());
-                    }
-
                     final String lTitle = titleController.text.trim();
                     if (lTitle.isNotEmpty) {
-                      // 1. Salvăm lecția în Firestore sub grupa respectivă
-                      DocumentReference lessonRef = await FirebaseFirestore
-                          .instance
+                      await FirebaseFirestore.instance
                           .collection('course_groups')
                           .doc(groupId)
                           .collection('lessons')
@@ -1003,71 +808,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             'createdAt': FieldValue.serverTimestamp(),
                           });
 
-                      // 2. 🚀 TRIMITEM NOTIFICĂRI CĂTRE ELEVI (Logica recuperată)
-                      try {
-                        // Găsim toți elevii care au acces sau sunt înscriși
-                        var studentsSnap = await FirebaseFirestore.instance
-                            .collection('users')
-                            .where('role', isEqualTo: 'student')
-                            .get();
-
-                        for (var studentDoc in studentsSnap.docs) {
-                          String studentId = studentDoc.id;
-
-                          // Notificare pentru Lecție / Teorie
-                          await FirebaseFirestore.instance
-                              .collection('notifications')
-                              .add({
-                                'userId': studentId,
-                                'courseId': groupId,
-                                'lessonId': lessonRef.id,
-                                'title': lTitle,
-                                'body': 'A fost adăugată o nouă lecție/material video.',
-                                'type':
-                                    'lesson', // Va deschide tab-ul de lecție
-                                'isRead': false,
-                                'createdAt': FieldValue.serverTimestamp(),
-                              });
-
-                          // Dacă există și conținut de temă, trimitem și notificare de temă
-                          if (homeworkContentController.text
-                                  .trim()
-                                  .isNotEmpty ||
-                              pdfUrls.isNotEmpty) {
-                            await FirebaseFirestore.instance
-                                .collection('notifications')
-                                .add({
-                                  'userId': studentId,
-                                  'courseId': groupId,
-                                  'lessonId': lessonRef.id,
-                                  'title': 'Temă nouă: $lTitle',
-                                  'body': 'Au fost adăugate cerințe de temă sau fișiere PDF.',
-                                  'type': 'homework', // Va deschide direct tab-ul de temă
-                                  'isRead': false,
-                                  'createdAt': FieldValue.serverTimestamp(),
-                                });
-                          }
-                        }
-                      } catch (e) {
-                        debugPrint("Eroare la trimiterea notificărilor: $e");
-                      }
-
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Lecția a fost adăugată și s-au trimis notificările!',
-                            ),
-                          ),
-                        );
                         Navigator.pop(context);
                       }
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff1e1b4b),
-                    foregroundColor: Colors.white,
-                  ),
                   child: const Text("Salvează"),
                 ),
               ],

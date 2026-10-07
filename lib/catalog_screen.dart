@@ -26,6 +26,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     }
 
     const Color primaryDark = Color(0xff42153e);
+    bool isMobile = MediaQuery.of(context).size.width < 750;
 
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),
@@ -63,13 +64,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               ? "Catalogul Copiilor Mei"
                               : "Catalogul Virtual • Progres Academic",
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
                         const Text(
-                          "Vizualizează notele centralizate pe rânduri, exact ca într-un catalog modern",
+                          "Vizualizează notele centralizate, exact ca într-un catalog modern",
                           style: TextStyle(fontSize: 12, color: Colors.white70),
                         ),
                       ],
@@ -80,7 +81,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
             const SizedBox(height: 16),
 
-            // --- STREAM PENTRU NOTE ȘI GRUPARE PE ELEVI (STIL KINDERPEDIA) ---
+            // --- STREAM PENTRU NOTE ȘI GRUPARE PE ELEVI ---
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('grades')
@@ -134,7 +135,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   );
                 }
 
-                // Grupare dinamică pe elev (cum ar fi Nume Elev -> Listă de note)
+                // Grupare dinamică pe elev
                 Map<String, List<Map<String, dynamic>>> studentMap = {};
                 for (var doc in filteredDocs) {
                   var data = doc.data() as Map<String, dynamic>;
@@ -198,119 +199,235 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           ),
                         ],
                       ),
-                      child: Row(
-                        children: [
-                          // 1. Avatar și Nume Elev
-                          Expanded(
-                            flex: 3,
-                            child: Row(
+                      // 🚀 Layout adaptabil: pe telefon devine Column, pe desktop rămâne Row
+                      child: isMobile
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: primaryDark.withOpacity(0.1),
-                                  child: Text(
-                                    studentName.isNotEmpty
-                                        ? studentName[0].toUpperCase()
-                                        : "E",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryDark,
+                                // 1. Avatar, Nume și Medie (Sus pe telefon)
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 18,
+                                          backgroundColor: primaryDark
+                                              .withOpacity(0.1),
+                                          child: Text(
+                                            studentName.isNotEmpty
+                                                ? studentName[0].toUpperCase()
+                                                : "E",
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: primaryDark,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              studentName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: primaryDark,
+                                              ),
+                                            ),
+                                            if (className.isNotEmpty)
+                                              Text(
+                                                "Clasa: $className",
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                  ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: primaryDark,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Text(
+                                            "Medie: ",
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                          Text(
+                                            average,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.amber,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        studentName,
+                                const Divider(height: 20),
+                                // 2. Notele înșiruite pe telefon
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: studentGrades.map((item) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.amber.shade200,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        item['grade'],
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 15,
+                                          fontSize: 13,
                                           color: primaryDark,
                                         ),
                                       ),
-                                      if (className.isNotEmpty)
-                                        Text(
-                                          "Clasa: $className",
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                // 1. Avatar și Nume Elev (Desktop)
+                                Expanded(
+                                  flex: 3,
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: primaryDark
+                                            .withOpacity(0.1),
+                                        child: Text(
+                                          studentName.isNotEmpty
+                                              ? studentName[0].toUpperCase()
+                                              : "E",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: primaryDark,
                                           ),
                                         ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              studentName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                                color: primaryDark,
+                                              ),
+                                            ),
+                                            if (className.isNotEmpty)
+                                              Text(
+                                                "Clasa: $className",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // 2. Notele înșiruite orizontal (Desktop)
+                                Expanded(
+                                  flex: 5,
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: studentGrades.map((item) {
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.amber.shade200,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          item['grade'],
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: primaryDark,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+
+                                // 3. Media încheiată (Desktop)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: primaryDark,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        "Medie",
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                      Text(
+                                        average,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.amber,
+                                          fontSize: 15,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-
-                          // 2. Notele înșiruite orizontal (Stil Kinderpedia)
-                          Expanded(
-                            flex: 5,
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: studentGrades.map((item) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.amber.shade200,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    item['grade'],
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: primaryDark,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-
-                          // 3. Media încheiată
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: primaryDark,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  "Medie",
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                                Text(
-                                  average,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.amber,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
                     );
                   },
                 );

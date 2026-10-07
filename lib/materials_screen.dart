@@ -18,153 +18,161 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
   Widget build(BuildContext context) {
     const Color primaryIndigo = Color(0xff1e1b4b);
     const Color accentLila = Color(0xff7c4dff);
+    bool isMobile = MediaQuery.of(context).size.width < 750;
 
     if (widget.role != 'teacher' && _activeTab == "Arhivă Teste") {
       _activeTab = "Bacalaureat";
     }
 
+    // Conținutul meniului lateral (folosit în Drawer pe telefon sau Row pe desktop)
+    Widget materialsSidebarContent = Container(
+      width: 240,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      child: ListView(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accentLila.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.folder_open,
+                  color: accentLila,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Materiale",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: primaryIndigo,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Divider(color: Colors.black12, height: 1),
+          const SizedBox(height: 16),
+
+          if (widget.role == 'teacher')
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InkWell(
+                  onTap: () => setState(() {
+                    _isArhivaTestExpanded = !_isArhivaTestExpanded;
+                    if (_isArhivaTestExpanded && _selectedClassTab == null) {
+                      _selectedClassTab = "Clasa a 4-a";
+                      _activeTab = "Arhivă Teste";
+                    }
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.folder_shared_outlined,
+                          size: 18,
+                          color: _activeTab == "Arhivă Teste"
+                              ? accentLila
+                              : Colors.grey,
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            "Arhivă Teste",
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        Icon(
+                          _isArhivaTestExpanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_isArhivaTestExpanded)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: List.generate(9, (index) {
+                        int gradeNum = index + 4;
+                        String cName = "Clasa a ${gradeNum}-a";
+                        bool isSel =
+                            _activeTab == "Arhivă Teste" &&
+                            _selectedClassTab == cName;
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              _activeTab = "Arhivă Teste";
+                              _selectedClassTab = cName;
+                            });
+                            if (isMobile) Navigator.pop(context);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 6,
+                              horizontal: 8,
+                            ),
+                            child: Text(
+                              cName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isSel
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSel ? primaryIndigo : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+              ],
+            ),
+
+          _buildSidebarItem(
+            "Bacalaureat",
+            Icons.school_outlined,
+            accentLila,
+            primaryIndigo,
+            isMobile,
+          ),
+          _buildSidebarItem(
+            "Evaluarea Națională",
+            Icons.menu_book_outlined,
+            accentLila,
+            primaryIndigo,
+            isMobile,
+          ),
+        ],
+      ),
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xfff8fafc),
+      drawer: isMobile ? Drawer(child: materialsSidebarContent) : null,
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 240,
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: accentLila.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.folder_open,
-                        color: accentLila,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      "Materiale",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: primaryIndigo,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Divider(color: Colors.black12, height: 1),
-                const SizedBox(height: 16),
-
-                if (widget.role == 'teacher')
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      InkWell(
-                        onTap: () => setState(() {
-                          _isArhivaTestExpanded = !_isArhivaTestExpanded;
-                          if (_isArhivaTestExpanded &&
-                              _selectedClassTab == null) {
-                            _selectedClassTab = "Clasa a 4-a";
-                            _activeTab = "Arhivă Teste";
-                          }
-                        }),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.folder_shared_outlined,
-                                size: 18,
-                                color: _activeTab == "Arhivă Teste"
-                                    ? accentLila
-                                    : Colors.grey,
-                              ),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                child: Text(
-                                  "Arhivă Teste",
-                                  style: TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                              ),
-                              Icon(
-                                _isArhivaTestExpanded
-                                    ? Icons.keyboard_arrow_up
-                                    : Icons.keyboard_arrow_down,
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (_isArhivaTestExpanded)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: List.generate(9, (index) {
-                              int gradeNum = index + 4;
-                              String cName = "Clasa a ${gradeNum}-a";
-                              bool isSel =
-                                  _activeTab == "Arhivă Teste" &&
-                                  _selectedClassTab == cName;
-                              return InkWell(
-                                onTap: () => setState(() {
-                                  _activeTab = "Arhivă Teste";
-                                  _selectedClassTab = cName;
-                                }),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 6,
-                                    horizontal: 8,
-                                  ),
-                                  child: Text(
-                                    cName,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: isSel
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: isSel
-                                          ? primaryIndigo
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                    ],
-                  ),
-
-                _buildSidebarItem(
-                  "Bacalaureat",
-                  Icons.school_outlined,
-                  accentLila,
-                  primaryIndigo,
-                ),
-                _buildSidebarItem(
-                  "Evaluarea Națională",
-                  Icons.menu_book_outlined,
-                  accentLila,
-                  primaryIndigo,
-                ),
-              ],
-            ),
-          ),
-          const VerticalDivider(width: 1, color: Colors.black12),
+          if (!isMobile) ...[
+            materialsSidebarContent,
+            const VerticalDivider(width: 1, color: Colors.black12),
+          ],
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -181,27 +189,44 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                     ),
                     child: Row(
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _activeTab == "Arhivă Teste"
-                                  ? "Arhivă Teste (${_selectedClassTab ?? 'Clasa a 4-a'})"
-                                  : _activeTab,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
+                        if (isMobile)
+                          Builder(
+                            builder: (context) => Padding(
+                              padding: const EdgeInsets.only(right: 12.0),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.menu,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () =>
+                                    Scaffold.of(context).openDrawer(),
+                                tooltip: "Meniu Materiale",
                               ),
                             ),
-                            const Text(
-                              "Resurse educaționale, teste și pregătire examen",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white70,
+                          ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _activeTab == "Arhivă Teste"
+                                    ? "Arhivă Teste (${_selectedClassTab ?? 'Clasa a 4-a'})"
+                                    : _activeTab,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                          ],
+                              const Text(
+                                "Resurse educaționale, teste și pregătire examen",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -230,10 +255,14 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
     IconData icon,
     Color accentLila,
     Color primaryIndigo,
+    bool isMobile,
   ) {
     bool isSelected = _activeTab == title;
     return InkWell(
-      onTap: () => setState(() => _activeTab = title),
+      onTap: () {
+        setState(() => _activeTab = title);
+        if (isMobile) Navigator.pop(context);
+      },
       borderRadius: BorderRadius.circular(10),
       child: Container(
         margin: const EdgeInsets.only(bottom: 6),
@@ -273,23 +302,31 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              "Foldere și Teste - $currentClass",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: primaryIndigo,
+            Expanded(
+              child: Text(
+                "Foldere și Teste - $currentClass",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: primaryIndigo,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: () => _showAddFolderDialog(context, currentClass),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accentLila,
-                foregroundColor: Colors.white,
+            if (widget.role == 'teacher')
+              ElevatedButton.icon(
+                onPressed: () => _showAddFolderDialog(context, currentClass),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentLila,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                ),
+                icon: const Icon(Icons.create_new_folder, size: 16),
+                label: const Text("Folder"),
               ),
-              icon: const Icon(Icons.create_new_folder, size: 16),
-              label: const Text("Adaugă Folder"),
-            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -340,40 +377,52 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.folder,
-                                color: Colors.amber,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                folderData['folderName'] ?? 'Folder',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: primaryIndigo,
+                          Expanded(
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.folder,
+                                  color: Colors.amber,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    folderData['folderName'] ?? 'Folder',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: primaryIndigo,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (widget.role == 'teacher')
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  _showUploadTestDialog(context, folderId),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: accentLila),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
                                 ),
                               ),
-                            ],
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () =>
-                                _showUploadTestDialog(context, folderId),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: accentLila),
+                              icon: Icon(
+                                Icons.upload_file,
+                                size: 16,
+                                color: accentLila,
+                              ),
+                              label: Text(
+                                "Încarcă",
+                                style: TextStyle(
+                                  color: accentLila,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ),
-                            icon: Icon(
-                              Icons.upload_file,
-                              size: 16,
-                              color: accentLila,
-                            ),
-                            label: Text(
-                              "Încarcă Test",
-                              style: TextStyle(color: accentLila, fontSize: 12),
-                            ),
-                          ),
                         ],
                       ),
                       const Divider(height: 24),
@@ -411,8 +460,12 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                                   "${testData['title']} (${testData['date']})",
                                   style: const TextStyle(fontSize: 11),
                                 ),
-                                deleteIcon: const Icon(Icons.close, size: 14),
-                                onDeleted: () => testDoc.reference.delete(),
+                                deleteIcon: widget.role == 'teacher'
+                                    ? const Icon(Icons.close, size: 14)
+                                    : null,
+                                onDeleted: widget.role == 'teacher'
+                                    ? () => testDoc.reference.delete()
+                                    : null,
                                 backgroundColor: Colors.grey.shade100,
                               );
                             }).toList(),
@@ -454,11 +507,13 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
               fontWeight: FontWeight.bold,
               color: primaryIndigo,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           const Text(
             "Aici elevii au acces la simulări, subiecte din anii trecuți și variante rezolvate.",
             style: TextStyle(color: Colors.grey, fontSize: 13),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
