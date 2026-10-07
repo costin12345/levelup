@@ -150,6 +150,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       for (var doc in enrollments.docs) {
         String userId = doc['userId'];
 
+        // 1. Adăugăm mai întâi notificarea în colecție (acest lucru va crește instant și numărul de pe clopoțel prin StreamBuilder-ul existent)
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': userId,
           'title': pushTitle,
@@ -161,6 +162,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
+        // 2. Calculăm numărul corect și actualizat de notificări necitite pentru acest elev
         final unreadSnap = await FirebaseFirestore.instance
             .collection('notifications')
             .where('userId', isEqualTo: userId)
@@ -168,6 +170,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
             .get();
         int unreadCount = unreadSnap.docs.length;
 
+        // 3. Preluăm token-ul FCM al elevului
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
@@ -178,6 +181,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           String? fcmToken = uData?['fcmToken'];
 
           if (fcmToken != null && fcmToken.isNotEmpty) {
+            // 4. Trimitem Notificarea Push via FCM v1 cu numărul corect de badge inclus
             await client.post(
               Uri.parse(fcmV1Url),
               headers: {'Content-Type': 'application/json'},
@@ -187,7 +191,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   'notification': {'title': pushTitle, 'body': pushBody},
                   'android': {
                     'priority': 'HIGH',
-                    'notification': {'sound': 'default'},
+                    'notification': {
+                      'sound': 'default',
+                      'channel_id': 'high_importance_channel',
+                    },
                   },
                   'apns': {
                     'headers': {
@@ -195,7 +202,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       'apns-push-type': 'alert',
                     },
                     'payload': {
-                      'aps': {'sound': 'default', 'badge': unreadCount},
+                      'aps': {
+                        'sound': 'default',
+                        'badge': unreadCount, // 👈 Numărul corect actualizat pe badge-ul aplicației
+                      },
                     },
                   },
                   'data': {

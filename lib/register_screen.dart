@@ -72,6 +72,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // 3. 🚀 TRIMITERE NOTIFICARE CĂTRE PROFESORI (Dacă e elev sau părinte în așteptare)
+      if (_selectedRole != 'teacher') {
+        // Găsim toți profesorii din sistem pentru a le trimite notificare
+        var teachersSnap = await FirebaseFirestore.instance
+            .collection('users')
+            .where('role', isEqualTo: 'teacher')
+            .get();
+
+        for (var teacherDoc in teachersSnap.docs) {
+          String teacherId = teacherDoc.id;
+
+          await FirebaseFirestore.instance.collection('notifications').add({
+            'userId': teacherId,
+            'title': 'Cont nou în așteptare',
+            'body':
+                'Utilizatorul $name ($email) s-a înregistrat ca $_selectedRole și așteaptă aprobare.',
+            'type': 'user_registration',
+            'isRead': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
       if (!mounted) return;
 
       Navigator.pushReplacement(

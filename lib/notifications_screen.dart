@@ -32,7 +32,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _updateBadgeForUser();
   }
 
-  // Funcție ajutătoare care alege animația Lottie în funcție de tipul notificării
   Widget _getAnimationForType(String type, bool isRead) {
     String assetPath = 'images/animations/homework.json';
 
@@ -156,73 +155,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _handleStudentNotificationClick(
-    DocumentSnapshot notifDoc,
-  ) async {
-    var data = notifDoc.data() as Map<String, dynamic>;
-    String notifId = notifDoc.id;
-
-    String courseId = data['courseId'] ?? '';
-    String lessonId = data['lessonId'] ?? '';
-    String notifType = data['type'] ?? 'lesson';
-    String notifTitle = data['title'] ?? 'Detalii';
-
-    await FirebaseFirestore.instance
-        .collection('notifications')
-        .doc(notifId)
-        .update({'isRead': true});
-
-    _updateBadgeForUser();
-
-    if (!mounted) return;
-
-    if (notifType == 'grade') {
-      if (widget.role == 'parent') {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                const Scaffold(body: CatalogScreen(role: 'parent')),
-          ),
-        );
-      } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                const Scaffold(body: CatalogScreen(role: 'student')),
-          ),
-        );
-      }
-    } else if (courseId.isNotEmpty && lessonId.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => LessonDetailPage(
-            courseId: courseId,
-            lessonId: lessonId,
-            lessonTitle: notifTitle,
-            initialTab: notifType,
-            role: widget.role,
-          ),
-        ),
-      );
-    } else if (courseId.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CourseDetailScreen(
-            courseId: courseId,
-            title: notifTitle,
-            category: 'General',
-            description: '',
-            role: widget.role,
-          ),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (currentUser == null) {
@@ -233,57 +165,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     // ==========================================
-    // 1. DACĂ ESTE PROFESOR -> Panou de Administrare cu noul design
+    // 1. DACĂ ESTE PROFESOR -> Panou de Administrare cu Tab-uri
     // ==========================================
-    if (widget.role == 'teacher') {
+    if (widget.role.toLowerCase().contains('teach') ||
+        widget.role.toLowerCase().contains('prof')) {
       return DefaultTabController(
         length: 3,
         child: Scaffold(
           backgroundColor: bgColor,
           appBar: AppBar(
             backgroundColor: primaryIndigo,
-            toolbarHeight: 85,
+            toolbarHeight: 70,
             titleSpacing: 16,
             elevation: 0,
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Image.asset(
-                    'images/logo.jpg',
-                    height: 40,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "PANOU ADMIN",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      "GESTIONARE UTILIZATORI",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            title: const Text(
+              "Panou Administrare & Notificări",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
             bottom: const TabBar(
               labelColor: accentPurple,
@@ -291,12 +192,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               indicatorColor: accentPurple,
               tabs: [
                 Tab(
-                  icon: Icon(Icons.person_add, size: 20),
+                  icon: Icon(Icons.person_add, size: 18),
                   text: "Conturi Noi",
                 ),
-                Tab(icon: Icon(Icons.school, size: 20), text: "Înscrieri"),
+                Tab(icon: Icon(Icons.school, size: 18), text: "Înscrieri"),
                 Tab(
-                  icon: Icon(Icons.group_remove, size: 20),
+                  icon: Icon(Icons.group_remove, size: 18),
                   text: "Gestionare Useri",
                 ),
               ],
@@ -542,10 +443,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide(color: Colors.grey.shade200),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
-                        ),
                       ),
                       onChanged: (_) => setState(() {}),
                     ),
@@ -637,54 +534,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     // ==========================================
-    // 2. DACĂ ESTE ELEV/PĂRINTE -> Notificări personale cu noul design
+    // 2. DACĂ ESTE ELEV/PĂRINTE -> Notificări personale
     // ==========================================
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: primaryIndigo,
-        toolbarHeight: 85,
-        titleSpacing: 16,
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Image.asset(
-                'images/logo.jpg',
-                height: 40,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(width: 14),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "NOTIFICĂRI",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                Text(
-                  "ACTIVITATE RECENTĂ",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        title: const Text(
+          "Notificările Mele",
+          style: TextStyle(color: Colors.white),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -703,70 +561,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             return const Center(
               child: Text(
                 "Nu ai nicio notificare în prezent.",
-                style: TextStyle(color: Colors.grey, fontSize: 15),
+                style: TextStyle(color: Colors.grey),
               ),
             );
           }
 
-          var notifs = snapshot.data!.docs.toList();
-          notifs.sort((a, b) {
-            var dataA = a.data() as Map<String, dynamic>;
-            var dataB = b.data() as Map<String, dynamic>;
-            Timestamp? tA = dataA['createdAt'] as Timestamp?;
-            Timestamp? tB = dataB['createdAt'] as Timestamp?;
-            if (tA == null || tB == null) return 0;
-            return tB.compareTo(tA);
-          });
+          var notifs = snapshot.data!.docs;
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: notifs.length,
             itemBuilder: (context, index) {
-              var doc = notifs[index];
-              var data = doc.data() as Map<String, dynamic>;
-              bool isRead = data['isRead'] ?? false;
-              String title = data['title'] ?? 'Notificare';
-              String body = data['body'] ?? '';
-              String type = data['type'] ?? 'homework';
-
+              var data = notifs[index].data() as Map<String, dynamic>;
               return Card(
-                elevation: isRead ? 1 : 2,
-                color: isRead ? Colors.white : const Color(0xfff3e8ff),
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: isRead
-                      ? BorderSide(color: Colors.grey.shade200)
-                      : const BorderSide(color: accentPurple, width: 1.5),
-                ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: _getAnimationForType(type, isRead),
-                  title: Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                      color: primaryIndigo,
-                    ),
-                  ),
-                  subtitle: Text(
-                    body,
-                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                  ),
-                  trailing: !isRead
-                      ? Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: accentPurple,
-                            shape: BoxShape.circle,
-                          ),
-                        )
-                      : null,
-                  onTap: () => _handleStudentNotificationClick(doc),
+                  title: Text(data['title'] ?? ''),
+                  subtitle: Text(data['body'] ?? ''),
                 ),
               );
             },
