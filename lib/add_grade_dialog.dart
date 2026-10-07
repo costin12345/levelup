@@ -5,7 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 
 class AddGradeDialog extends StatefulWidget {
-  const AddGradeDialog({super.key});
+  final bool isAbsence;
+  const AddGradeDialog({super.key, required this.isAbsence});
 
   @override
   State<AddGradeDialog> createState() => _AddGradeDialogState();

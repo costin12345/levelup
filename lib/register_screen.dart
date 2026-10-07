@@ -1,12 +1,8 @@
-import 'dart:convert';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:googleapis_auth/auth_io.dart' as auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'login_screen.dart';
-//import 'package0:cloud_firestore/cloud_firestore.dart';
 import 'main.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -19,7 +15,6 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _childEmailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -27,6 +22,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedRole = 'student';
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+
+  static const Color primaryIndigo = Color(0xff1e1b4b);
+  static const Color accentPurple = Color(0xff7c3aed);
+  static const Color bgColor = Color(
+    0xfff8fafc,
+  ); // Fundalul unitar din aplicație
 
   Future<void> _register() async {
     String name = _nameController.text.trim();
@@ -61,22 +62,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       String uid = userCredential.user!.uid;
 
-      // 2. Salvare profil în Firestore (Implicit FĂRĂ ACCES 'hasAccess: false')
+      // 2. Salvare profil în Firestore (Elevii și Părinții au nevoie de aprobare prin hasAccess: false)
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'uid': uid,
         'fullName': name,
         'email': email,
         'role': _selectedRole,
-        'childEmail': _selectedRole == 'parent'
-            ? _childEmailController.text.trim()
-            : null,
-        'hasAccess': true, // Părintele poate avea acces direct aprobat sau false, cum dorești
+        'hasAccess': _selectedRole == 'teacher' ? true : false,
         'createdAt': FieldValue.serverTimestamp(),
       });
-      _notifyTeacherAboutNewUser(rawName: name, userRole: _selectedRole);
+
       if (!mounted) return;
 
-      // Intrarea în aplicație
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
@@ -91,137 +88,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _showSnackBar(String message, {bool isError = true}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
-  }
-
-  Future<void> _notifyTeacherAboutNewUser({
-    required String rawName,
-    required String userRole, // 'student' sau 'parent'
-  }) async {
-    try {
-      // Formatăm denumirea în funcție de rol
-      String formattedName = userRole == 'parent' || userRole == 'parinte'
-          ? 'Părintele $rawName'
-          : 'Elevul $rawName';
-
-      final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
-        {
-          "type": "service_account",
-          "project_id": "level-up-19583",
-          "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\n/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\nFQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\nUGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\nSFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
-          "client_email":
-              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
-          "client_id": "112777526185284576732",
-          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-          "token_uri": "https://oauth2.googleapis.com/token",
-          "auth_provider_x509_cert_url":
-              "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
-          "universe_domain": "googleapis.com",
-        },
-      );
-
-      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-      final client = await auth.clientViaServiceAccount(
-        serviceAccountCredentials,
-        scopes,
-      );
-
-      final teachersDocs = await FirebaseFirestore.instance
-          .collection('users')
-          .where('role', whereIn: ['teacher', 'Teacher'])
-          .get();
-
-      if (teachersDocs.docs.isEmpty) {
-        client.close();
-        return;
-      }
-
-      final String fcmV1Url =
-          'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
-
-      String pushTitle = '👤 Cont nou creat!';
-      String pushBody = '$formattedName a creat un cont și așteaptă aprobarea.';
-
-      for (var teacherDoc in teachersDocs.docs) {
-        var tData = teacherDoc.data();
-        String? teacherFcmToken = tData['fcmToken'];
-        String teacherId = teacherDoc.id;
-
-        await FirebaseFirestore.instance.collection('notifications').add({
-          'userId': teacherId,
-          'title': pushTitle,
-          'body': pushBody,
-          'isRead': false,
-          'type': 'user_registration',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-
-        // 1. Numărăm strict elevii care așteaptă aprobarea
-        var pendingUsers = await FirebaseFirestore.instance
-            .collection('users')
-            .where('role', isEqualTo: 'student')
-            .where('hasAccess', isEqualTo: false)
-            .get();
-
-        // 2. Numărăm înscrierile la cursuri în așteptare
-        var pendingEnrollments = await FirebaseFirestore.instance
-            .collection('enrollments')
-            .where('status', isEqualTo: 'pending')
-            .get();
-
-        // 3. Suma reală unificată (fără userii vechi din gestionare)
-        int unreadCount =
-            pendingUsers.docs.length + pendingEnrollments.docs.length;
-
-        if (teacherFcmToken != null && teacherFcmToken.isNotEmpty) {
-          await client.post(
-            Uri.parse(fcmV1Url),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'message': {
-                'token': teacherFcmToken,
-                'notification': {'title': pushTitle, 'body': pushBody},
-                'android': {
-                  'priority': 'HIGH',
-                  'notification': {'sound': 'default'},
-                },
-                'apns': {
-                  'headers': {'apns-priority': '10', 'apns-push-type': 'alert'},
-                  'payload': {
-                    'aps': {'sound': 'default', 'badge': unreadCount},
-                  },
-                },
-                'data': {
-                  'type': 'user_registration',
-                  'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-                },
-              },
-            }),
-          );
-        }
-      }
-      client.close();
-    } catch (e) {
-      debugPrint("Eroare la notificarea profesorului pentru cont nou: $e");
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfffff8dc),
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xff42153e),
+        backgroundColor: primaryIndigo,
         toolbarHeight: 85,
         titleSpacing: 16,
+        elevation: 0,
         title: Row(
           children: [
             Container(
@@ -263,213 +149,499 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         ),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 450),
-            padding: const EdgeInsets.all(28.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xff42153e).withOpacity(0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  "Creează un Cont Nou",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xff42153e),
-                  ),
-                ),
-                const SizedBox(height: 20), // Spațiu sub titlu
-
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'student',
-                      label: Text('Sunt Elev'),
-                      icon: Icon(Icons.school_outlined),
-                    ),
-                    ButtonSegment(
-                      value: 'teacher',
-                      label: Text('Sunt Profesor'),
-                      icon: Icon(Icons.person_outline),
-                    ),
-                    ButtonSegment(
-                      value: 'parent',
-                      label: Text('Părinte'),
-                      icon: Icon(Icons.family_restroom),
-                    ),
-                  ],
-                  selected: {_selectedRole},
-                  onSelectionChanged: (newSelection) =>
-                      setState(() => _selectedRole = newSelection.first),
-                ),
-                const SizedBox(height: 20), // Spațiu sub selectorul de rol
-                // 2. Câmpul pentru emailul elevului (afișat doar pentru părinți)
-                if (_selectedRole == 'parent') ...[
-                  TextField(
-                    controller: _childEmailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Adresa de email a copilului (Elevului)',
-                      prefixIcon: const Icon(
-                        Icons.mark_email_read_outlined,
-                        color: Color(0xff42153e),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Nume și Prenume',
-                    prefixIcon: const Icon(
-                      Icons.person_outline,
-                      color: Color(0xff42153e),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16), // Spațiu între Nume și Email
-
-                TextField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Adresă de Email',
-                    prefixIcon: const Icon(
-                      Icons.email_outlined,
-                      color: Color(0xff42153e),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16), // Spațiu între Email și Parolă
-
-                TextField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Parolă',
-                    prefixIcon: const Icon(
-                      Icons.lock_outline,
-                      color: Color(0xff42153e),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () => setState(
-                        () => _isPasswordVisible = !_isPasswordVisible,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(
-                  height: 16,
-                ), // Spațiu între Parolă și Confirmare Parolă
-
-                TextField(
-                  controller: _confirmPasswordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Confirmă Parola',
-                    prefixIcon: const Icon(
-                      Icons.lock_reset,
-                      color: Color(0xff42153e),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28), // Spațiu înainte de buton
-
-                _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xff42153e),
-                        ),
-                      )
-                    : SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _register,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xff42153e),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Creează Contul',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                // --- AICI PUI NOUL SIZEDBOX ȘI ROW-UL PENTRU LOGIN ---
-                const SizedBox(
-                  height: 16,
-                ), // Spațiu între Buton și textul de Login
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      "Ai deja un cont?",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        "Autentifică-te",
-                        style: TextStyle(
-                          color: Color(0xff42153e),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      body: Stack(
+        children: [
+          // 🚀 Cercuri decorative multiple în fundal (exact ca la Login)
+          Positioned(
+            top: 40,
+            right: -100,
+            child: Container(
+              width: 420,
+              height: 420,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: accentPurple.withOpacity(0.07),
+              ),
             ),
           ),
-        ),
+          Positioned(
+            top: -60,
+            left: -60,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: primaryIndigo.withOpacity(0.04),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 40,
+            left: 120,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: accentPurple.withOpacity(0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -80,
+            right: 180,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: primaryIndigo.withOpacity(0.05),
+              ),
+            ),
+          ),
+
+          // Simboluri matematice pe fundal
+          Positioned(
+            top: 60,
+            left: 80,
+            child: Text(
+              "∑",
+              style: TextStyle(
+                fontSize: 70,
+                color: primaryIndigo.withOpacity(0.04),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 80,
+            right: 100,
+            child: Text(
+              "∫",
+              style: TextStyle(
+                fontSize: 80,
+                color: primaryIndigo.withOpacity(0.04),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 150,
+            right: 120,
+            child: Text(
+              "π",
+              style: TextStyle(
+                fontSize: 60,
+                color: primaryIndigo.withOpacity(0.04),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 120,
+            left: 100,
+            child: Text(
+              "√x",
+              style: TextStyle(
+                fontSize: 50,
+                color: primaryIndigo.withOpacity(0.04),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          // Cardul central cu bula și toca
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 40.0,
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.topCenter,
+                children: [
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    padding: const EdgeInsets.fromLTRB(40, 55, 40, 40),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.grey.shade100, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryIndigo.withOpacity(0.08),
+                          blurRadius: 40,
+                          offset: const Offset(0, 20),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          "Creează un Cont Nou",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: primaryIndigo,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          "Completează datele pentru a te înregistra.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+
+                        // Selector de Rol modern
+                        DropdownButtonFormField<String>(
+                          value: _selectedRole,
+                          dropdownColor: Colors.white,
+                          decoration: InputDecoration(
+                            labelText: 'Tip Utilizator',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 13,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.badge_outlined,
+                              color: primaryIndigo.withOpacity(0.7),
+                              size: 20,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xfff8fafc),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: accentPurple,
+                                width: 2,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'student',
+                              child: Text('Elev'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'parent',
+                              child: Text('Părinte'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'teacher',
+                              child: Text('Profesor'),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null)
+                              setState(() => _selectedRole = val);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Nume și Prenume
+                        TextField(
+                          controller: _nameController,
+                          cursorColor: accentPurple,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Nume și Prenume',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 13,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.person_outline,
+                              color: primaryIndigo.withOpacity(0.7),
+                              size: 20,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xfff8fafc),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: accentPurple,
+                                width: 2,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Email
+                        TextField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          cursorColor: accentPurple,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Adresă de Email',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 13,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.email_outlined,
+                              color: primaryIndigo.withOpacity(0.7),
+                              size: 20,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xfff8fafc),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: accentPurple,
+                                width: 2,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Parolă
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: !_isPasswordVisible,
+                          cursorColor: accentPurple,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Parolă',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 13,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              color: primaryIndigo.withOpacity(0.7),
+                              size: 20,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isPasswordVisible
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: Colors.grey.shade400,
+                                size: 20,
+                              ),
+                              onPressed: () => setState(
+                                () => _isPasswordVisible = !_isPasswordVisible,
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xfff8fafc),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: accentPurple,
+                                width: 2,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Confirmare Parolă
+                        TextField(
+                          controller: _confirmPasswordController,
+                          obscureText: !_isPasswordVisible,
+                          cursorColor: accentPurple,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Confirmă Parola',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 13,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.lock_reset,
+                              color: primaryIndigo.withOpacity(0.7),
+                              size: 20,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xfff8fafc),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: accentPurple,
+                                width: 2,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+
+                        // Buton Înregistrare cu gradient
+                        _isLoading
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: accentPurple,
+                                ),
+                              )
+                            : DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [primaryIndigo, accentPurple],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: accentPurple.withOpacity(0.3),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _register,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    minimumSize: const Size.fromHeight(50),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Creează Contul',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                        const SizedBox(height: 24),
+
+                        // Link către Login
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Ai deja un cont?",
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const LoginScreen(),
+                                  ),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: accentPurple,
+                              ),
+                              child: const Text(
+                                "Autentifică-te",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Bula indigo cu toca ieșită din chenar
+                  Positioned(
+                    top: -30,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: primaryIndigo,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: bgColor, width: 4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryIndigo.withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.school,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

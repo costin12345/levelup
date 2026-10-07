@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
 
 Widget getWebIframe(String viewId, String url) {
-  return const SizedBox.shrink();
+  return const Center(child: Text("Platformă web neacceptată"));
 }
