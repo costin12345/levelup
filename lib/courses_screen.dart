@@ -23,7 +23,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
     const Color accentLila = Color(0xff7c4dff);
     bool isMobile = MediaQuery.of(context).size.width < 750;
 
-    // Conținutul meniului lateral (folosit fie în Row pe desktop, fie în Drawer pe telefon)
     Widget subjectsDrawerContent = Container(
       width: 240,
       color: Colors.white,
@@ -68,10 +67,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       _selectedSubject = subject;
                       _selectedCourseDoc = null;
                     });
-                    if (isMobile)
-                      Navigator.pop(
-                        context,
-                      ); // Închide drawer-ul pe telefon la selecție
+                    if (isMobile) Navigator.pop(context);
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
@@ -119,18 +115,14 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xfff8fafc),
-      // 🚀 Pe telefon, meniul lateral devine un Drawer retractabil
       drawer: isMobile ? Drawer(child: subjectsDrawerContent) : null,
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Pe desktop afișăm meniul direct în stânga
           if (!isMobile) ...[
             subjectsDrawerContent,
             const VerticalDivider(width: 1, color: Colors.black12),
           ],
-
-          // Conținut Principal
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -143,7 +135,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       Expanded(
                         child: Row(
                           children: [
-                            // 🚀 Buton de meniu pe telefon pentru a deschide materiile lateral
                             if (isMobile)
                               Builder(
                                 builder: (context) => IconButton(
@@ -166,10 +157,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             Flexible(
                               child: Text(
                                 _selectedCourseDoc != null
-                                    ? "Clasa: ${_selectedCourseDoc!['title']} ($_selectedSubject)"
+                                    ? "${_selectedCourseDoc!['title']}"
                                     : "Cursuri - $_selectedSubject",
                                 style: const TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w900,
                                   color: primaryIndigo,
                                 ),
@@ -179,7 +170,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           ],
                         ),
                       ),
-                      if (widget.role == 'teacher')
+                      if (widget.role == 'teacher' &&
+                          _selectedCourseDoc == null)
                         Padding(
                           padding: const EdgeInsets.only(left: 8.0),
                           child: ElevatedButton.icon(
@@ -193,7 +185,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               ),
                             ),
                             icon: const Icon(Icons.add, size: 16),
-                            label: const Text("Adaugă Curs"),
+                            label: const Text("Curs"),
                           ),
                         ),
                     ],
@@ -217,7 +209,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // 1. Lista de Cursuri/Clase (adaptată responsive)
   Widget _buildCoursesList(
     Color accentLila,
     Color primaryIndigo,
@@ -241,9 +232,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
         return GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isMobile
-                ? 1
-                : 3, // 1 coloană pe telefon, 3 pe desktop
+            crossAxisCount: isMobile ? 1 : 3,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
             childAspectRatio: isMobile ? 3.5 : 2.5,
@@ -302,7 +291,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // 2. Afișează Grupele sub formă de TAB-uri în partea de sus
   Widget _buildCourseGroupsWithTabs(
     String courseId,
     Color accentLila,
@@ -325,11 +313,21 @@ class _CoursesScreenState extends State<CoursesScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text("Nu există grupe create în acest curs."),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                // 🚀 Buton explicit afișat profesorului când nu există grupe
                 if (widget.role == 'teacher')
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     onPressed: () => _showAddGroupDialog(context, courseId),
-                    child: const Text("Adaugă Prima Grupă"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentLila,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                    ),
+                    icon: const Icon(Icons.group_add, size: 18),
+                    label: const Text("Adaugă Prima Grupă"),
                   ),
               ],
             ),
@@ -435,7 +433,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                   size: 16,
                                 ),
                                 label: Text(
-                                  "Adaugă Lecție",
+                                  "Lecție",
                                   style: TextStyle(color: accentLila),
                                 ),
                               ),
@@ -461,7 +459,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
-  // 3. Lista de lecții
   Widget _buildLessonsList(
     String groupId,
     Color accentLila,
@@ -724,100 +721,75 @@ class _CoursesScreenState extends State<CoursesScreen> {
     final contentController = TextEditingController();
     final homeworkContentController = TextEditingController();
 
-    List<String> videoUrls = [];
-    List<String> pdfUrls = [];
-
-    final newVideoController = TextEditingController();
-    final newPdfController = TextEditingController();
-
     showDialog(
       context: context,
-      barrierDismissible: true,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              surfaceTintColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                "Adaugă Lecție Nouă",
-                style: TextStyle(
-                  color: Color(0xff1e1b4b),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: SizedBox(
-                width: 520,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: titleController,
-                        decoration: const InputDecoration(
-                          labelText: "Titlu Lecție",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: contentController,
-                        maxLines: 3,
-                        decoration: const InputDecoration(
-                          labelText: "Conținut / Explicații Teoretice",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: homeworkContentController,
-                        maxLines: 2,
-                        decoration: const InputDecoration(
-                          labelText: "Cerințe Temă",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ],
+        return AlertDialog(
+          title: const Text("Adaugă Lecție Nouă"),
+          content: SizedBox(
+            width: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: "Titlu Lecție",
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: contentController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: "Conținut / Explicații Teoretice",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: homeworkContentController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: "Cerințe Temă",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Anulează"),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final String lTitle = titleController.text.trim();
-                    if (lTitle.isNotEmpty) {
-                      await FirebaseFirestore.instance
-                          .collection('course_groups')
-                          .doc(groupId)
-                          .collection('lessons')
-                          .add({
-                            'title': lTitle,
-                            'content': contentController.text.trim(),
-                            'videoUrls': videoUrls,
-                            'homeworkContent': homeworkContentController.text
-                                .trim(),
-                            'pdfUrls': pdfUrls,
-                            'createdAt': FieldValue.serverTimestamp(),
-                          });
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Anulează"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final String lTitle = titleController.text.trim();
+                if (lTitle.isNotEmpty) {
+                  await FirebaseFirestore.instance
+                      .collection('course_groups')
+                      .doc(groupId)
+                      .collection('lessons')
+                      .add({
+                        'title': lTitle,
+                        'content': contentController.text.trim(),
+                        'homeworkContent': homeworkContentController.text
+                            .trim(),
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
 
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                      }
-                    }
-                  },
-                  child: const Text("Salvează"),
-                ),
-              ],
-            );
-          },
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              child: const Text("Salvează"),
+            ),
+          ],
         );
       },
     );
