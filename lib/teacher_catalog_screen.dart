@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -699,7 +700,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
         if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator());
         var docs = snapshot.data!.docs;
-
+        //
         Map<String, Map<String, List<double>>> entityMonthlyGrades = {};
 
         for (var doc in docs) {
@@ -866,3 +867,4 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
     );
   }
 }
+*/
