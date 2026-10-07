@@ -30,6 +30,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xfffff8dc),
+      // 🚀 Adăugăm un AppBar adaptabil pe telefon pentru a putea accesa meniul lateral cu 3 linii
+      appBar: isMobile
+          ? AppBar(
+              backgroundColor: primaryDark,
+              foregroundColor: Colors.white,
+              title: const Text(
+                "Catalog Virtual",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              elevation: 0,
+            )
+          : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -199,12 +211,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           ),
                         ],
                       ),
-                      // 🚀 Layout adaptabil: pe telefon devine Column, pe desktop rămâne Row
                       child: isMobile
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // 1. Avatar, Nume și Medie (Sus pe telefon)
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
@@ -282,7 +292,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                   ],
                                 ),
                                 const Divider(height: 20),
-                                // 2. Notele înșiruite pe telefon
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
@@ -314,7 +323,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             )
                           : Row(
                               children: [
-                                // 1. Avatar și Nume Elev (Desktop)
                                 Expanded(
                                   flex: 3,
                                   child: Row(
@@ -361,8 +369,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                     ],
                                   ),
                                 ),
-
-                                // 2. Notele înșiruite orizontal (Desktop)
                                 Expanded(
                                   flex: 5,
                                   child: Wrap(
@@ -395,8 +401,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                     }).toList(),
                                   ),
                                 ),
-
-                                // 3. Media încheiată (Desktop)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 14,

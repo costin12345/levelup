@@ -42,69 +42,75 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
 
     bool isMediiPeGrupa = _activeCatalogMenu == "Medii pe Grupă";
     bool isRapoarte = _activeCatalogMenu == "Rapoarte Academice";
+    bool isMobile = MediaQuery.of(context).size.width < 750;
+
+    // Conținutul meniului lateral (folosit în Drawer pe telefon sau Row pe desktop)
+    Widget catalogSidebarContent = Container(
+      width: 240,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accentLila.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.menu_book, color: accentLila, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Meniu Catalog",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: primaryIndigo,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Divider(color: Colors.black12, height: 1),
+          const SizedBox(height: 16),
+          _buildSidebarItem(
+            "Note și Absențe",
+            Icons.fact_check,
+            accentLila,
+            primaryIndigo,
+            isMobile,
+          ),
+          _buildSidebarItem(
+            "Medii pe Grupă",
+            Icons.bar_chart,
+            accentLila,
+            primaryIndigo,
+            isMobile,
+          ),
+          _buildSidebarItem(
+            "Rapoarte Academice",
+            Icons.description_outlined,
+            accentLila,
+            primaryIndigo,
+            isMobile,
+          ),
+        ],
+      ),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xfff8fafc),
+      drawer: isMobile ? Drawer(child: catalogSidebarContent) : null,
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 240,
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: accentLila.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.menu_book,
-                        color: accentLila,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      "Meniu Catalog",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: primaryIndigo,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Divider(color: Colors.black12, height: 1),
-                const SizedBox(height: 16),
-                _buildSidebarItem(
-                  "Note și Absențe",
-                  Icons.fact_check,
-                  accentLila,
-                  primaryIndigo,
-                ),
-                _buildSidebarItem(
-                  "Medii pe Grupă",
-                  Icons.bar_chart,
-                  accentLila,
-                  primaryIndigo,
-                ),
-                _buildSidebarItem(
-                  "Rapoarte Academice",
-                  Icons.description_outlined,
-                  accentLila,
-                  primaryIndigo,
-                ),
-              ],
-            ),
-          ),
-          const VerticalDivider(width: 1, color: Colors.black12),
+          if (!isMobile) ...[
+            catalogSidebarContent,
+            const VerticalDivider(width: 1, color: Colors.black12),
+          ],
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -122,27 +128,51 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _activeCatalogMenu,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              if (isMobile)
+                                Builder(
+                                  builder: (context) => Padding(
+                                    padding: const EdgeInsets.only(right: 12.0),
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.menu,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () =>
+                                          Scaffold.of(context).openDrawer(),
+                                      tooltip: "Meniu Catalog",
+                                    ),
+                                  ),
+                                ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _activeCatalogMenu,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const Text(
+                                      "Managementul notelor, mediilor și rapoartelor",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.white70,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const Text(
-                              "Managementul notelor, mediilor și rapoartelor academice",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        if (!isMediiPeGrupa && !isRapoarte)
+                        if (!isMediiPeGrupa && !isRapoarte && !isMobile)
                           Row(
                             children: [
                               ElevatedButton.icon(
@@ -156,9 +186,9 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                                   foregroundColor: Colors.white,
                                 ),
                                 icon: const Icon(Icons.add, size: 16),
-                                label: const Text("Adaugă Notă"),
+                                label: const Text("Notă"),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
                               ElevatedButton.icon(
                                 onPressed: () => showDialog(
                                   context: context,
@@ -170,13 +200,52 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                                   foregroundColor: Colors.white,
                                 ),
                                 icon: const Icon(Icons.person_remove, size: 16),
-                                label: const Text("Adaugă Absență"),
+                                label: const Text("Absență"),
                               ),
                             ],
                           ),
                       ],
                     ),
                   ),
+                  // Pe telefon, butoanele de adăugare le punem sub antet pentru spațiu optim
+                  if (!isMediiPeGrupa && !isRapoarte && isMobile) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => showDialog(
+                              context: context,
+                              builder: (context) =>
+                                  const AddGradeDialog(isAbsence: false),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accentLila,
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text("Adaugă Notă"),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => showDialog(
+                              context: context,
+                              builder: (context) =>
+                                  const AddGradeDialog(isAbsence: true),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade600,
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.person_remove, size: 16),
+                            label: const Text("Adaugă Absență"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -340,10 +409,14 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
     IconData icon,
     Color accentLila,
     Color primaryIndigo,
+    bool isMobile,
   ) {
     bool isSelected = _activeCatalogMenu == title;
     return InkWell(
-      onTap: () => setState(() => _activeCatalogMenu = title),
+      onTap: () {
+        setState(() => _activeCatalogMenu = title);
+        if (isMobile) Navigator.pop(context);
+      },
       borderRadius: BorderRadius.circular(10),
       child: Container(
         margin: const EdgeInsets.only(bottom: 6),
@@ -462,24 +535,26 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        data['studentName'] ?? 'Elev',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          data['studentName'] ?? 'Elev',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                      Text(
-                        "Clasa: ${data['className']} • Grupa: ${data['groupName']} • Materie: ${data['courseTitle']} • Data: ${data['date'] ?? '-'}",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+                        Text(
+                          "Clasa: ${data['className']} • Grupa: ${data['groupName']} • Materie: ${data['courseTitle']} • Data: ${data['date'] ?? '-'}",
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   Row(
                     children: [
