@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:levelup/teacher_catalog_screen.dart';
 
 import 'catalog_screen.dart';
 import 'notifications_screen.dart';
@@ -125,12 +126,15 @@ class LevelUpApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryIndigo = Color(0xff1e1b4b);
+
     return MaterialApp(
       title: 'Level Up',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: primaryIndigo),
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xfffff8dc),
+        scaffoldBackgroundColor: const Color(0xfff8fafc),
       ),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
@@ -138,7 +142,7 @@ class LevelUpApp extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(
-                child: CircularProgressIndicator(color: Color(0xff42153e)),
+                child: CircularProgressIndicator(color: primaryIndigo),
               ),
             );
           }
@@ -161,12 +165,26 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-
+  late final List<Widget> _screens;
   @override
   void initState() {
     super.initState();
-    setupFCM();
-    clearAppBadge();
+    _screens = [
+      HomeTab(onGoToCourses: () => setState(() => _currentIndex = 2)),
+      const TeacherCatalogScreen(),
+      const Center(
+        child: Text(
+          "Cursuri & Materiale",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ),
+      const Center(
+        child: Text(
+          "Progres & Statistici",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ),
+    ];
   }
 
   void _changeTab(int index) {
@@ -189,7 +207,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     User? currentUser = FirebaseAuth.instance.currentUser;
-
+    const Color primaryIndigo = Color(0xff1e1b4b);
     return StreamBuilder<DocumentSnapshot>(
       stream: currentUser != null
           ? FirebaseFirestore.instance
@@ -212,20 +230,19 @@ class _MainScreenState extends State<MainScreen> {
             "Home",
             "Catalog",
             "Cursuri",
-            "Progres",
-            "Profil",
-            "Arhiva",
+            // Fără Profil, dacă l-ai scos
           ];
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
             const TeacherCatalogScreen(),
             CoursesScreen(role: userRole),
             ProgressScreen(role: 'teacher', currentUserId: currentUser!.uid),
+            // Dacă ai adăugat Arhivă sau alt ecran, îl pui aici
             const Center(
               child: Text(
-                "Profilul Profesorului",
+                "Arhivă teste",
                 style: TextStyle(
-                  color: Color(0xff42153e),
+                  color: Color(0xff1e1b4b),
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -259,7 +276,7 @@ class _MainScreenState extends State<MainScreen> {
               child: Text(
                 "Profilul Părintelui",
                 style: TextStyle(
-                  color: Color(0xff42153e),
+                  color: primaryIndigo,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -278,7 +295,7 @@ class _MainScreenState extends State<MainScreen> {
               child: Text(
                 "Profilul Elevului",
                 style: TextStyle(
-                  color: Color(0xff42153e),
+                  color: primaryIndigo,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -288,9 +305,9 @@ class _MainScreenState extends State<MainScreen> {
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xfffff8dc),
+          backgroundColor: primaryIndigo,
           appBar: AppBar(
-            backgroundColor: const Color(0xff42153e),
+            backgroundColor: primaryIndigo,
             toolbarHeight: 75,
             titleSpacing: 12,
             title: Row(
@@ -419,59 +436,30 @@ class _MainScreenState extends State<MainScreen> {
                   double screenWidth = MediaQuery.of(context).size.width;
 
                   if (screenWidth > 600) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        TextButton(
-                          onPressed: () => _changeTab(0),
-                          child: Text(
-                            menuTitles[0],
-                            style: TextStyle(
-                              color: _currentIndex == 0
-                                  ? Colors.amber
-                                  : Colors.white,
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          for (int i = 0; i < menuTitles.length; i++)
+                            TextButton(
+                              onPressed: () => _changeTab(i),
+                              child: Text(
+                                menuTitles[i],
+                                style: TextStyle(
+                                  color: _currentIndex == i
+                                      ? Colors.amber
+                                      : Colors.white,
+                                ),
+                              ),
                             ),
+                          IconButton(
+                            icon: const Icon(Icons.logout, color: Colors.white),
+                            tooltip: "Deconectare",
+                            onPressed: _handleLogout,
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () => _changeTab(1),
-                          child: Text(
-                            menuTitles[1],
-                            style: TextStyle(
-                              color: _currentIndex == 1
-                                  ? Colors.amber
-                                  : Colors.white,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => _changeTab(2),
-                          child: Text(
-                            menuTitles[2],
-                            style: TextStyle(
-                              color: _currentIndex == 2
-                                  ? Colors.amber
-                                  : Colors.white,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => _changeTab(3),
-                          child: Text(
-                            menuTitles[3],
-                            style: TextStyle(
-                              color: _currentIndex == 3
-                                  ? Colors.amber
-                                  : Colors.white,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.logout, color: Colors.white),
-                          tooltip: "Deconectare",
-                          onPressed: _handleLogout,
-                        ),
-                      ],
+                        ],
+                      ),
                     );
                   } else {
                     return Row(
@@ -550,512 +538,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ================= ECRAN CATALOG PROFESOR CU FILTRARE AVANSATĂ =================
-class TeacherCatalogScreen extends StatefulWidget {
-  const TeacherCatalogScreen({super.key});
-
-  @override
-  State<TeacherCatalogScreen> createState() => _TeacherCatalogScreenState();
-}
-
-class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
-  String _selectedFilterClass = "Toate";
-  String _selectedFilterCourse = "Toate";
-  String _selectedFilterGrade = "Toate";
-  String _selectedFilterDate = "Toate";
-  String? _selectedSingleStudent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xfffff8dc),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xff42153e), Color(0xff6a2465)],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: const [
-                      Icon(Icons.auto_stories, color: Colors.amber, size: 28),
-                      SizedBox(width: 10),
-                      Text(
-                        "Catalogul Virtual",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    "Filtrare avansată pe clase, elevi și note",
-                    style: TextStyle(fontSize: 11, color: Colors.white70),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => const AddGradeDialog(),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber,
-                        foregroundColor: const Color(0xff42153e),
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      icon: const Icon(
-                        Icons.add_circle,
-                        color: Color(0xff42153e),
-                      ),
-                      label: const Text(
-                        "Adaugă Notă",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('grades')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                Set<String> classes = {"Toate"};
-                Set<String> courses = {
-                  "Toate",
-                  "Matematică",
-                  "Informatică",
-                  "Fizică",
-                };
-                Set<String> gradesSet = {"Toate"};
-                Set<String> studentsSet = {"Toți elevii"};
-                Set<String> datesSet = {"Toate"};
-
-                if (snapshot.hasData) {
-                  for (var doc in snapshot.data!.docs) {
-                    var data = doc.data() as Map<String, dynamic>;
-                    if (data['className'] != null) {
-                      classes.add(data['className']);
-                    }
-                    if (data['grade'] != null) {
-                      gradesSet.add(data['grade']);
-                    }
-                    if (data['studentName'] != null) {
-                      studentsSet.add(data['studentName']);
-                    }
-                    if (data['date'] != null) {
-                      datesSet.add(data['date']);
-                    }
-                  }
-                }
-                return Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDropdownFilter(
-                            "Clasa",
-                            _selectedFilterClass,
-                            classes,
-                            (val) =>
-                                setState(() => _selectedFilterClass = val!),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildDropdownFilter(
-                            "Elev",
-                            _selectedSingleStudent ?? "Toți elevii",
-                            studentsSet,
-                            (val) => setState(
-                              () => _selectedSingleStudent =
-                                  val == "Toți elevii" ? null : val,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDropdownFilter(
-                            "Materia",
-                            _selectedFilterCourse,
-                            courses,
-                            (val) =>
-                                setState(() => _selectedFilterCourse = val!),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildDropdownFilter(
-                            "Nota",
-                            _selectedFilterGrade,
-                            gradesSet,
-                            (val) =>
-                                setState(() => _selectedFilterGrade = val!),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDropdownFilter(
-                            "Data",
-                            _selectedFilterDate,
-                            datesSet,
-                            (val) => setState(() => _selectedFilterDate = val!),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('grades')
-                    .orderBy('createdAt', descending: true)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xff42153e),
-                      ),
-                    );
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.sentiment_satisfied_alt,
-                            size: 64,
-                            color: Colors.purple.shade200,
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            "Nicio notă adăugată momentan.",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  var allDocs = snapshot.data!.docs;
-
-                  var filteredDocs = allDocs.where((doc) {
-                    var data = doc.data() as Map<String, dynamic>;
-                    String className = data['className'] ?? '';
-                    String studentName = data['studentName'] ?? '';
-                    String courseTitle = data['courseTitle'] ?? '';
-                    String grade = data['grade'] ?? '';
-
-                    bool matchesClass =
-                        _selectedFilterClass == "Toate" ||
-                        className == _selectedFilterClass;
-                    bool matchesStudent =
-                        _selectedSingleStudent == null ||
-                        studentName == _selectedSingleStudent;
-                    bool matchesCourse =
-                        _selectedFilterCourse == "Toate" ||
-                        courseTitle == _selectedFilterCourse;
-                    bool matchesGrade =
-                        _selectedFilterGrade == "Toate" ||
-                        grade == _selectedFilterGrade;
-
-                    return matchesClass &&
-                        matchesStudent &&
-                        matchesCourse &&
-                        matchesGrade;
-                  }).toList();
-
-                  if (filteredDocs.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        "Nu s-au găsit note pentru filtrele selectate.",
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: filteredDocs.length,
-                    itemBuilder: (context, index) {
-                      var data =
-                          filteredDocs[index].data() as Map<String, dynamic>;
-                      String studentName = data['studentName'] ?? 'Elev';
-                      String className = data['className'] ?? 'Fără clasă';
-                      String course = data['courseTitle'] ?? 'Materie';
-                      String grade = data['grade'] ?? '';
-                      String date = data['date'] ?? 'Azi';
-                      String comment = data['comment'] ?? '';
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.amber.shade200,
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xff42153e).withOpacity(0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xff42153e)
-                                .withOpacity(0.1),
-                            child: const Icon(
-                              Icons.person,
-                              color: Color(0xff42153e),
-                            ),
-                          ),
-                          title: Text(
-                            "$studentName • $course",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xff42153e),
-                              fontSize: 15,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                "Clasa: $className",
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              if (comment.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  "Comentariu: $comment",
-                                  style: TextStyle(
-                                    color: Colors.grey.shade800,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 12,
-                                    color: Colors.amber.shade800,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "Data: $date",
-                                    style: TextStyle(
-                                      color: Colors.amber.shade900,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  grade,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xff42153e),
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
-                                  size: 22,
-                                ),
-                                tooltip: "Șterge Nota",
-                                onPressed: () async {
-                                  bool? confirm = await showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text("Șterge Nota"),
-                                      content: const Text(
-                                        "Ești sigur că vrei să ștergi această notă?",
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text("Anulează"),
-                                        ),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                          ),
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text(
-                                            "Șterge",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-
-                                  if (confirm == true) {
-                                    String gradeId = filteredDocs[index].id;
-                                    await FirebaseFirestore.instance
-                                        .collection('grades')
-                                        .doc(gradeId)
-                                        .delete();
-
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                "Nota a fost ștersă cu succes.",
-                                              ),
-                                            ),
-                                          );
-                                    }
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdownFilter(
-    String label,
-    String currentValue,
-    Set<String> items,
-    ValueChanged<String?> onChanged,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: items.contains(currentValue) ? currentValue : items.first,
-          isExpanded: true,
-          icon: const Icon(Icons.arrow_drop_down, color: Color(0xff42153e)),
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(
-                "$label: $item",
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xff42153e),
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-}
-
-// ================= ECRANUL HOME COMPLET =================
 class HomeTab extends StatelessWidget {
   final VoidCallback onGoToCourses;
 
@@ -1063,344 +545,608 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    User? currentUser = FirebaseAuth.instance.currentUser;
+    const Color primaryDark = Color(0xff1e1b4b);
+    const Color accentLila = Color(0xff7c4dff);
 
-    if (currentUser == null) {
-      return const Center(child: Text("Utilizator neconectat."));
-    }
-
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xff42153e)),
-          );
-        }
-
-        String fullName = "Utilizator";
-        String role = "student";
-        bool hasAccess = false;
-
-        if (snapshot.hasData && snapshot.data!.exists) {
-          var userData = snapshot.data!.data() as Map<String, dynamic>;
-          fullName = userData['fullName'] ?? "Utilizator";
-          role = userData['role'] ?? "student";
-          hasAccess = userData['hasAccess'] ?? false;
-        }
-
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipPath(
+              clipper: _VeeClipper(),
+              child: Container(
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('images/spatiu.jpeg'),
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      primaryDark,
+                      const Color(0xff312e81),
+                      Colors.white.withOpacity(0.95),
+                    ],
                   ),
                 ),
-                child: Container(
-                  color: const Color(0xff42153e).withOpacity(0.35),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 200,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: 30,
+                      left: 40,
+                      child: Text(
+                        "E = mc²",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.06),
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 80,
+                      right: 60,
+                      child: Text(
+                        "∫ f(x)dx",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.06),
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 120,
+                      left: 80,
+                      child: Text(
+                        "a² + b² = c²",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.06),
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 150,
+                      right: 180,
+                      child: Text(
+                        "π ≈ 3.14",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.06),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 160,
+                      right: 100,
+                      child: Text(
+                        "lim (1 + 1/n)ⁿ",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.06),
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 40, 24, 160),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 900),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: accentLila.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  "ÎNVĂȚARE EFICIENTĂ • REZULTATE GARANTATE",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 10,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                "Every problem,\nhas a solution.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  height: 1.15,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 600,
+                                ),
+                                child: Text(
+                                  "La Level Up, ajutăm fiecare elev și părinte să țină pasul cu performanța prin metode moderne și structurate.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.white.withOpacity(0.85),
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 30),
+                              ElevatedButton(
+                                onPressed: onGoToCourses,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: accentLila,
+                                  foregroundColor: Colors.white,
+                                  elevation: 8,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 36,
+                                    vertical: 18,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "VEZI CURSURILE",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            Transform.translate(
+              offset: const Offset(0, -110),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 850),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color: Colors.grey.shade200,
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accentLila.withOpacity(0.3),
+                                blurRadius: 50,
+                                offset: const Offset(0, 25),
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Stack(
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                AspectRatio(
+                                  aspectRatio: 16 / 9,
+                                  child: Image.asset(
+                                    'images/spatiu.jpeg',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                    horizontal: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        primaryDark.withOpacity(0.9),
+                                      ],
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      Text(
+                                        "• Monitorizare note în timp real",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        "• Conexiune părinte-elev",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          width: 140,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      bool isWide = constraints.maxWidth > 750;
-                      return isWide
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(child: _buildHeroText(context)),
-                                const SizedBox(width: 24),
-                                SizedBox(width: 320, child: _buildHeroCard()),
-                              ],
-                            )
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildHeroText(context),
-                                const SizedBox(
-                                  height:
-                                      20, // Spațiu curat împotriva suprapunerii
-                                ),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: _buildHeroCard(),
-                                ),
-                              ],
-                            );
+                      bool isMobile = constraints.maxWidth < 800;
+
+                      Widget textContent = Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: accentLila.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              "DESPRE NOI",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: accentLila,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            "Viziunea, Valorile și Performanța Ta",
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: primaryDark,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "La Level Up, combinăm educația de performanță cu instrumente moderne de învățare digitală. Fiecare elev beneficiază de mentorat dedicat, monitorizare a progresului în timp real și materiale structurate pentru a obține rezultate excepționale la examene și în carieră.",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700,
+                              height: 1.6,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: onGoToCourses,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryDark,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.arrow_forward, size: 16),
+                            label: const Text(
+                              "Află mai multe",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+
+                      Widget imageContent = _buildInfoImageCard(
+                        accentLila,
+                        primaryDark,
+                      );
+
+                      if (isMobile) {
+                        return Column(
+                          children: [
+                            textContent,
+                            const SizedBox(height: 30),
+                            imageContent,
+                          ],
+                        );
+                      } else {
+                        return Row(
+                          children: [
+                            Expanded(child: textContent),
+                            const SizedBox(width: 40),
+                            Expanded(child: imageContent),
+                          ],
+                        );
+                      }
                     },
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              if (!hasAccess && role != 'parent')
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber.shade700),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.amber.shade900),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            "Contul tău ($fullName - $role) este în așteptarea aprobării.",
-                            style: TextStyle(
-                              color: Colors.amber.shade900,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _buildFeatureCard(
-                          Icons.school,
-                          "Excelență Academică",
-                          "Materiale structurate",
-                          constraints.maxWidth,
-                        ),
-                        _buildFeatureCard(
-                          Icons.groups,
-                          "Corp Didactic",
-                          "Mentori cu experiență",
-                          constraints.maxWidth,
-                        ),
-                        _buildFeatureCard(
-                          Icons.sports_esports,
-                          "Gamification",
-                          "Învățare prin joc",
-                          constraints.maxWidth,
-                        ),
-                        _buildFeatureCard(
-                          Icons.verified,
-                          "Valori & Integritate",
-                          "Dezvoltare personală",
-                          constraints.maxWidth,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Niveluri de Studiu",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.amber.shade900,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      "Pregătire Adaptată",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xff42153e),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        bool isMobile = constraints.maxWidth < 600;
-                        return isMobile
-                            ? Column(
-                                children: [
-                                  _buildCategoryCard(
-                                    "Gimnaziu",
-                                    "Clasele V - VIII",
-                                    Icons.child_care,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _buildCategoryCard(
-                                    "Liceu",
-                                    "Clasele IX - XII",
-                                    Icons.menu_book,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _buildCategoryCard(
-                                    "Bacalaureat",
-                                    "Simulări & Teste",
-                                    Icons.assignment,
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildCategoryCard(
-                                      "Gimnaziu",
-                                      "Clasele V - VIII",
-                                      Icons.child_care,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildCategoryCard(
-                                      "Liceu",
-                                      "Clasele IX - XII",
-                                      Icons.menu_book,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildCategoryCard(
-                                      "Bacalaureat",
-                                      "Simulări & Teste",
-                                      Icons.assignment,
-                                    ),
-                                  ),
-                                ],
-                              );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              Container(
-                color: const Color(0xff42153e),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 24,
-                  horizontal: 16,
-                ),
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('users')
-                      .snapshots(),
-                  builder: (context, usersSnapshot) {
-                    int studentCount = 0;
-                    int teacherCount = 0;
+            ),
+            const SizedBox(height: 80),
 
-                    if (usersSnapshot.hasData) {
-                      for (var doc in usersSnapshot.data!.docs) {
-                        var data = doc.data() as Map<String, dynamic>;
-                        if (data['role'] == 'teacher') {
-                          teacherCount++;
-                        } else {
-                          studentCount++;
-                        }
-                      }
-                    }
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      bool isMobile = constraints.maxWidth < 800;
 
-                    return StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('courses')
-                          .snapshots(),
-                      builder: (context, coursesSnapshot) {
-                        int coursesCount = coursesSnapshot.hasData
-                            ? coursesSnapshot.data!.docs.length
-                            : 0;
-
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      if (isMobile) {
+                        return Wrap(
+                          spacing: 16,
+                          runSpacing: 16,
+                          alignment: WrapAlignment.center,
                           children: [
-                            _buildCounterItem("$studentCount", "Utilizatori"),
-                            _buildCounterItem("$teacherCount", "Profesori"),
-                            _buildCounterItem("$coursesCount", "Cursuri"),
-                            _buildCounterItem("24/7", "Suport"),
+                            _buildFeatureCard(
+                              Icons.school,
+                              "Excelență Academică",
+                              "Materiale structurate",
+                              constraints.maxWidth,
+                              accentLila,
+                              isRow: false,
+                            ),
+                            _buildFeatureCard(
+                              Icons.groups,
+                              "Corp Didactic",
+                              "Mentori cu experiență",
+                              constraints.maxWidth,
+                              accentLila,
+                              isRow: false,
+                            ),
+                            _buildFeatureCard(
+                              Icons.sports_esports,
+                              "Gamification",
+                              "Învățare prin joc",
+                              constraints.maxWidth,
+                              accentLila,
+                              isRow: false,
+                            ),
+                            _buildFeatureCard(
+                              Icons.verified,
+                              "Valori & Integritate",
+                              "Dezvoltare personală",
+                              constraints.maxWidth,
+                              accentLila,
+                              isRow: false,
+                            ),
                           ],
                         );
-                      },
-                    );
-                  },
+                      } else {
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: _buildFeatureCard(
+                                Icons.school,
+                                "Excelență Academică",
+                                "Materiale structurate",
+                                constraints.maxWidth,
+                                accentLila,
+                                isRow: true,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildFeatureCard(
+                                Icons.groups,
+                                "Corp Didactic",
+                                "Mentori cu experiență",
+                                constraints.maxWidth,
+                                accentLila,
+                                isRow: true,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildFeatureCard(
+                                Icons.sports_esports,
+                                "Gamification",
+                                "Învățare prin joc",
+                                constraints.maxWidth,
+                                accentLila,
+                                isRow: true,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildFeatureCard(
+                                Icons.verified,
+                                "Valori & Integritate",
+                                "Dezvoltare personală",
+                                constraints.maxWidth,
+                                accentLila,
+                                isRow: true,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
                 ),
               ),
-              const SizedBox(height: 30),
-              Container(
-                color: const Color(0xff2b0c28),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 24,
-                  horizontal: 20,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
+            ),
+            const SizedBox(height: 60),
+
+            Container(
+              color: primaryDark,
+              padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 20),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .snapshots(),
+                builder: (context, usersSnapshot) {
+                  int studentCount = 0;
+                  int teacherCount = 0;
+
+                  if (usersSnapshot.hasData) {
+                    for (var doc in usersSnapshot.data!.docs) {
+                      var data = doc.data() as Map<String, dynamic>;
+                      if (data['role'] == 'teacher') {
+                        teacherCount++;
+                      } else {
+                        studentCount++;
+                      }
+                    }
+                  }
+
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('courses')
+                        .snapshots(),
+                    builder: (context, coursesSnapshot) {
+                      int coursesCount = coursesSnapshot.hasData
+                          ? coursesSnapshot.data!.docs.length
+                          : 0;
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildCounterItem(
+                            "$studentCount",
+                            "Utilizatori",
+                            accentLila,
                           ),
-                          child: Image.asset(
-                            'images/logo.jpg',
-                            height: 28,
-                            fit: BoxFit.contain,
+                          _buildCounterItem(
+                            "$teacherCount",
+                            "Profesori",
+                            accentLila,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          "LEVEL UP",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                          _buildCounterItem(
+                            "$coursesCount",
+                            "Cursuri",
+                            accentLila,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Platformă educațională modernă destinată performanței.",
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Divider(color: Colors.white24),
-                    const SizedBox(height: 12),
-                    Text(
-                      "© 2026 Level Up App. Toate drepturile rezervate.",
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
+                          _buildCounterItem("24/7", "Suport", accentLila),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
-            ],
-          ),
-        );
-      },
+            ),
+
+            Container(
+              color: const Color(0xff0f172a),
+              padding: const EdgeInsets.symmetric(vertical: 35, horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Image.asset(
+                          'images/logo.jpg',
+                          height: 28,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        "LEVEL UP",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Platformă educațională modernă destinată performanței.",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(color: Colors.white24),
+                  const SizedBox(height: 12),
+                  Text(
+                    "© 2026 Level Up App. Toate drepturile rezervate.",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1492,10 +1238,13 @@ class HomeTab extends StatelessWidget {
     String title,
     String desc,
     double maxWidth,
-  ) {
-    double cardWidth = maxWidth > 600
-        ? (maxWidth - 36) / 4
-        : (maxWidth - 12) / 2;
+    Color accentLila, {
+    required bool isRow,
+  }) {
+    double? cardWidth = isRow
+        ? null
+        : (maxWidth > 600 ? (maxWidth - 36) / 4 : (maxWidth - 12) / 2);
+
     return Container(
       width: cardWidth,
       padding: const EdgeInsets.all(12),
@@ -1568,7 +1317,7 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildCounterItem(String count, String label) {
+  Widget _buildCounterItem(String count, String label, Color accentLila) {
     return Column(
       children: [
         Text(
@@ -1587,4 +1336,100 @@ class HomeTab extends StatelessWidget {
       ],
     );
   }
+}
+
+class _VeeClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(0, size.height - 60);
+    path.lineTo(size.width / 2, size.height);
+    path.lineTo(size.width, size.height - 60);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+Widget _buildInfoImageCard(Color accentLila, Color primaryDark) {
+  return Stack(
+    clipBehavior: Clip.none,
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: accentLila.withOpacity(0.2), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: accentLila.withOpacity(0.12),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Image.asset(
+            'images/info.png',
+            height: 320,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+      Positioned(
+        top: 25,
+        left: -15,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: accentLila.withOpacity(0.15),
+                child: const Icon(
+                  Icons.star,
+                  color: Color(0xff7c4dff),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Excelență",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: primaryDark,
+                    ),
+                  ),
+                  Text(
+                    "Evaluare 5 Stele",
+                    style: TextStyle(fontSize: 9, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
 }

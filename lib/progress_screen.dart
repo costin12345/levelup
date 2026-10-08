@@ -15,11 +15,11 @@ class ProgressScreen extends StatefulWidget {
   final String? childEmail;
 
   const ProgressScreen({
-    Key? key,
+    super.key,
     required this.role,
     required this.currentUserId,
     this.childEmail,
-  }) : super(key: key);
+  });
 
   @override
   State<ProgressScreen> createState() => _ProgressScreenState();
@@ -31,6 +31,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryIndigo = Color(0xff1e1b4b);
+    const Color accentLila = Color(0xff7c4dff);
+
     String titleText = widget.role == 'parent'
         ? 'Scările Progresului pe Materii - Copilul Meu'
         : widget.role == 'student'
@@ -38,14 +41,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
         : 'Evoluția Elevilor - Scările Performanței';
 
     return Scaffold(
-      backgroundColor: const Color(0xfffff8dc),
+      backgroundColor: const Color(0xfff8fafc),
       appBar: AppBar(
-        title: Text(titleText),
-        backgroundColor: const Color(0xff42153e),
+        title: Text(
+          titleText,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        backgroundColor: primaryIndigo,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -74,20 +81,20 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   }
 
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber.shade300),
+                      border: Border.all(color: Colors.grey.shade300),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _selectedStudentFilter ?? "Toți elevii",
                         isExpanded: true,
                         dropdownColor: Colors.white,
-                        style: const TextStyle(
-                          color: Color(0xff42153e),
+                        style: TextStyle(
+                          color: primaryIndigo,
                           fontWeight: FontWeight.bold,
                         ),
                         items: studentItems,
@@ -108,40 +115,53 @@ class _ProgressScreenState extends State<ProgressScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   "Evoluția pe discipline:",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: Color(0xff42153e),
+                    color: primaryIndigo,
                   ),
                 ),
-                DropdownButton<String>(
-                  value: _selectedPeriod,
-                  dropdownColor: Colors.white,
-                  style: const TextStyle(
-                    color: Color(0xff42153e),
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 2,
                   ),
-                  items: ["Toate", "Luna aceasta", "Săptămâna aceasta"]
-                      .map(
-                        (period) => DropdownMenuItem(
-                          value: period,
-                          child: Text(period),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedPeriod = val!;
-                    });
-                  },
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedPeriod,
+                      dropdownColor: Colors.white,
+                      style: TextStyle(
+                        color: primaryIndigo,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      items: ["Toate", "Luna aceasta", "Săptămâna aceasta"]
+                          .map(
+                            (period) => DropdownMenuItem(
+                              value: period,
+                              child: Text(period),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedPeriod = val!;
+                        });
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // 🚀 Folosim structura originală cu Expanded + ListView.builder care funcționa perfect
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -149,10 +169,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xff42153e),
-                      ),
+                    return Center(
+                      child: CircularProgressIndicator(color: accentLila),
                     );
                   }
 
@@ -211,7 +229,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   };
                   var subjectsList = allSubjects.toList();
 
-                  // 🚀 Folosim SingleChildScrollView + Column pentru a garanta afișarea pe web
                   return SingleChildScrollView(
                     child: Column(
                       children: subjectsList.map((subject) {
@@ -224,19 +241,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
                           children: [
                             // 🏫 1. SCARA PRINCIPALĂ (NOTE CURENTE)
                             Container(
-                              margin: const EdgeInsets.only(bottom: 20),
+                              margin: const EdgeInsets.only(bottom: 16),
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.amber.shade300,
-                                  width: 1.5,
-                                ),
+                                border: Border.all(color: Colors.grey.shade200),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xff42153e)
-                                        .withOpacity(0.05),
+                                    color: Colors.black.withOpacity(0.02),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -251,10 +264,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                     children: [
                                       Text(
                                         "$subject (Note Curente)",
-                                        style: const TextStyle(
-                                          fontSize: 17,
+                                        style: TextStyle(
+                                          fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xff42153e),
+                                          color: primaryIndigo,
                                         ),
                                       ),
                                       const Text(
@@ -274,6 +287,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                         ? const Center(
                                             child: Text(
                                               "Nu există note curente.",
+                                              style: TextStyle(
+                                                color: Colors.grey,
+                                              ),
                                             ),
                                           )
                                         : TweenAnimationBuilder<double>(
@@ -300,6 +316,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                                           points: regularPoints,
                                                           animationProgress:
                                                               animationValue,
+                                                          primaryColor:
+                                                              primaryIndigo,
                                                         ),
                                                   );
                                                 },
@@ -314,11 +332,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
                               margin: const EdgeInsets.only(bottom: 24),
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
-                                color: const Color(0xfffff3cd),
+                                color: accentLila.withOpacity(0.04),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Colors.orange.shade400,
-                                  width: 2,
+                                  color: accentLila.withOpacity(0.2),
+                                  width: 1.5,
                                 ),
                               ),
                               child: Column(
@@ -326,18 +344,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(
+                                      Icon(
                                         Icons.military_tech,
-                                        color: Colors.orange,
+                                        color: accentLila,
                                         size: 22,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         "$subject — Simulări & Evaluări",
-                                        style: const TextStyle(
-                                          fontSize: 17,
+                                        style: TextStyle(
+                                          fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xff42153e),
+                                          color: primaryIndigo,
                                         ),
                                       ),
                                     ],
@@ -346,11 +364,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                   SizedBox(
                                     height: 210,
                                     child: simulationPoints.isEmpty
-                                        ? const Center(
+                                        ? Center(
                                             child: Text(
                                               "Nicio simulare înregistrată încă.",
                                               style: TextStyle(
-                                                color: Colors.brown,
+                                                color: Colors.grey.shade600,
                                                 fontStyle: FontStyle.italic,
                                               ),
                                             ),
@@ -380,6 +398,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                                               simulationPoints,
                                                           animationProgress:
                                                               animationValue,
+                                                          primaryColor:
+                                                              accentLila,
                                                         ),
                                                   );
                                                 },
@@ -406,16 +426,19 @@ class _ProgressScreenState extends State<ProgressScreen> {
 class SingleSubjectStaircasePainter extends CustomPainter {
   final List<GradePoint> points;
   final double animationProgress;
+  final Color primaryColor;
 
   SingleSubjectStaircasePainter({
     required this.points,
     required this.animationProgress,
+    required this.primaryColor,
   });
 
   @override
   bool shouldRepaint(covariant SingleSubjectStaircasePainter oldDelegate) {
     return oldDelegate.animationProgress != animationProgress ||
-        oldDelegate.points != points;
+        oldDelegate.points != points ||
+        oldDelegate.primaryColor != primaryColor;
   }
 
   @override
@@ -423,12 +446,12 @@ class SingleSubjectStaircasePainter extends CustomPainter {
     if (points.isEmpty) return;
 
     final paintStaircaseStructure = Paint()
-      ..color = const Color(0xff42153e).withOpacity(0.12)
+      ..color = primaryColor.withOpacity(0.12)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final paintLine = Paint()
-      ..color = const Color(0xff42153e)
+      ..color = primaryColor
       ..strokeWidth = 4.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -537,7 +560,7 @@ class SingleSubjectStaircasePainter extends CustomPainter {
         text: TextSpan(
           text: "${points[i].grade} (${points[i].date})",
           style: const TextStyle(
-            color: Color(0xff42153e),
+            color: Color(0xff1e1b4b),
             fontSize: 11,
             fontWeight: FontWeight.bold,
           ),

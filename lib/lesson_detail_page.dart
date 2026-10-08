@@ -29,24 +29,28 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
   @override
   Widget build(BuildContext context) {
     int initialIndex = (widget.initialTab == 'homework') ? 1 : 0;
+    const Color primaryIndigo = Color(0xff1e1b4b);
+    const Color accentLila = Color(0xff7c4dff);
 
     return DefaultTabController(
       length: 2,
       initialIndex: initialIndex,
       child: Scaffold(
-        backgroundColor: const Color(0xfffff8dc),
+        backgroundColor: const Color(0xfff8fafc),
         appBar: AppBar(
-          backgroundColor: const Color(0xff42153e),
+          backgroundColor: primaryIndigo,
           foregroundColor: Colors.white,
           title: Text(
             widget.lessonTitle,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
-          bottom: const TabBar(
-            labelColor: Colors.amber,
+          elevation: 0,
+          bottom: TabBar(
+            labelColor: accentLila,
             unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.amber,
-            tabs: [
+            indicatorColor: accentLila,
+            indicatorWeight: 3,
+            tabs: const [
               Tab(
                 icon: Icon(Icons.menu_book, size: 20),
                 text: "Teorie & Aplicații",
@@ -67,8 +71,8 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xff42153e)),
+              return Center(
+                child: CircularProgressIndicator(color: accentLila),
               );
             }
 
@@ -105,190 +109,267 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
               children: [
                 // TAB 1: TEORIE
                 SingleChildScrollView(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (lessonContent.isNotEmpty) ...[
-                        Text(
-                          lessonContent,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.5,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                      if (videoUrls.isNotEmpty) ...[
-                        const Text(
-                          "📹 Înregistrări Video Curs (Bunny Embed):",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Color(0xff42153e),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        ...videoUrls.asMap().entries.map(
-                          (entry) => Padding(
-                            padding: const EdgeInsets.only(bottom: 20.0),
-                            child: UniversalEmbeddedViewer(
-                              viewId: 'video_${widget.lessonId}_${entry.key}',
-                              url: entry.value,
-                              height: 380,
-                            ),
-                          ),
-                        ),
-                      ] else if (lessonContent.isEmpty) ...[
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.only(top: 60),
-                            child: Text(
-                              "Nu există conținut teoretic încărcat pentru această lecție.",
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontStyle: FontStyle.italic,
-                                fontSize: 15,
+                  padding: const EdgeInsets.all(24.0),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (lessonContent.isNotEmpty) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.02),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                lessonContent,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  height: 1.6,
+                                  color: Colors.grey.shade800,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      ],
-                    ],
+                            const SizedBox(height: 24),
+                          ],
+                          if (videoUrls.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.play_circle_fill,
+                                  color: accentLila,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "📹 Înregistrări Video Curs (Bunny Embed):",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: primaryIndigo,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ...videoUrls.asMap().entries.map(
+                              (entry) => Padding(
+                                padding: const EdgeInsets.only(bottom: 20.0),
+                                child: UniversalEmbeddedViewer(
+                                  viewId:
+                                      'video_${widget.lessonId}_${entry.key}',
+                                  url: entry.value,
+                                  height: 380,
+                                ),
+                              ),
+                            ),
+                          ] else if (lessonContent.isEmpty &&
+                              videoUrls.isEmpty) ...[
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 60),
+                                child: Text(
+                                  "Nu există conținut teoretic încărcat pentru această lecție.",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
 
                 // TAB 2: TEMĂ
                 SingleChildScrollView(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (homeworkContent.isNotEmpty) ...[
-                        const Text(
-                          "📝 Cerințe Temă:",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Color(0xff42153e),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.amber.shade300),
-                          ),
-                          child: Text(
-                            homeworkContent,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              height: 1.4,
-                              color: Colors.black87,
+                  padding: const EdgeInsets.all(24.0),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (homeworkContent.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.assignment_outlined,
+                                  color: accentLila,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "📝 Cerințe Temă:",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: primaryIndigo,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                      if (pdfUrls.isNotEmpty) ...[
-                        const Text(
-                          "📄 Fișiere PDF Suport / Fișe de Lucru:",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Color(0xff42153e),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        ...pdfUrls.asMap().entries.map((entry) {
-                          String pdfUrl = entry.value;
-
-                          // 🚀 Adăugăm parametrii care ascund bara de unelte (download, print, etc.)
-                          String embedUrl = pdfUrl;
-                          if (pdfUrl.contains('drive.google.com')) {
-                            // Pentru Google Drive, fortăm modul fără bară sau adăugăm parametrii de vizualizare
-                            embedUrl = pdfUrl.contains('&embedded=true')
-                                ? pdfUrl
-                                : '$pdfUrl&embedded=true';
-                          } else {
-                            // Pentru fișiere directe / link-uri web, adăugăm hashtag-ul care ascunde toolbar-ul în viewer-ul nativ PDF al browserului
-                            if (!embedUrl.contains('#toolbar=0')) {
-                              embedUrl = '$embedUrl#toolbar=0';
-                            }
-                          }
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 24.0),
-                            child: Container(
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: accentLila.withOpacity(0.2),
+                                ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xff42153e)
-                                        .withOpacity(0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                                    color: accentLila.withOpacity(0.05),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
                                   ),
                                 ],
-                                border: Border.all(
-                                  color: Colors.amber.shade200,
-                                  width: 1.5,
+                              ),
+                              child: Text(
+                                homeworkContent,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  height: 1.5,
+                                  color: Colors.grey.shade800,
                                 ),
                               ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Antet elegant
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          if (pdfUrls.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.picture_as_pdf,
+                                  color: Colors.redAccent,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "📄 Fișiere PDF Suport / Fișe de Lucru:",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: primaryIndigo,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ...pdfUrls.asMap().entries.map((entry) {
+                              String pdfUrl = entry.value;
+
+                              String embedUrl = pdfUrl;
+                              if (pdfUrl.contains('drive.google.com')) {
+                                embedUrl = pdfUrl.contains('&embedded=true')
+                                    ? pdfUrl
+                                    : '$pdfUrl&embedded=true';
+                              } else {
+                                if (!embedUrl.contains('#toolbar=0')) {
+                                  embedUrl = '$embedUrl#toolbar=0';
+                                }
+                              }
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 24.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.02),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                      width: 1.5,
                                     ),
-                                    color: const Color(0xff42153e),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.picture_as_pdf,
-                                          color: Colors.amber,
-                                          size: 20,
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
                                         ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            "Fișă de lucru #${entry.key + 1}",
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
+                                        color: primaryIndigo,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.picture_as_pdf,
+                                              color: accentLila,
+                                              size: 20,
                                             ),
-                                          ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                "Fișă de lucru #${entry.key + 1}",
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      SizedBox(
+                                        height: 520,
+                                        child: UniversalEmbeddedViewer(
+                                          viewId:
+                                              'pdf_${widget.lessonId}_${entry.key}',
+                                          url: embedUrl,
+                                          height: 520,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  // Vizualizatorul cu zoom activ, dar fără butoane de download
-                                  SizedBox(
-                                    height: 520,
-                                    child: UniversalEmbeddedViewer(
-                                      viewId:
-                                          'pdf_${widget.lessonId}_${entry.key}',
-                                      url: embedUrl,
-                                      height: 520,
-                                    ),
+                                ),
+                              );
+                            }),
+                          ] else if (homeworkContent.isEmpty &&
+                              pdfUrls.isEmpty) ...[
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 60),
+                                child: Text(
+                                  "Nu a fost adăugată nicio temă sau fișier PDF pentru această lecție.",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 15,
                                   ),
-                                ],
+                                ),
                               ),
                             ),
-                          );
-                        }),
-                      ],
-                    ],
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -344,6 +425,8 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
 
   @override
   Widget build(BuildContext context) {
+    const Color accentLila = Color(0xff7c4dff);
+
     return Container(
       height: widget.height,
       width: double.infinity,
@@ -363,9 +446,7 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
             : (_mobileController != null
                   ? WebViewWidget(controller: _mobileController!)
                   : const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xff42153e),
-                      ),
+                      child: CircularProgressIndicator(color: accentLila),
                     )),
       ),
     );
