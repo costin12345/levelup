@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 class GradePoint {
   final double grade;
   final String date;
+  final String title;
 
-  GradePoint({required this.grade, required this.date});
+  GradePoint({required this.grade, required this.date, required this.title});
 }
 
 class ProgressScreen extends StatefulWidget {
@@ -35,10 +36,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
     const Color accentLila = Color(0xff7c4dff);
 
     String titleText = widget.role == 'parent'
-        ? 'Scările Progresului pe Materii - Copilul Meu'
+        ? 'Progresul Academic - Copilul Meu'
         : widget.role == 'student'
-        ? 'Scările Progresului Meu pe Materii'
-        : 'Evoluția Elevilor - Scările Performanței';
+        ? 'Progresul Meu Academic'
+        : 'Panou Performanță Elevi';
 
     return Scaffold(
       backgroundColor: const Color(0xfff8fafc),
@@ -52,7 +53,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         elevation: 0,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -93,7 +94,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         value: _selectedStudentFilter ?? "Toți elevii",
                         isExpanded: true,
                         dropdownColor: Colors.white,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: primaryIndigo,
                           fontWeight: FontWeight.bold,
                         ),
@@ -115,8 +116,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Evoluția pe discipline:",
+                const Text(
+                  "Evoluția Notelor & Concluzii",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -137,7 +138,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     child: DropdownButton<String>(
                       value: _selectedPeriod,
                       dropdownColor: Colors.white,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: primaryIndigo,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -160,7 +161,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -181,9 +182,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   }
 
                   var docs = snapshot.data!.docs;
-
-                  Map<String, List<GradePoint>> regularGroups = {};
-                  Map<String, List<GradePoint>> simulationGroups = {};
+                  Map<String, List<GradePoint>> subjectGroups = {};
 
                   for (var doc in docs) {
                     var data = doc.data() as Map<String, dynamic>;
@@ -198,220 +197,199 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
                     String course = data['courseTitle'] ?? 'Matematică';
                     String date = data['date'] ?? '';
+                    String title = data['title'] ?? 'Evaluare';
 
-                    bool isSim =
-                        data['isSimulation'] == true ||
-                        (data['title'] != null &&
-                            data['title'].toString().toLowerCase().contains(
-                              'simulare',
-                            ));
-
-                    if (isSim) {
-                      if (!simulationGroups.containsKey(course)) {
-                        simulationGroups[course] = [];
-                      }
-                      simulationGroups[course]!.add(
-                        GradePoint(grade: gradeVal, date: date),
-                      );
-                    } else {
-                      if (!regularGroups.containsKey(course)) {
-                        regularGroups[course] = [];
-                      }
-                      regularGroups[course]!.add(
-                        GradePoint(grade: gradeVal, date: date),
-                      );
+                    if (!subjectGroups.containsKey(course)) {
+                      subjectGroups[course] = [];
                     }
+                    subjectGroups[course]!.add(
+                      GradePoint(grade: gradeVal, date: date, title: title),
+                    );
                   }
 
-                  Set<String> allSubjects = {
-                    ...regularGroups.keys,
-                    ...simulationGroups.keys,
-                  };
-                  var subjectsList = allSubjects.toList();
+                  var subjects = subjectGroups.keys.toList();
 
-                  return SingleChildScrollView(
-                    child: Column(
-                      children: subjectsList.map((subject) {
-                        List<GradePoint> regularPoints =
-                            regularGroups[subject] ?? [];
-                        List<GradePoint> simulationPoints =
-                            simulationGroups[subject] ?? [];
+                  return ListView.builder(
+                    itemCount: subjects.length,
+                    itemBuilder: (context, index) {
+                      String subject = subjects[index];
+                      List<GradePoint> points = subjectGroups[subject]!;
 
-                        return Column(
+                      double sum = points.fold(
+                        0,
+                        (sum, element) => sum + element.grade,
+                      );
+                      double average = points.isNotEmpty
+                          ? sum / points.length
+                          : 0.0;
+
+                      // Generare concluzie automată bazată pe medie
+                      String conclusionText = "";
+                      Color conclusionColor = Colors.green;
+                      IconData conclusionIcon = Icons.sentiment_very_satisfied;
+
+                      if (average >= 9.0) {
+                        conclusionText = "Performanță excelentă! Elevul demonstrează o înțelegere profundă a materiei și consecvență la evaluări.";
+                        conclusionColor = Colors.green.shade700;
+                        conclusionIcon = Icons.military_tech;
+                      } else if (average >= 7.0) {
+                        conclusionText = "Rezultate bune și un ritm stabil de învățare. Cu puțină atenție suplimentară, se poate atinge excelența.";
+                        conclusionColor = Colors.blue.shade700;
+                        conclusionIcon = Icons.thumb_up;
+                      } else {
+                        conclusionText = "Atenție sporită necesară! Se recomandă recapitularea temelor anterioare și o comunicare mai strânsă cu profesorul.";
+                        conclusionColor = Colors.orange.shade800;
+                        conclusionIcon = Icons.warning_amber_rounded;
+                      }
+
+                      double chartWidth = points.length > 5
+                          ? points.length * 80.0
+                          : MediaQuery.of(context).size.width - 70;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 🏫 1. SCARA PRINCIPALĂ (NOTE CURENTE)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              padding: const EdgeInsets.all(18),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade200),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.02),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                            // Antet Materie și Medie
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: accentLila.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.show_chart,
+                                        color: accentLila,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      subject,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryIndigo,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "$subject (Note Curente)",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: primaryIndigo,
+                                  decoration: BoxDecoration(
+                                    color: accentLila.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    "Media: ${average.toStringAsFixed(2)}",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: primaryIndigo,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+
+                            // GRAFICUL DE LINIE INTERACTIV CU SCROLL
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: SizedBox(
+                                width: chartWidth,
+                                height: 230,
+                                child: points.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          "Fără date pentru grafic",
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      )
+                                    : CustomPaint(
+                                        size: Size(chartWidth, 230),
+                                        painter: LineChartPainter(
+                                          points: points,
+                                          primaryColor: accentLila,
                                         ),
                                       ),
-                                      const Text(
-                                        "🚶‍♂️ 🎒 Mers pe trepte",
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  SizedBox(
-                                    height: 210,
-                                    child: regularPoints.isEmpty
-                                        ? const Center(
-                                            child: Text(
-                                              "Nu există note curente.",
-                                              style: TextStyle(
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                          )
-                                        : TweenAnimationBuilder<double>(
-                                            tween: Tween<double>(
-                                              begin: 0.0,
-                                              end: 1.0,
-                                            ),
-                                            duration: const Duration(
-                                              milliseconds: 3000,
-                                            ),
-                                            builder:
-                                                (
-                                                  context,
-                                                  animationValue,
-                                                  child,
-                                                ) {
-                                                  return CustomPaint(
-                                                    size: const Size(
-                                                      double.infinity,
-                                                      210,
-                                                    ),
-                                                    painter:
-                                                        SingleSubjectStaircasePainter(
-                                                          points: regularPoints,
-                                                          animationProgress:
-                                                              animationValue,
-                                                          primaryColor:
-                                                              primaryIndigo,
-                                                        ),
-                                                  );
-                                                },
-                                          ),
-                                  ),
-                                ],
                               ),
                             ),
+                            const SizedBox(height: 16),
 
-                            // 🏆 2. SCARA DE SIMULĂRI
+                            // CASETA DE CONCLUZIE AUTOMATĂ
                             Container(
-                              margin: const EdgeInsets.only(bottom: 24),
-                              padding: const EdgeInsets.all(18),
+                              padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: accentLila.withOpacity(0.04),
-                                borderRadius: BorderRadius.circular(16),
+                                color: conclusionColor.withOpacity(0.06),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: accentLila.withOpacity(0.2),
-                                  width: 1.5,
+                                  color: conclusionColor.withOpacity(0.3),
                                 ),
                               ),
-                              child: Column(
+                              child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.military_tech,
-                                        color: accentLila,
-                                        size: 22,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        "$subject — Simulări & Evaluări",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: primaryIndigo,
-                                        ),
-                                      ),
-                                    ],
+                                  Icon(
+                                    conclusionIcon,
+                                    color: conclusionColor,
+                                    size: 20,
                                   ),
-                                  const SizedBox(height: 16),
-                                  SizedBox(
-                                    height: 210,
-                                    child: simulationPoints.isEmpty
-                                        ? Center(
-                                            child: Text(
-                                              "Nicio simulare înregistrată încă.",
-                                              style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                            ),
-                                          )
-                                        : TweenAnimationBuilder<double>(
-                                            tween: Tween<double>(
-                                              begin: 0.0,
-                                              end: 1.0,
-                                            ),
-                                            duration: const Duration(
-                                              milliseconds: 3000,
-                                            ),
-                                            builder:
-                                                (
-                                                  context,
-                                                  animationValue,
-                                                  child,
-                                                ) {
-                                                  return CustomPaint(
-                                                    size: const Size(
-                                                      double.infinity,
-                                                      210,
-                                                    ),
-                                                    painter:
-                                                        SingleSubjectStaircasePainter(
-                                                          points:
-                                                              simulationPoints,
-                                                          animationProgress:
-                                                              animationValue,
-                                                          primaryColor:
-                                                              accentLila,
-                                                        ),
-                                                  );
-                                                },
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          "Concluzie & Evaluare:",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: primaryIndigo,
                                           ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          conclusionText,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade800,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                           ],
-                        );
-                      }).toList(),
-                    ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -423,32 +401,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 }
 
-class SingleSubjectStaircasePainter extends CustomPainter {
+// ============================================================================
+// --- CUSTOM PAINTER PREMIUM PENTRU GRAFICUL DE LINIE ---
+// ============================================================================
+class LineChartPainter extends CustomPainter {
   final List<GradePoint> points;
-  final double animationProgress;
   final Color primaryColor;
 
-  SingleSubjectStaircasePainter({
-    required this.points,
-    required this.animationProgress,
-    required this.primaryColor,
-  });
-
-  @override
-  bool shouldRepaint(covariant SingleSubjectStaircasePainter oldDelegate) {
-    return oldDelegate.animationProgress != animationProgress ||
-        oldDelegate.points != points ||
-        oldDelegate.primaryColor != primaryColor;
-  }
+  LineChartPainter({required this.points, required this.primaryColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (points.isEmpty) return;
-
-    final paintStaircaseStructure = Paint()
-      ..color = primaryColor.withOpacity(0.12)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
 
     final paintLine = Paint()
       ..color = primaryColor
@@ -457,132 +421,145 @@ class SingleSubjectStaircasePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    double horizontalPadding = 60.0;
-    double availableWidth = size.width - (horizontalPadding * 2);
+    final paintGrid = Paint()
+      ..color = Colors.grey.shade200
+      ..strokeWidth = 1.0;
 
-    double dxStep = points.length > 1
-        ? availableWidth / (points.length - 1)
-        : 0;
+    double paddingLeft = 35.0;
+    double paddingBottom = 40.0;
+    double paddingTop = 30.0;
+    double availableWidth = size.width - paddingLeft - 25;
+    double availableHeight = size.height - paddingBottom - paddingTop;
 
-    double mapGradeToY(double grade) {
-      double paddingBottom = 40.0;
-      double paddingTop = 50.0;
-      double availableHeight = size.height - paddingBottom - paddingTop;
-      return size.height - paddingBottom - ((grade - 1) / 9) * availableHeight;
-    }
-
-    List<Offset> evaluatedPoints = [];
-    for (int i = 0; i < points.length; i++) {
-      double x = points.length == 1
-          ? size.width / 2
-          : horizontalPadding + (i * dxStep);
-      double targetY = mapGradeToY(points[i].grade);
-      double y = size.height - (size.height - targetY) * animationProgress;
-      evaluatedPoints.add(Offset(x, y));
-    }
-
-    Path stairPath = Path();
-    Path structurePath = Path();
-
-    for (int i = 0; i < evaluatedPoints.length; i++) {
-      double x = evaluatedPoints[i].dx;
-      double y = evaluatedPoints[i].dy;
-
-      if (i == 0) {
-        stairPath.moveTo(x, y);
-      } else {
-        double prevX = evaluatedPoints[i - 1].dx;
-        double prevY = evaluatedPoints[i - 1].dy;
-
-        stairPath.lineTo(x, prevY);
-        stairPath.lineTo(x, y);
-
-        structurePath.moveTo(prevX, size.height - 40);
-        structurePath.lineTo(prevX, prevY);
-        structurePath.lineTo(x, prevY);
-        structurePath.lineTo(x, size.height - 40);
-      }
-    }
-
-    canvas.drawPath(structurePath, paintStaircaseStructure);
-    canvas.drawPath(stairPath, paintLine);
-
-    double exactIndexFloat = animationProgress * (evaluatedPoints.length - 1);
-    int currentIndex = exactIndexFloat.floor();
-    int nextIndex = (currentIndex + 1 < evaluatedPoints.length)
-        ? currentIndex + 1
-        : currentIndex;
-    double localProgress = exactIndexFloat - currentIndex;
-
-    Offset studentPos;
-    if (currentIndex == nextIndex) {
-      studentPos = evaluatedPoints[currentIndex];
-    } else {
-      double currentX = evaluatedPoints[currentIndex].dx;
-      double currentY = evaluatedPoints[currentIndex].dy;
-      double nextX = evaluatedPoints[nextIndex].dx;
-      double nextY = evaluatedPoints[nextIndex].dy;
-
-      double interpX = currentX + (nextX - currentX) * localProgress;
-      double interpY = currentY + (nextY - currentY) * localProgress;
-      studentPos = Offset(interpX, interpY);
-    }
-
-    for (int i = 0; i < points.length; i++) {
-      double x = evaluatedPoints[i].dx;
-      double y = evaluatedPoints[i].dy;
-
-      Paint pointPaint = Paint()
-        ..color = points[i].grade >= 8.0
-            ? Colors.green.shade600
-            : Colors.orange.shade700
-        ..style = PaintingStyle.fill;
-
-      canvas.drawCircle(Offset(x, y), 8, pointPaint);
-
-      Paint borderPaint = Paint()
-        ..color = Colors.white
-        ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke;
-      canvas.drawCircle(Offset(x, y), 8, borderPaint);
-
-      TextPainter emojiPainter = TextPainter(
-        text: TextSpan(
-          text: points[i].grade >= 8.0 ? '😊' : '🙁',
-          style: const TextStyle(fontSize: 13),
-        ),
-        textDirection: TextDirection.ltr,
+    for (int grade = 2; grade <= 10; grade += 2) {
+      double y =
+          paddingTop + availableHeight - ((grade - 1) / 9) * availableHeight;
+      canvas.drawLine(
+        Offset(paddingLeft, y),
+        Offset(size.width - 10, y),
+        paintGrid,
       );
-      emojiPainter.layout();
-      emojiPainter.paint(canvas, Offset(x - (emojiPainter.width / 2), y - 26));
 
       TextPainter textPainter = TextPainter(
         text: TextSpan(
-          text: "${points[i].grade} (${points[i].date})",
-          style: const TextStyle(
-            color: Color(0xff1e1b4b),
+          text: '$grade',
+          style: TextStyle(
+            color: Colors.grey.shade500,
             fontSize: 11,
             fontWeight: FontWeight.bold,
           ),
         ),
-        textAlign: TextAlign.center,
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(x - (textPainter.width / 2), size.height - 24),
-      );
+      textPainter.paint(canvas, Offset(8, y - (textPainter.height / 2)));
     }
 
-    TextPainter studentPainter = TextPainter(
-      text: const TextSpan(text: '🚶‍♂️ 🎒', style: TextStyle(fontSize: 24)),
-      textDirection: TextDirection.ltr,
-    );
-    studentPainter.layout();
-    studentPainter.paint(
-      canvas,
-      Offset(studentPos.dx - (studentPainter.width / 2), studentPos.dy - 44),
-    );
+    double dxStep = points.length > 1
+        ? availableWidth / (points.length - 1)
+        : availableWidth / 2;
+
+    List<Offset> coords = [];
+    for (int i = 0; i < points.length; i++) {
+      double x =
+          paddingLeft + (points.length == 1 ? availableWidth / 2 : i * dxStep);
+      double y =
+          paddingTop +
+          availableHeight -
+          ((points[i].grade - 1) / 9) * availableHeight;
+      coords.add(Offset(x, y));
+    }
+
+    if (coords.length > 1) {
+      Path fillPath = Path.from(
+        Path()..moveTo(coords.first.dx, paddingTop + availableHeight),
+      );
+      for (var coord in coords) {
+        fillPath.lineTo(coord.dx, coord.dy);
+      }
+      fillPath.lineTo(coords.last.dx, paddingTop + availableHeight);
+      fillPath.close();
+
+      final Paint fillPaint = Paint()
+        ..shader =
+            LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                primaryColor.withOpacity(0.25),
+                primaryColor.withOpacity(0.0),
+              ],
+            ).createShader(
+              Rect.fromLTWH(0, paddingTop, size.width, availableHeight),
+            );
+
+      canvas.drawPath(fillPath, fillPaint);
+    }
+
+    Path path = Path();
+    for (int i = 0; i < coords.length; i++) {
+      if (i == 0) {
+        path.moveTo(coords[i].dx, coords[i].dy);
+      } else {
+        path.lineTo(coords[i].dx, coords[i].dy);
+      }
+    }
+    canvas.drawPath(path, paintLine);
+
+    for (int i = 0; i < coords.length; i++) {
+      bool isGood = points[i].grade >= 8.0;
+
+      Paint glowPaint = Paint()
+        ..color = (isGood ? Colors.green : Colors.orange).withOpacity(0.3)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(coords[i], 10, glowPaint);
+
+      Paint pointPaint = Paint()
+        ..color = isGood ? Colors.green.shade600 : Colors.orange.shade700
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(coords[i], 6, pointPaint);
+
+      Paint whiteBorder = Paint()
+        ..color = Colors.white
+        ..strokeWidth = 2.5
+        ..style = PaintingStyle.stroke;
+      canvas.drawCircle(coords[i], 6, whiteBorder);
+
+      TextPainter gradePainter = TextPainter(
+        text: TextSpan(
+          text: "${points[i].grade}",
+          style: TextStyle(
+            color: isGood ? Colors.green.shade800 : Colors.orange.shade900,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      gradePainter.layout();
+      gradePainter.paint(
+        canvas,
+        Offset(coords[i].dx - (gradePainter.width / 2), coords[i].dy - 25),
+      );
+
+      TextPainter datePainter = TextPainter(
+        text: TextSpan(
+          text: points[i].date,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 10),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      datePainter.layout();
+      datePainter.paint(
+        canvas,
+        Offset(coords[i].dx - (datePainter.width / 2), size.height - 22),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant LineChartPainter oldDelegate) {
+    return oldDelegate.points != points ||
+        oldDelegate.primaryColor != primaryColor;
   }
 }

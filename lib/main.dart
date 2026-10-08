@@ -226,23 +226,41 @@ class _MainScreenState extends State<MainScreen> {
         List<String> menuTitles = [];
 
         if (userRole == 'teacher') {
-          menuTitles = [
-            "Home",
-            "Catalog",
-            "Cursuri",
-            // Fără Profil, dacă l-ai scos
-          ];
+          menuTitles = ["Home", "Catalog", "Cursuri", "Progres"];
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
             const TeacherCatalogScreen(),
             CoursesScreen(role: userRole),
             ProgressScreen(role: 'teacher', currentUserId: currentUser!.uid),
-            // Dacă ai adăugat Arhivă sau alt ecran, îl pui aici
+          ];
+        } else if (userRole == 'parent') {
+          menuTitles = ["Home", "Catalog", "Copilul Meu", "Profil"];
+          pages = [
+            HomeTab(onGoToCourses: () => _changeTab(1)),
+            const CatalogScreen(role: 'parent'),
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(currentUser!.uid)
+                  .get(),
+              builder: (context, snapshot) {
+                String childEmail = '';
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  var data = snapshot.data!.data() as Map<String, dynamic>;
+                  childEmail = data['childEmail'] ?? '';
+                }
+                return ProgressScreen(
+                  role: 'parent',
+                  currentUserId: currentUser!.uid,
+                  childEmail: childEmail,
+                );
+              },
+            ),
             const Center(
               child: Text(
-                "Arhivă teste",
+                "Profilul Părintelui",
                 style: TextStyle(
-                  color: Color(0xff1e1b4b),
+                  color: primaryIndigo,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
