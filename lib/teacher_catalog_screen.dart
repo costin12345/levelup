@@ -7,8 +7,6 @@ import 'package:googleapis_auth/auth_io.dart' as auth;
 
 import 'add_grade_dialog.dart';
 
-// ==========================================
-// --- TEACHER CATALOG SCREEN ---
 class TeacherCatalogScreen extends StatefulWidget {
   const TeacherCatalogScreen({super.key});
 
@@ -372,157 +370,157 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                  ],
 
-                    // --- FILTRE ---
-                    if (!isMediiPeGrupa && !isRapoarte && !isArhivadTeste)
-                      StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('grades')
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          Set<String> classes = {"Toate"};
-                          Set<String> groups = {"Toate"};
-                          Set<String> courses = {
-                            "Toate",
-                            "Matematică",
-                            "Informatică",
-                            "Fizică",
-                          };
-                          Set<String> gradesSet = {"Toate"};
-                          Set<String> studentsSet = {"Toți elevii"};
+                  // --- FILTRE ---
+                  if (!isMediiPeGrupa && !isRapoarte && !isArhivadTeste)
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('grades')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        Set<String> classes = {"Toate"};
+                        Set<String> groups = {"Toate"};
+                        Set<String> courses = {
+                          "Toate",
+                          "Matematică",
+                          "Informatică",
+                          "Fizică",
+                        };
+                        Set<String> gradesSet = {"Toate"};
+                        Set<String> studentsSet = {"Toți elevii"};
 
-                          if (snapshot.hasData) {
-                            for (var doc in snapshot.data!.docs) {
-                              var data = doc.data() as Map<String, dynamic>;
-                              if (data['className'] != null) {
-                                classes.add(data['className']);
-                              }
-                              if (data['groupName'] != null) {
-                                groups.add(data['groupName']);
-                              }
-                              if (data['grade'] != null) {
-                                gradesSet.add(data['grade']);
-                              }
-                              if (data['studentName'] != null) {
-                                studentsSet.add(data['studentName']);
-                              }
+                        if (snapshot.hasData) {
+                          for (var doc in snapshot.data!.docs) {
+                            var data = doc.data() as Map<String, dynamic>;
+                            if (data['className'] != null) {
+                              classes.add(data['className']);
+                            }
+                            if (data['groupName'] != null) {
+                              groups.add(data['groupName']);
+                            }
+                            if (data['grade'] != null) {
+                              gradesSet.add(data['grade']);
+                            }
+                            if (data['studentName'] != null) {
+                              studentsSet.add(data['studentName']);
                             }
                           }
+                        }
 
-                          Set<String> typeOptions = {
-                            "Toate",
-                            "Doar Note",
-                            "Doar Absențe",
-                          };
+                        Set<String> typeOptions = {
+                          "Toate",
+                          "Doar Note",
+                          "Doar Absențe",
+                        };
 
-                          return Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade200),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: [
-                                SizedBox(
-                                  width: 160,
-                                  child: _buildFineDropdown(
-                                    "Clasa",
-                                    _selectedFilterClass,
-                                    classes,
-                                    (val) => setState(
-                                      () => _selectedFilterClass = val!,
-                                    ),
-                                    accentLila,
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade200),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              SizedBox(
+                                width: 160,
+                                child: _buildFineDropdown(
+                                  "Clasa",
+                                  _selectedFilterClass,
+                                  classes,
+                                  (val) => setState(
+                                    () => _selectedFilterClass = val!,
                                   ),
+                                  accentLila,
                                 ),
-                                SizedBox(
-                                  width: 160,
-                                  child: _buildFineDropdown(
-                                    "Grupa",
-                                    _selectedFilterGroup,
-                                    groups,
-                                    (val) => setState(
-                                      () => _selectedFilterGroup = val!,
-                                    ),
-                                    accentLila,
+                              ),
+                              SizedBox(
+                                width: 160,
+                                child: _buildFineDropdown(
+                                  "Grupa",
+                                  _selectedFilterGroup,
+                                  groups,
+                                  (val) => setState(
+                                    () => _selectedFilterGroup = val!,
                                   ),
+                                  accentLila,
                                 ),
-                                SizedBox(
-                                  width: 160,
-                                  child: _buildFineDropdown(
-                                    "Elev",
-                                    _selectedSingleStudent ?? "Toți elevii",
-                                    studentsSet,
-                                    (val) => setState(
-                                      () => _selectedSingleStudent =
-                                          val == "Toți elevii" ? null : val,
-                                    ),
-                                    accentLila,
+                              ),
+                              SizedBox(
+                                width: 160,
+                                child: _buildFineDropdown(
+                                  "Elev",
+                                  _selectedSingleStudent ?? "Toți elevii",
+                                  studentsSet,
+                                  (val) => setState(
+                                    () => _selectedSingleStudent =
+                                        val == "Toți elevii" ? null : val,
                                   ),
+                                  accentLila,
                                 ),
-                                SizedBox(
-                                  width: 160,
-                                  child: _buildFineDropdown(
-                                    "Materia",
-                                    _selectedFilterCourse,
-                                    courses,
-                                    (val) => setState(
-                                      () => _selectedFilterCourse = val!,
-                                    ),
-                                    accentLila,
+                              ),
+                              SizedBox(
+                                width: 160,
+                                child: _buildFineDropdown(
+                                  "Materia",
+                                  _selectedFilterCourse,
+                                  courses,
+                                  (val) => setState(
+                                    () => _selectedFilterCourse = val!,
                                   ),
+                                  accentLila,
                                 ),
-                                SizedBox(
-                                  width: 160,
-                                  child: _buildFineDropdown(
-                                    "Nota",
-                                    _selectedFilterGrade,
-                                    gradesSet,
-                                    (val) => setState(
-                                      () => _selectedFilterGrade = val!,
-                                    ),
-                                    accentLila,
+                              ),
+                              SizedBox(
+                                width: 160,
+                                child: _buildFineDropdown(
+                                  "Nota",
+                                  _selectedFilterGrade,
+                                  gradesSet,
+                                  (val) => setState(
+                                    () => _selectedFilterGrade = val!,
                                   ),
+                                  accentLila,
                                 ),
-                                SizedBox(
-                                  width: 160,
-                                  child: _buildFineDropdown(
-                                    "Afișare",
-                                    _selectedFilterType,
-                                    typeOptions,
-                                    (val) => setState(
-                                      () => _selectedFilterType = val!,
-                                    ),
-                                    accentLila,
+                              ),
+                              SizedBox(
+                                width: 160,
+                                child: _buildFineDropdown(
+                                  "Afișare",
+                                  _selectedFilterType,
+                                  typeOptions,
+                                  (val) => setState(
+                                    () => _selectedFilterType = val!,
                                   ),
+                                  accentLila,
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    if (!isMediiPeGrupa && !isRapoarte && !isArhivadTeste)
-                      const SizedBox(height: 16),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  if (!isMediiPeGrupa && !isRapoarte && !isArhivadTeste)
+                    const SizedBox(height: 16),
 
-                    // --- CONȚINUT DINAMIC ---
-                    isMediiPeGrupa
-                        ? _buildMediiPeGrupaView(primaryIndigo, accentLila)
-                        : isRapoarte
-                        ? _buildRapoarteAcademiceView(primaryIndigo, accentLila)
-                        : isArhivadTeste
-                        ? _buildArhivaTesteView(primaryIndigo, accentLila)
-                        : _buildNoteSiAbsenteView(accentLila, primaryIndigo),
-                  ],
+                  // --- CONȚINUT DINAMIC ---
+                  isMediiPeGrupa
+                      ? _buildMediiPeGrupaView(primaryIndigo, accentLila)
+                      : isRapoarte
+                      ? _buildRapoarteAcademiceView(primaryIndigo, accentLila)
+                      : isArhivadTeste
+                      ? _buildArhivaTesteView(primaryIndigo, accentLila)
+                      : _buildNoteSiAbsenteView(accentLila, primaryIndigo),
                 ],
               ),
             ),
