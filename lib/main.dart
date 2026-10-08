@@ -250,7 +250,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ];
         } else if (userRole == 'parent') {
-          menuTitles = ["Home", "Catalog", "Copilul Meu"];
+          menuTitles = ["Home", "Catalog", "Copilul Meu", "Profil"];
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(1)),
             const CatalogScreen(role: 'parent'),
