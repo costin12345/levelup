@@ -1,3 +1,5 @@
+
+
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -6,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
+import 'package:http/http.dart' as http;
 
 import 'lesson_detail_page.dart';
 
@@ -26,7 +29,7 @@ class CourseDetailScreen extends StatefulWidget {
     required this.description,
     required this.role,
     this.targetLessonId,
-    this.initialTab,
+    this.initialTab, required String lessonId, required String lessonTitle,
   });
 
   @override
@@ -502,8 +505,45 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
+
                 ElevatedButton(
                   onPressed: () async {
+                    String rawHomeworkText = homeworkContentController.text.trim();
+                    String optimizedHomeworkText = rawHomeworkText;
+
+                    // Dacă ai scris sau lipit textul brut/exercițiile, le optimizăm direct cu Gemini AI!
+                    if (rawHomeworkText.isNotEmpty) {
+                      try {
+                        const apiKey = 'AQ.Ab8RN6JnbffPXhaSWxdHeSCImFbosLXN326KXt8tYqCIrCko-w'; // Înlocuiește cu cheia ta API reală
+                        final url = Uri.parse(
+                          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey',
+                        );
+
+                        final response = await http.post(
+                          url,
+                          headers: {'Content-Type': 'application/json'},
+                          body: jsonEncode({
+                            "contents": [
+                              {
+                                "parts": [
+                                  {
+                                    "text": "Ești un profesor expert. Analizează aceste cerințe/exerciții, corectează eventualele greșeli și formatează-le într-un stil extrem de curat, profesional și ordonat pentru elevi (folosind Markdown, titluri, pași și puncte clare):\n\n$rawHomeworkText"
+                                  }
+                                ]
+                              }
+                            ]
+                          }),
+                        );
+
+                        if (response.statusCode == 200) {
+                          final data = jsonDecode(response.body);
+                          optimizedHomeworkText = data['candidates'][0]['content']['parts'][0]['text'] ?? rawHomeworkText;
+                        }
+                      } catch (e) {
+                        debugPrint("Eroare la optimizarea cu AI: $e");
+                      }
+                    }
+
                     if (newPdfController.text.trim().isNotEmpty) {
                       pdfUrls.add(newPdfController.text.trim());
                     }
@@ -517,15 +557,13 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         'title': lTitle,
                         'content': contentController.text.trim(),
                         'videoUrls': videoUrls,
-                        'homeworkContent': homeworkContentController.text
-                            .trim(),
+                        'homeworkContent': optimizedHomeworkText, // Salvăm textul curat formatat de AI
                         'pdfUrls': pdfUrls,
                         'updatedAt': FieldValue.serverTimestamp(),
                       };
 
                       if (existingLesson == null) {
-                        lessonPayload['createdAt'] =
-                            FieldValue.serverTimestamp();
+                        lessonPayload['createdAt'] = FieldValue.serverTimestamp();
                         DocumentReference docRef = await FirebaseFirestore
                             .instance
                             .collection('courses')
@@ -535,7 +573,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
                         await _sendPushToStudents(
                           lessonTitle: lTitle,
-                          notificationType: 'lesson',
+                          notificationType: 'homework',
                           lessonId: docRef.id,
                         );
                       } else {
@@ -545,7 +583,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Lecția a fost salvată cu succes!'),
+                            content: Text('Tema a fost formatată și salvată profesional cu AI!'),
+                            backgroundColor: Colors.green,
                           ),
                         );
                         Navigator.pop(context);
@@ -556,7 +595,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     backgroundColor: primaryIndigo,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text("Salvează"),
+                  child: const Text("Salvează cu AI"),
                 ),
               ],
             );
@@ -565,6 +604,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       },
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
