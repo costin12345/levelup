@@ -44,14 +44,18 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
     setState(() => _isAiProcessing = true);
 
     try {
-      const apiKey = 'CHEIA_TA_API_GEMINI'; // Introdu cheia ta Gemini
+      const apiKey = 'AQ.Ab8RN6LZbJMzN1Rv4Td2CCGHicDZqQOO_rxSp7wsnrmZvWSMLw'; // Introdu cheia ta Gemini
 
       final url = Uri.parse(
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey',
       );
 
-      bool isImageUrl = sourceUrlOrText.startsWith('http') &&
-          (sourceUrlOrText.endsWith('.png') || sourceUrlOrText.endsWith('.jpg') || sourceUrlOrText.endsWith('.jpeg') || sourceUrlOrText.contains('drive.google.com'));
+      bool isImageUrl =
+          sourceUrlOrText.startsWith('http') &&
+          (sourceUrlOrText.endsWith('.png') ||
+              sourceUrlOrText.endsWith('.jpg') ||
+              sourceUrlOrText.endsWith('.jpeg') ||
+              sourceUrlOrText.contains('drive.google.com'));
 
       Map<String, dynamic> requestBody;
 
@@ -61,17 +65,17 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
             {
               "parts": [
                 {
-                  "text": "Ești un profesor expert. Analizează această imagine/fișier, extrage tot textul, corectează-l și formatează-l într-un stil extrem de curat, profesional, cu titluri și structură clară pentru elevi (folosind Markdown)."
+                  "text": "Ești un profesor expert. Analizează această imagine/fișier, extrage tot textul, corectează-l și formatează-l într-un stil extrem de curat, profesional, cu titluri și structură clară pentru elevi (folosind Markdown).",
                 },
                 {
                   "file_data": {
                     "mime_type": "image/jpeg",
-                    "file_uri": sourceUrlOrText
-                  }
-                }
-              ]
-            }
-          ]
+                    "file_uri": sourceUrlOrText,
+                  },
+                },
+              ],
+            },
+          ],
         };
       } else {
         requestBody = {
@@ -79,11 +83,12 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
             {
               "parts": [
                 {
-                  "text": "Ești un profesor expert în educație. Analizează acest text brut, corectează-l și rescrie-l într-un format extrem de curat, profesional, structurat cu titluri clare și subpuncte (Markdown):\n\n$sourceUrlOrText"
-                }
-              ]
-            }
-          ]
+                  "text":
+                      "Ești un profesor expert în educație. Analizează acest text brut, corectează-l și rescrie-l într-un format extrem de curat, profesional, structurat cu titluri clare și subpuncte (Markdown):\n\n$sourceUrlOrText",
+                },
+              ],
+            },
+          ],
         };
       }
 
@@ -95,9 +100,13 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        String enhancedText = data['candidates'][0]['content']['parts'][0]['text'] ?? sourceUrlOrText;
+        String enhancedText =
+            data['candidates'][0]['content']['parts'][0]['text'] ??
+            sourceUrlOrText;
 
-        String updateField = fieldType == 'theory' ? 'content' : 'homeworkContent';
+        String updateField = fieldType == 'theory'
+            ? 'content'
+            : 'homeworkContent';
         await FirebaseFirestore.instance
             .collection('courses')
             .doc(widget.courseId)
@@ -108,7 +117,9 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Conținutul a fost extras și optimizat cu succes de AI!'),
+              content: Text(
+                'Conținutul a fost extras și optimizat cu succes de AI!',
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -119,7 +130,10 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Eroare la prelucrarea cu AI: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Eroare la prelucrarea cu AI: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -151,7 +165,10 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
             unselectedLabelColor: Colors.white70,
             indicatorColor: accentLila,
             indicatorWeight: 3,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
             tabs: const [
               Tab(
                 icon: Icon(Icons.menu_book_rounded, size: 20),
@@ -227,7 +244,9 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.grey.shade200),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                    ),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.02),
@@ -237,15 +256,20 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                     ],
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Row(
                                             children: [
-                                              Icon(Icons.lightbulb_outline_rounded,
-                                                  color: accentLila, size: 20),
+                                              Icon(
+                                                Icons.lightbulb_outline_rounded,
+                                                color: accentLila,
+                                                size: 20,
+                                              ),
                                               const SizedBox(width: 8),
                                               Text(
                                                 "Note de curs / Explicații",
@@ -259,7 +283,10 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                           ),
                                           if (widget.role == 'teacher')
                                             TextButton.icon(
-                                              onPressed: () => _enhanceWithAI(lessonContent, 'theory'),
+                                              onPressed: () => _enhanceWithAI(
+                                                lessonContent,
+                                                'theory',
+                                              ),
                                               icon: const Icon(
                                                 Icons.auto_awesome,
                                                 size: 16,
@@ -312,16 +339,22 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                 ),
                                 const SizedBox(height: 12),
                                 ...videoUrls.asMap().entries.map(
-                                      (entry) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 24.0),
+                                  (entry) => Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: 24.0,
+                                    ),
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.grey.shade200),
+                                        border: Border.all(
+                                          color: Colors.grey.shade200,
+                                        ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.03),
+                                            color: Colors.black.withOpacity(
+                                              0.03,
+                                            ),
                                             blurRadius: 10,
                                             offset: const Offset(0, 4),
                                           ),
@@ -329,7 +362,8 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                       ),
                                       clipBehavior: Clip.antiAlias,
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.symmetric(
@@ -357,7 +391,8 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                             ),
                                           ),
                                           UniversalEmbeddedViewer(
-                                            viewId: 'video_${widget.lessonId}_${entry.key}',
+                                            viewId:
+                                                'video_${widget.lessonId}_${entry.key}',
                                             url: entry.value,
                                             height: 420,
                                           ),
@@ -366,7 +401,8 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                     ),
                                   ),
                                 ),
-                              ] else if (lessonContent.isEmpty && videoUrls.isEmpty) ...[
+                              ] else if (lessonContent.isEmpty &&
+                                  videoUrls.isEmpty) ...[
                                 const Center(
                                   child: Padding(
                                     padding: EdgeInsets.only(top: 60),
@@ -418,7 +454,8 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Row(
                                           children: [
@@ -438,19 +475,33 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                             ),
                                           ],
                                         ),
-                                        if (widget.role == 'teacher' && pdfUrls.isNotEmpty && homeworkContent.isEmpty)
+                                        if (widget.role == 'teacher' &&
+                                            pdfUrls.isNotEmpty &&
+                                            homeworkContent.isEmpty)
                                           ElevatedButton.icon(
-                                            onPressed: () => _enhanceWithAI(pdfUrls.first, 'homework'),
+                                            onPressed: () => _enhanceWithAI(
+                                              pdfUrls.first,
+                                              'homework',
+                                            ),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: accentLila,
                                               foregroundColor: Colors.white,
                                             ),
-                                            icon: const Icon(Icons.auto_awesome, size: 16),
-                                            label: const Text("Extrage text din PDF cu AI"),
+                                            icon: const Icon(
+                                              Icons.auto_awesome,
+                                              size: 16,
+                                            ),
+                                            label: const Text(
+                                              "Extrage text din PDF cu AI",
+                                            ),
                                           ),
-                                        if (widget.role == 'teacher' && homeworkContent.isNotEmpty)
+                                        if (widget.role == 'teacher' &&
+                                            homeworkContent.isNotEmpty)
                                           TextButton.icon(
-                                            onPressed: () => _enhanceWithAI(homeworkContent, 'homework'),
+                                            onPressed: () => _enhanceWithAI(
+                                              homeworkContent,
+                                              'homework',
+                                            ),
                                             icon: const Icon(
                                               Icons.auto_awesome,
                                               size: 16,
@@ -472,37 +523,38 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                                     const SizedBox(height: 16),
                                     homeworkContent.isNotEmpty
                                         ? Text(
-                                      homeworkContent,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        height: 1.7,
-                                        color: Colors.grey.shade800,
-                                      ),
-                                    )
-                                        : Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          "Nu a fost generat textul pentru această temă încă.",
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                            fontStyle: FontStyle.italic,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        if (pdfUrls.isNotEmpty) ...[
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            "Ai un fișier PDF atașat. Apasă pe butonul de sus „Extrage text din PDF cu AI” pentru ca Gemini să-l transforme într-un text curat și structurat!",
+                                            homeworkContent,
                                             style: TextStyle(
-                                              color: accentLila,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
+                                              fontSize: 15,
+                                              height: 1.7,
+                                              color: Colors.grey.shade800,
                                             ),
+                                          )
+                                        : Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                "Nu a fost generat textul pentru această temă încă.",
+                                                style: TextStyle(
+                                                  color: Colors.grey,
+                                                  fontStyle: FontStyle.italic,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              if (pdfUrls.isNotEmpty) ...[
+                                                const SizedBox(height: 12),
+                                                Text(
+                                                  "Ai un fișier PDF atașat. Apasă pe butonul de sus „Extrage text din PDF cu AI” pentru ca Gemini să-l transforme într-un text curat și structurat!",
+                                                  style: TextStyle(
+                                                    color: accentLila,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
-                                        ],
-                                      ],
-                                    ),
                                   ],
                                 ),
                               ),
@@ -605,10 +657,10 @@ class _UniversalEmbeddedViewerState extends State<UniversalEmbeddedViewer> {
       child: kIsWeb
           ? getWebIframe(widget.viewId, widget.url)
           : (_mobileController != null
-          ? WebViewWidget(controller: _mobileController!)
-          : const Center(
-        child: CircularProgressIndicator(color: accentLila),
-      )),
+                ? WebViewWidget(controller: _mobileController!)
+                : const Center(
+                    child: CircularProgressIndicator(color: accentLila),
+                  )),
     );
   }
 }

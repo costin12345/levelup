@@ -32,7 +32,9 @@ class CourseGroupsScreen extends StatelessWidget {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Text(
             "Adaugă Grupă Nouă",
             style: TextStyle(color: primaryIndigo, fontWeight: FontWeight.bold),
@@ -41,19 +43,26 @@ class CourseGroupsScreen extends StatelessWidget {
             controller: groupNameController,
             decoration: InputDecoration(
               labelText: "Nume Grupă (ex: Grupa A, Grupa Avansați)",
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Anulează", style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                "Anulează",
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentLila,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () async {
                 if (groupNameController.text.trim().isNotEmpty) {
@@ -62,9 +71,9 @@ class CourseGroupsScreen extends StatelessWidget {
                       .doc(courseId)
                       .collection('groups')
                       .add({
-                    'name': groupNameController.text.trim(),
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
+                        'name': groupNameController.text.trim(),
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -77,7 +86,11 @@ class CourseGroupsScreen extends StatelessWidget {
   }
 
   // Ștergere grupă
-  Future<void> _deleteGroup(BuildContext context, String groupId, String groupName) async {
+  Future<void> _deleteGroup(
+    BuildContext context,
+    String groupId,
+    String groupName,
+  ) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -92,7 +105,9 @@ class CourseGroupsScreen extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Șterge', style: TextStyle(color: Colors.white)),
@@ -121,7 +136,10 @@ class CourseGroupsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: primaryIndigo,
         foregroundColor: Colors.white,
-        title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         actions: [
           if (role == 'teacher')
             IconButton(
@@ -151,26 +169,40 @@ class CourseGroupsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       category,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   if (description.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
                       description,
-                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
                     ),
                   ],
                 ],
@@ -182,13 +214,20 @@ class CourseGroupsScreen extends StatelessWidget {
               children: [
                 const Text(
                   "Selectează Grupa",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryIndigo),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryIndigo,
+                  ),
                 ),
                 if (role == 'teacher')
                   TextButton.icon(
                     onPressed: () => _showAddGroupDialog(context),
                     icon: const Icon(Icons.add, size: 16, color: accentLila),
-                    label: const Text("Adaugă Grupă", style: TextStyle(color: accentLila)),
+                    label: const Text(
+                      "Adaugă Grupă",
+                      style: TextStyle(color: accentLila),
+                    ),
                   ),
               ],
             ),
@@ -204,7 +243,9 @@ class CourseGroupsScreen extends StatelessWidget {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: accentLila));
+                  return const Center(
+                    child: CircularProgressIndicator(color: accentLila),
+                  );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -250,21 +291,37 @@ class CourseGroupsScreen extends StatelessWidget {
                             color: accentLila.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.group, color: accentLila, size: 20),
+                          child: const Icon(
+                            Icons.group,
+                            color: accentLila,
+                            size: 20,
+                          ),
                         ),
                         title: Text(
                           groupName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: primaryIndigo),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: primaryIndigo,
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (role == 'teacher')
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                                onPressed: () => _deleteGroup(context, groupId, groupName),
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                                onPressed: () =>
+                                    _deleteGroup(context, groupId, groupName),
                               ),
-                            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                           ],
                         ),
 
@@ -279,7 +336,8 @@ class CourseGroupsScreen extends StatelessWidget {
                                 description: description,
                                 role: role,
                                 initialTab: 'lesson',
-                                lessonId: 'lessonId', lessonTitle: 'lessonTitle', // Parametru opțional cerut de noul LessonDetailPage
+                                lessonId: 'lessonId',
+                                lessonTitle: 'lessonTitle', // Parametru opțional cerut de noul LessonDetailPage
                               ),
                             ),
                           );
@@ -332,23 +390,23 @@ class _CoursesScreenState extends State<CoursesScreen> {
   ];
 
   Future<void> _requestEnrollment(
-      String courseId,
-      String userId,
-      String userEmail,
-      String userName,
-      ) async {
+    String courseId,
+    String userId,
+    String userEmail,
+    String userName,
+  ) async {
     final enrollmentId = '${courseId}_$userId';
     await FirebaseFirestore.instance
         .collection('enrollments')
         .doc(enrollmentId)
         .set({
-      'courseId': courseId,
-      'userId': userId,
-      'userEmail': userEmail,
-      'userName': userName,
-      'status': 'pending',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+          'courseId': courseId,
+          'userId': userId,
+          'userEmail': userEmail,
+          'userName': userName,
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -465,12 +523,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       await FirebaseFirestore.instance
                           .collection('courses')
                           .add({
-                        'title': titleController.text.trim(),
-                        'category': selectedCategory,
-                        'description': descriptionController.text.trim(),
-                        'imageUrl': imageUrlController.text.trim(),
-                        'createdAt': FieldValue.serverTimestamp(),
-                      });
+                            'title': titleController.text.trim(),
+                            'category': selectedCategory,
+                            'description': descriptionController.text.trim(),
+                            'imageUrl': imageUrlController.text.trim(),
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
                       if (mounted) Navigator.pop(context);
                     }
                   },
@@ -613,7 +671,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         builder: (context, userSnap) {
                           if (userSnap.hasData && userSnap.data!.exists) {
                             var uData =
-                            userSnap.data!.data() as Map<String, dynamic>;
+                                userSnap.data!.data() as Map<String, dynamic>;
                             String fullName = uData['fullName'] ?? fallbackName;
                             return Text(
                               fullName,
@@ -641,7 +699,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         builder: (context, courseSnap) {
                           if (courseSnap.hasData && courseSnap.data!.exists) {
                             var cData =
-                            courseSnap.data!.data() as Map<String, dynamic>;
+                                courseSnap.data!.data() as Map<String, dynamic>;
                             return Text(
                               'Curs: ${cData['title'] ?? 'Fără titlu'}',
                               style: const TextStyle(
@@ -650,8 +708,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               ),
                             );
                           }
-                          return const Text('Se încarcă cursul...',
-                              style: TextStyle(fontSize: 12));
+                          return const Text(
+                            'Se încarcă cursul...',
+                            style: TextStyle(fontSize: 12),
+                          );
                         },
                       ),
                       trailing: Row(
@@ -730,7 +790,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -834,9 +897,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   builder: (context, coursesSnapshot) {
                     if (!coursesSnapshot.hasData) {
                       return const Center(
-                        child: CircularProgressIndicator(
-                          color: accentLila,
-                        ),
+                        child: CircularProgressIndicator(color: accentLila),
                       );
                     }
 
@@ -881,7 +942,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       itemBuilder: (context, index) {
                         var courseDoc = filteredDocs[index];
                         var courseData =
-                        courseDoc.data() as Map<String, dynamic>;
+                            courseDoc.data() as Map<String, dynamic>;
                         String courseId = courseDoc.id;
                         String title = courseData['title'] ?? '';
                         String category = courseData['category'] ?? '';
@@ -1074,13 +1135,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 ),
                 child: imageUrl.isNotEmpty
                     ? Image.network(
-                  imageUrl,
-                  height: 130,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _buildPlaceholderImage(accentLila),
-                )
+                        imageUrl,
+                        height: 130,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildPlaceholderImage(accentLila),
+                      )
                     : _buildPlaceholderImage(accentLila),
               ),
               Padding(
@@ -1125,8 +1186,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       const SizedBox(height: 6),
                       Text(
                         description,
-                        style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ],
