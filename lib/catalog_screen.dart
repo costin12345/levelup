@@ -23,7 +23,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     }
   }
 
-  // Preluăm email-ul copilului asociat părintelui dincolecția 'users'
+  // Preluăm email-ul copilului asociat părintelui din colecția 'users'
   Future<void> _fetchChildEmail() async {
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
@@ -49,6 +49,68 @@ class _CatalogScreenState extends State<CatalogScreen> {
     } else {
       if (mounted) setState(() => _isLoadingChild = false);
     }
+  }
+
+  // Helper pentru afișarea statusului temei
+  Widget _buildHomeworkBadge(String? status) {
+    String text;
+    Color bgColor;
+    Color textColor;
+
+    switch (status?.toLowerCase()) {
+      case 'efectuata':
+        text = '🟢 Temă Efectuată';
+        bgColor = Colors.green.shade50;
+        textColor = Colors.green.shade800;
+        break;
+      case 'partiala':
+        text = '🟡 Temă Parțială';
+        bgColor = Colors.amber.shade50;
+        textColor = Colors.amber.shade800;
+        break;
+      case 'neefectuata':
+      default:
+        text = '🔴 Lipsă Temă';
+        bgColor = Colors.red.shade50;
+        textColor = Colors.red.shade800;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  // Helper pentru afișarea statusului plății ședinței
+  Widget _buildPaymentBadge(String? status) {
+    bool isPaid = status?.toLowerCase() == 'platita';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isPaid ? Colors.blue.shade50 : Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        isPaid ? '💵 Plătită' : '⏳ Neplătită',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: isPaid ? Colors.blue.shade800 : Colors.orange.shade800,
+        ),
+      ),
+    );
   }
 
   @override
@@ -121,7 +183,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          "Vizualizează notele centralizate în timp real",
+                          "Vizualizează notele, testele, temele și plățile în timp real",
                           style: TextStyle(fontSize: 12, color: Colors.white70),
                         ),
                       ],
@@ -158,7 +220,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ),
               )
             else
-              // --- STREAM PENTRU NOTE ---
+              // --- STREAM PENTRU NOTE ȘI ȘEDINȚE ---
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('grades')
@@ -181,7 +243,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Text(
-                          "Nu există note înregistrate momentan.",
+                          "Nu există înregistrări momentan.",
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 14,
@@ -209,7 +271,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Text(
-                          "Nu s-au găsit note pentru elevul selectat.",
+                          "Nu s-au găsit date pentru elevul selectat.",
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 14,
@@ -225,18 +287,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     var data = doc.data() as Map<String, dynamic>;
                     String studentName =
                         data['studentName'] ?? 'Elev necunoscut';
-                    String grade = data['grade']?.toString() ?? '-';
-                    String course = data['courseTitle'] ?? 'Materie';
-                    String className = data['className'] ?? '';
 
                     if (!studentMap.containsKey(studentName)) {
                       studentMap[studentName] = [];
                     }
                     studentMap[studentName]!.add({
                       'id': doc.id,
-                      'grade': grade,
-                      'course': course,
-                      'className': className,
+                      'grade': data['grade']?.toString() ?? '-',
+                      'sessionNumber':
+                          data['sessionNumber']?.toString() ?? 'Ședință',
+                      'homeworkStatus': data['homeworkStatus'] ?? 'neefectuata',
+                      'paymentStatus': data['paymentStatus'] ?? 'neplatita',
+                      'feedback': data['feedback'] ?? 'Fără observații',
+                      'className': data['className'] ?? '',
+                      'date': data['createdAt'],
                     });
                   }
 
@@ -246,16 +310,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     itemCount: studentMap.keys.length,
                     itemBuilder: (context, index) {
                       String studentName = studentMap.keys.elementAt(index);
-                      List<Map<String, dynamic>> studentGrades =
+                      List<Map<String, dynamic>> sessions =
                           studentMap[studentName]!;
-                      String className = studentGrades.isNotEmpty
-                          ? studentGrades[0]['className']
+                      String className = sessions.isNotEmpty
+                          ? sessions[0]['className']
                           : '';
 
-                      // Calcul medie
+                      // Calcul medie note teste
                       double sum = 0;
                       int count = 0;
-                      for (var item in studentGrades) {
+                      for (var item in sessions) {
                         double? val = double.tryParse(item['grade']);
                         if (val != null) {
                           sum += val;
@@ -267,11 +331,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           : "-";
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -284,32 +345,32 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             ),
                           ],
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 1. Avatar și Nume Elev
-                            Expanded(
-                              flex: 3,
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: accentLila.withOpacity(
-                                      0.12,
-                                    ),
-                                    child: Text(
-                                      studentName.isNotEmpty
-                                          ? studentName[0].toUpperCase()
-                                          : "E",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: accentLila,
+                            // Header elev + Medie generală
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: accentLila.withOpacity(
+                                        0.12,
+                                      ),
+                                      child: Text(
+                                        studentName.isNotEmpty
+                                            ? studentName[0].toUpperCase()
+                                            : "E",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: accentLila,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
+                                    const SizedBox(width: 12),
+                                    Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
@@ -317,92 +378,159 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                           studentName,
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 14,
+                                            fontSize: 16,
                                             color: primaryIndigo,
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
                                         Text(
                                           className.isNotEmpty
                                               ? "Clasa: $className"
-                                              : "Fără detalii",
+                                              : "Fără detalii clasă",
                                           style: TextStyle(
-                                            fontSize: 11,
+                                            fontSize: 12,
                                             color: Colors.grey.shade500,
                                           ),
                                         ),
                                       ],
                                     ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
                                   ),
-                                ],
+                                  decoration: BoxDecoration(
+                                    color: accentLila.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        "Medie",
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: accentLila,
+                                        ),
+                                      ),
+                                      Text(
+                                        average,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: accentLila,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 24, thickness: 1),
+                            const Text(
+                              "Istoric Ședințe, Teste & Plăți",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Colors.grey,
                               ),
                             ),
+                            const SizedBox(height: 8),
 
-                            // 2. Notele înșiruite
-                            Expanded(
-                              flex: 6,
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: studentGrades.map((item) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: accentLila.withOpacity(0.06),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: accentLila.withOpacity(0.2),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      item['grade'],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: primaryIndigo,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-
-                            // 3. Media
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: accentLila.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    "Medie",
-                                    style: TextStyle(
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
-                                      color: accentLila,
+                            // Listă detaliată per ședință
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: sessions.length,
+                              separatorBuilder: (context, _) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, sessionIndex) {
+                                var session = sessions[sessionIndex];
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
                                     ),
                                   ),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    average,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      color: accentLila,
-                                      fontSize: 15,
-                                    ),
+                                  child: Row(
+                                    children: [
+                                      // Număr ședință
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          session['sessionNumber'],
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: primaryIndigo,
+                                          ),
+                                        ),
+                                      ),
+                                      // Notă test
+                                      Expanded(
+                                        flex: 2,
+                                        child: Row(
+                                          children: [
+                                            const Text(
+                                              "Test: ",
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: accentLila.withOpacity(
+                                                  0.1,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                session['grade'],
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 11,
+                                                  color: primaryIndigo,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Status temă
+                                      Expanded(
+                                        flex: 3,
+                                        child: Center(
+                                          child: _buildHomeworkBadge(
+                                            session['homeworkStatus'],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      // Status plată ședință
+                                      Expanded(
+                                        flex: 3,
+                                        child: Center(
+                                          child: _buildPaymentBadge(
+                                            session['paymentStatus'],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                );
+                              },
                             ),
                           ],
                         ),

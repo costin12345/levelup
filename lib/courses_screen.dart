@@ -336,8 +336,6 @@ class CourseGroupsScreen extends StatelessWidget {
                                 description: description,
                                 role: role,
                                 initialTab: 'lesson',
-                                lessonId: 'lessonId',
-                                lessonTitle: 'lessonTitle', // Parametru opțional cerut de noul LessonDetailPage
                               ),
                             ),
                           );
