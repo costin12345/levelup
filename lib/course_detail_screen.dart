@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -7,6 +8,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 import 'lesson_detail_page.dart';
 
@@ -37,6 +40,8 @@ class CourseDetailScreen extends StatefulWidget {
 }
 
 class _CourseDetailScreenState extends State<CourseDetailScreen> {
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -268,6 +273,93 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     }
   }
 
+  // Funcție locală OCR cu Google ML Kit (pe procesor, fără AI)
+  Future<void> _extractTextLocally(
+    BuildContext context,
+    StateSetter setDialogState,
+    TextEditingController targetController,
+  ) async {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xff7c4dff)),
+                title: const Text('Fă o poză cu camera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processImageSource(
+                    ImageSource.camera,
+                    setDialogState,
+                    targetController,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.photo_library,
+                  color: Color(0xff7c4dff),
+                ),
+                title: const Text('Alege din galerie'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processImageSource(
+                    ImageSource.gallery,
+                    setDialogState,
+                    targetController,
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _processImageSource(
+    ImageSource source,
+    StateSetter setDialogState,
+    TextEditingController targetController,
+  ) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 90,
+      );
+
+      if (image == null) return;
+
+      setDialogState(() {
+        targetController.text = "Se citește textul local pe procesor...";
+      });
+
+      final textRecognizer = TextRecognizer(
+        script: TextRecognitionScript.latin,
+      );
+
+      final inputImage = InputImage.fromFilePath(image.path);
+      final RecognizedText recognizedText = await textRecognizer.processImage(
+        inputImage,
+      );
+      String extractedText = recognizedText.text;
+
+      await textRecognizer.close();
+      extractedText = extractedText.replaceAll(r'\', '');
+
+      setDialogState(() {
+        targetController.text = extractedText;
+      });
+    } catch (e) {
+      setDialogState(() {
+        targetController.text = "";
+      });
+      debugPrint("Eroare la OCR local: $e");
+    }
+  }
+
   void _showAddOrEditLessonDialog(
     BuildContext context, {
     DocumentSnapshot? existingLesson,
@@ -349,14 +441,49 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
+
+                      // Rând cu etichetă și buton OCR local pentru Teorie
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Conținut / Explicații Teoretice",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _extractTextLocally(
+                              context,
+                              setDialogState,
+                              contentController,
+                            ),
+                            icon: const Icon(
+                              Icons.document_scanner,
+                              size: 16,
+                              color: accentLila,
+                            ),
+                            label: const Text(
+                              "Scanează OCR Local",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: accentLila,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       TextField(
                         controller: contentController,
                         maxLines: 3,
                         decoration: const InputDecoration(
-                          labelText: "Conținut / Explicații Teoretice",
                           border: OutlineInputBorder(),
                         ),
                       ),
+
                       const SizedBox(height: 10),
                       const Text(
                         "Link-uri Video Bunny (iframe embed):",
@@ -424,14 +551,49 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
+
+                      // Rând cu etichetă și buton OCR local pentru Temă
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Cerințe / Exerciții Temă (Text)",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _extractTextLocally(
+                              context,
+                              setDialogState,
+                              homeworkContentController,
+                            ),
+                            icon: const Icon(
+                              Icons.document_scanner,
+                              size: 16,
+                              color: accentLila,
+                            ),
+                            label: const Text(
+                              "Scanează OCR Local",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: accentLila,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       TextField(
                         controller: homeworkContentController,
                         maxLines: 3,
                         decoration: const InputDecoration(
-                          labelText: "Cerințe / Exerciții Temă (Text)",
                           border: OutlineInputBorder(),
                         ),
                       ),
+
                       const SizedBox(height: 10),
                       const Text(
                         "Fișiere PDF încărcate:",
@@ -508,47 +670,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
                 ElevatedButton(
                   onPressed: () async {
-                    String rawHomeworkText = homeworkContentController.text
-                        .trim();
-                    String optimizedHomeworkText = rawHomeworkText;
-
-                    // Dacă ai scris sau lipit textul brut/exercițiile, le optimizăm direct cu Gemini AI!
-                    if (rawHomeworkText.isNotEmpty) {
-                      try {
-                        const apiKey =
-                            'AQ.Ab8RN6JnbffPXhaSWxdHeSCImFbosLXN326KXt8tYqCIrCko-w'; // Înlocuiește cu cheia ta API reală
-                        final url = Uri.parse(
-                          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey',
-                        );
-
-                        final response = await http.post(
-                          url,
-                          headers: {'Content-Type': 'application/json'},
-                          body: jsonEncode({
-                            "contents": [
-                              {
-                                "parts": [
-                                  {
-                                    "text":
-                                        "Ești un profesor expert. Analizează aceste cerințe/exerciții, corectează eventualele greșeli și formatează-le într-un stil extrem de curat, profesional și ordonat pentru elevi (folosind Markdown, titluri, pași și puncte clare):\n\n$rawHomeworkText",
-                                  },
-                                ],
-                              },
-                            ],
-                          }),
-                        );
-
-                        if (response.statusCode == 200) {
-                          final data = jsonDecode(response.body);
-                          optimizedHomeworkText =
-                              data['candidates'][0]['content']['parts'][0]['text'] ??
-                              rawHomeworkText;
-                        }
-                      } catch (e) {
-                        debugPrint("Eroare la optimizarea cu AI: $e");
-                      }
-                    }
-
                     if (newPdfController.text.trim().isNotEmpty) {
                       pdfUrls.add(newPdfController.text.trim());
                     }
@@ -562,7 +683,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         'title': lTitle,
                         'content': contentController.text.trim(),
                         'videoUrls': videoUrls,
-                        'homeworkContent': optimizedHomeworkText, // Salvăm textul curat formatat de AI
+                        'homeworkContent': homeworkContentController.text
+                            .trim(),
                         'pdfUrls': pdfUrls,
                         'updatedAt': FieldValue.serverTimestamp(),
                       };
@@ -577,7 +699,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             .collection('lessons')
                             .add(lessonPayload);
 
-                        // Aici trimitem notificarea push către elevi pentru lecția/tema nouă
                         await _sendPushToStudents(
                           lessonTitle: lTitle,
                           notificationType: 'homework',
@@ -590,9 +711,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'Tema a fost formatată și salvată profesional cu AI!',
-                            ),
+                            content: Text('Lecția a fost salvată cu succes!'),
                             backgroundColor: Colors.green,
                           ),
                         );
@@ -604,7 +723,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     backgroundColor: primaryIndigo,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text("Salvează cu AI"),
+                  child: const Text("Salvează"),
                 ),
               ],
             );
@@ -644,7 +763,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ANTET MODERN CURS
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -715,8 +833,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // DESCRIERE CURS
             if (widget.description.isNotEmpty) ...[
               const Text(
                 "Despre Curs",
@@ -746,7 +862,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               ),
               const SizedBox(height: 24),
             ],
-
             const Text(
               "Lecții și Materiale",
               style: TextStyle(
@@ -756,8 +871,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // ANUNȚ / REMINDER GLOBAL
             StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('courses')
@@ -781,14 +894,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: accentLila.withOpacity(
-                            0.06,
-                          ), // Fundal fin lila în loc de galben
+                          color: accentLila.withOpacity(0.06),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: accentLila.withOpacity(
-                              0.3,
-                            ), // Margine elegantă lila
+                            color: accentLila.withOpacity(0.3),
                             width: 1.5,
                           ),
                           boxShadow: [
@@ -809,8 +918,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                   children: [
                                     Icon(
                                       Icons.campaign,
-                                      color:
-                                          accentLila, // Iconiță în nuanța lila
+                                      color: accentLila,
                                       size: 22,
                                     ),
                                     const SizedBox(width: 8),
@@ -819,7 +927,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
-                                        color: primaryIndigo, // Text în indigo închis
+                                        color: primaryIndigo,
                                       ),
                                     ),
                                   ],
@@ -869,8 +977,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                 );
               },
             ),
-
-            // LISTA DE LECȚII
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('courses')
