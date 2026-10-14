@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:levelup/profile_tab.dart';
 import 'package:levelup/teacher_catalog_screen.dart';
 
 import 'catalog_screen.dart';
@@ -221,8 +222,55 @@ class _MainScreenState extends State<MainScreen> {
           var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
           userRole = userData?['role'] ?? 'student';
         }
-
         List<Widget> pages = [];
+        List<String> menuTitles = [];
+
+        if (userRole == 'teacher') {
+          menuTitles = ["Home", "Catalog", "Cursuri", "Contul Meu"];
+          pages = [
+            HomeTab(onGoToCourses: () => _changeTab(2)),
+            const TeacherCatalogScreen(),
+            CoursesScreen(role: userRole),
+            const ProfileTab(),
+          ];
+        } else if (userRole == 'parent') {
+          // Am lăsat doar paginile dorite: Home, Catalog, Contul Meu, Progres (fără Cursuri)
+          menuTitles = ["Home", "Catalog", "Contul Meu", "Progres"];
+          pages = [
+            HomeTab(onGoToCourses: () => _changeTab(1)),
+            const CatalogScreen(role: 'parent'),
+            const ProfileTab(), // Aici părintele își vede și cursurile copilului
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(currentUser!.uid)
+                  .get(),
+              builder: (context, snapshot) {
+                String childEmail = '';
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  var data = snapshot.data!.data() as Map<String, dynamic>;
+                  childEmail = data['childEmail'] ?? '';
+                }
+                return ProgressScreen(
+                  role: 'parent',
+                  currentUserId: currentUser!.uid,
+                  childEmail: childEmail,
+                );
+              },
+            ),
+          ];
+        } else {
+          // Student / Elev
+          menuTitles = ["Home", "Cursuri", "Catalog", "Contul Meu", "Progres"];
+          pages = [
+            HomeTab(onGoToCourses: () => _changeTab(1)),
+            CoursesScreen(role: userRole),
+            const CatalogScreen(role: 'student'),
+            const ProfileTab(),
+            ProgressScreen(role: 'student', currentUserId: currentUser!.uid),
+          ];
+        }
+        /* List<Widget> pages = [];
         List<String> menuTitles = [];
 
         if (userRole == 'teacher') {
@@ -320,7 +368,7 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
           ];
-        }
+        }*/
 
         return Scaffold(
           backgroundColor: primaryIndigo,
@@ -485,7 +533,7 @@ class _MainScreenState extends State<MainScreen> {
                       children: [
                         PopupMenuButton<int>(
                           icon: const Icon(Icons.menu, color: Colors.white),
-                          color: const Color(0xff42153e),
+                          color: const Color(0xff1e1b4b),
                           onSelected: (index) {
                             if (index == 4) {
                               _handleLogout();

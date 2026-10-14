@@ -417,7 +417,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
-  void _showAddCourseDialog() {
+  /*void _showAddCourseDialog() {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final imageUrlController = TextEditingController();
@@ -515,9 +515,25 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
+                // În _showAddCourseDialog, la apăsarea butonului "Salvează":
                 ElevatedButton(
                   onPressed: () async {
                     if (titleController.text.trim().isNotEmpty) {
+                      User? teacherUser = FirebaseAuth.instance.currentUser;
+                      // Preluăm numele direct din baza de date pentru a fi siguri că este cel actualizat
+                      String teacherName = "Profesor";
+                      if (teacherUser != null) {
+                        var userDoc = await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(teacherUser.uid)
+                            .get();
+                        if (userDoc.exists) {
+                          var data = userDoc.data() as Map<String, dynamic>;
+                          teacherName =
+                              data['fullName'] ?? data['name'] ?? 'Profesor';
+                        }
+                      }
+
                       await FirebaseFirestore.instance
                           .collection('courses')
                           .add({
@@ -525,6 +541,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             'category': selectedCategory,
                             'description': descriptionController.text.trim(),
                             'imageUrl': imageUrlController.text.trim(),
+                            'teacherName': teacherName,
+                            'teacherId': teacherUser?.uid ?? '',
                             'createdAt': FieldValue.serverTimestamp(),
                           });
                       if (mounted) Navigator.pop(context);
@@ -534,7 +552,202 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     backgroundColor: accentLila,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text("Salvează"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+*/
+
+  void _showAddCourseDialog() {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final imageUrlController = TextEditingController();
+    String selectedCategory = _allCategories.first;
+
+    // Variabile pentru profesorul selectat
+    String? selectedTeacherId;
+    String? selectedTeacherName;
+
+    const Color primaryIndigo = Color(0xff1e1b4b);
+    const Color accentLila = Color(0xff7c4dff);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                "Adaugă Curs Nou",
+                style: TextStyle(
+                  color: primaryIndigo,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: "Titlu Curs (ex: Matematică clasa a V-a)",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+                      decoration: InputDecoration(
+                        labelText: "Categorie Principală",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      isExpanded: true,
+                      items: _allCategories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(
+                            category,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        if (newValue != null) {
+                          setDialogState(() => selectedCategory = newValue);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- SELECTAREA PROFESORULUI TITULAR ---
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .where('role', isEqualTo: 'teacher')
+                          .snapshots(),
+                      builder: (context, teacherSnapshot) {
+                        if (!teacherSnapshot.hasData) {
+                          return const LinearProgressIndicator();
+                        }
+
+                        var teachers = teacherSnapshot.data!.docs;
+
+                        return DropdownButtonFormField<String>(
+                          value: selectedTeacherId,
+                          decoration: InputDecoration(
+                            labelText: "Profesor Titular",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          hint: const Text("Selectează profesorul"),
+                          isExpanded: true,
+                          items: teachers.map((doc) {
+                            var data = doc.data() as Map<String, dynamic>;
+                            String tId = doc.id;
+                            String tName =
+                                data['fullName'] ?? data['name'] ?? 'Profesor';
+                            return DropdownMenuItem<String>(
+                              value: tId,
+                              onTap: () {
+                                selectedTeacherName = tName;
+                              },
+                              child: Text(tName),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setDialogState(() {
+                              selectedTeacherId = val;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: "Descriere Curs",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: imageUrlController,
+                      decoration: InputDecoration(
+                        labelText: "Link Imagine / Banner (Opțional)",
+                        hintText: "https://exemplu.ro/imagine.jpg",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Anulează",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (titleController.text.trim().isNotEmpty &&
+                        selectedTeacherId != null) {
+                      await FirebaseFirestore.instance
+                          .collection('courses')
+                          .add({
+                            'title': titleController.text.trim(),
+                            'category': selectedCategory,
+                            'description': descriptionController.text.trim(),
+                            'imageUrl': imageUrlController.text.trim(),
+                            'teacherName': selectedTeacherName ?? 'Profesor',
+                            'teacherId':
+                                selectedTeacherId, // Salvăm ID-ul Roxanei
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
+                      if (mounted) Navigator.pop(context);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Completează titlul și selectează profesorul!',
+                          ),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentLila,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: const Text("Salvează"),
@@ -601,6 +814,217 @@ class _CoursesScreenState extends State<CoursesScreen> {
         }
       }
     }
+  }
+
+  void _showEditCourseDialog(
+    String courseId,
+    Map<String, dynamic> currentData,
+  ) {
+    final titleController = TextEditingController(
+      text: currentData['title'] ?? '',
+    );
+    final descriptionController = TextEditingController(
+      text: currentData['description'] ?? '',
+    );
+    final imageUrlController = TextEditingController(
+      text: currentData['imageUrl'] ?? '',
+    );
+    String selectedCategory = currentData['category'] ?? _allCategories.first;
+
+    // Preluăm profesorul curent dacă există deja salvat
+    String? selectedTeacherId = currentData['teacherId'];
+    String? selectedTeacherName = currentData['teacherName'];
+
+    const Color primaryIndigo = Color(0xff1e1b4b);
+    const Color accentLila = Color(0xff7c4dff);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                "Modifică Cursul",
+                style: TextStyle(
+                  color: primaryIndigo,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: "Titlu Curs",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      value: _allCategories.contains(selectedCategory)
+                          ? selectedCategory
+                          : _allCategories.first,
+                      decoration: InputDecoration(
+                        labelText: "Categorie Principală",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      isExpanded: true,
+                      items: _allCategories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(
+                            category,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        if (newValue != null) {
+                          setDialogState(() => selectedCategory = newValue);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- SELECTAREA NOULUI PROFESOR TITULAR ---
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .where('role', isEqualTo: 'teacher')
+                          .snapshots(),
+                      builder: (context, teacherSnapshot) {
+                        if (!teacherSnapshot.hasData) {
+                          return const LinearProgressIndicator();
+                        }
+
+                        var teachers = teacherSnapshot.data!.docs;
+
+                        return DropdownButtonFormField<String>(
+                          value: selectedTeacherId,
+                          decoration: InputDecoration(
+                            labelText: "Profesor Titular",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          hint: const Text("Selectează profesorul"),
+                          isExpanded: true,
+                          items: teachers.map((doc) {
+                            var data = doc.data() as Map<String, dynamic>;
+                            String tId = doc.id;
+                            String tName =
+                                data['fullName'] ?? data['name'] ?? 'Profesor';
+                            return DropdownMenuItem<String>(
+                              value: tId,
+                              onTap: () {
+                                selectedTeacherName = tName;
+                              },
+                              child: Text(tName),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setDialogState(() {
+                              selectedTeacherId = val;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: "Descriere Curs",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: imageUrlController,
+                      decoration: InputDecoration(
+                        labelText: "Link Imagine / Banner (Opțional)",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Anulează",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (titleController.text.trim().isNotEmpty) {
+                      await FirebaseFirestore.instance
+                          .collection('courses')
+                          .doc(courseId)
+                          .update({
+                            'title': titleController.text.trim(),
+                            'category': selectedCategory,
+                            'description': descriptionController.text.trim(),
+                            'imageUrl': imageUrlController.text.trim(),
+                            'teacherName':
+                                selectedTeacherName ??
+                                currentData['teacherName'] ??
+                                'Profesor',
+                            'teacherId':
+                                selectedTeacherId ??
+                                currentData['teacherId'] ??
+                                '',
+                          });
+
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Cursul a fost actualizat cu succes!',
+                            ),
+                            backgroundColor: Colors.green,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentLila,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text("Salvează Modificările"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showPendingRequestsDialog() {
@@ -960,12 +1384,27 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             isApproved: true,
                             actionWidget: Row(
                               children: [
+                                // --- BUTONUL DE EDITARE ---
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                    size: 20,
+                                  ),
+                                  tooltip: "Modifică Cursul",
+                                  onPressed: () => _showEditCourseDialog(
+                                    courseId,
+                                    courseData,
+                                  ),
+                                ),
+                                // --- BUTONUL DE ȘTERGERE ---
                                 IconButton(
                                   icon: const Icon(
                                     Icons.delete,
                                     color: Colors.red,
                                     size: 20,
                                   ),
+                                  tooltip: "Șterge Cursul",
                                   onPressed: () =>
                                       _deleteCourse(courseId, title),
                                 ),
