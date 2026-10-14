@@ -32,7 +32,9 @@ class CourseGroupsScreen extends StatelessWidget {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Text(
             "Adaugă Grupă Nouă",
             style: TextStyle(color: primaryIndigo, fontWeight: FontWeight.bold),
@@ -41,19 +43,26 @@ class CourseGroupsScreen extends StatelessWidget {
             controller: groupNameController,
             decoration: InputDecoration(
               labelText: "Nume Grupă (ex: Grupa A, Grupa Avansați)",
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Anulează", style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                "Anulează",
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentLila,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () async {
                 if (groupNameController.text.trim().isNotEmpty) {
@@ -62,9 +71,9 @@ class CourseGroupsScreen extends StatelessWidget {
                       .doc(courseId)
                       .collection('groups')
                       .add({
-                    'name': groupNameController.text.trim(),
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
+                        'name': groupNameController.text.trim(),
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -77,7 +86,11 @@ class CourseGroupsScreen extends StatelessWidget {
   }
 
   // Ștergere grupă
-  Future<void> _deleteGroup(BuildContext context, String groupId, String groupName) async {
+  Future<void> _deleteGroup(
+    BuildContext context,
+    String groupId,
+    String groupName,
+  ) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -92,7 +105,9 @@ class CourseGroupsScreen extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Șterge', style: TextStyle(color: Colors.white)),
@@ -121,7 +136,10 @@ class CourseGroupsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: primaryIndigo,
         foregroundColor: Colors.white,
-        title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         actions: [
           if (role == 'teacher')
             IconButton(
@@ -151,26 +169,40 @@ class CourseGroupsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       category,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   if (description.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
                       description,
-                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
                     ),
                   ],
                 ],
@@ -182,13 +214,20 @@ class CourseGroupsScreen extends StatelessWidget {
               children: [
                 const Text(
                   "Selectează Grupa",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryIndigo),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryIndigo,
+                  ),
                 ),
                 if (role == 'teacher')
                   TextButton.icon(
                     onPressed: () => _showAddGroupDialog(context),
                     icon: const Icon(Icons.add, size: 16, color: accentLila),
-                    label: const Text("Adaugă Grupă", style: TextStyle(color: accentLila)),
+                    label: const Text(
+                      "Adaugă Grupă",
+                      style: TextStyle(color: accentLila),
+                    ),
                   ),
               ],
             ),
@@ -204,7 +243,9 @@ class CourseGroupsScreen extends StatelessWidget {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: accentLila));
+                  return const Center(
+                    child: CircularProgressIndicator(color: accentLila),
+                  );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -250,21 +291,37 @@ class CourseGroupsScreen extends StatelessWidget {
                             color: accentLila.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.group, color: accentLila, size: 20),
+                          child: const Icon(
+                            Icons.group,
+                            color: accentLila,
+                            size: 20,
+                          ),
                         ),
                         title: Text(
                           groupName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: primaryIndigo),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: primaryIndigo,
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (role == 'teacher')
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                                onPressed: () => _deleteGroup(context, groupId, groupName),
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                                onPressed: () =>
+                                    _deleteGroup(context, groupId, groupName),
                               ),
-                            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                           ],
                         ),
 
@@ -279,7 +336,6 @@ class CourseGroupsScreen extends StatelessWidget {
                                 description: description,
                                 role: role,
                                 initialTab: 'lesson',
-                                lessonId: 'lessonId', lessonTitle: 'lessonTitle', // Parametru opțional cerut de noul LessonDetailPage
                               ),
                             ),
                           );
@@ -332,23 +388,23 @@ class _CoursesScreenState extends State<CoursesScreen> {
   ];
 
   Future<void> _requestEnrollment(
-      String courseId,
-      String userId,
-      String userEmail,
-      String userName,
-      ) async {
+    String courseId,
+    String userId,
+    String userEmail,
+    String userName,
+  ) async {
     final enrollmentId = '${courseId}_$userId';
     await FirebaseFirestore.instance
         .collection('enrollments')
         .doc(enrollmentId)
         .set({
-      'courseId': courseId,
-      'userId': userId,
-      'userEmail': userEmail,
-      'userName': userName,
-      'status': 'pending',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+          'courseId': courseId,
+          'userId': userId,
+          'userEmail': userEmail,
+          'userName': userName,
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -361,7 +417,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
-  void _showAddCourseDialog() {
+  /*void _showAddCourseDialog() {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final imageUrlController = TextEditingController();
@@ -459,18 +515,36 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
+                // În _showAddCourseDialog, la apăsarea butonului "Salvează":
                 ElevatedButton(
                   onPressed: () async {
                     if (titleController.text.trim().isNotEmpty) {
+                      User? teacherUser = FirebaseAuth.instance.currentUser;
+                      // Preluăm numele direct din baza de date pentru a fi siguri că este cel actualizat
+                      String teacherName = "Profesor";
+                      if (teacherUser != null) {
+                        var userDoc = await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(teacherUser.uid)
+                            .get();
+                        if (userDoc.exists) {
+                          var data = userDoc.data() as Map<String, dynamic>;
+                          teacherName =
+                              data['fullName'] ?? data['name'] ?? 'Profesor';
+                        }
+                      }
+
                       await FirebaseFirestore.instance
                           .collection('courses')
                           .add({
-                        'title': titleController.text.trim(),
-                        'category': selectedCategory,
-                        'description': descriptionController.text.trim(),
-                        'imageUrl': imageUrlController.text.trim(),
-                        'createdAt': FieldValue.serverTimestamp(),
-                      });
+                            'title': titleController.text.trim(),
+                            'category': selectedCategory,
+                            'description': descriptionController.text.trim(),
+                            'imageUrl': imageUrlController.text.trim(),
+                            'teacherName': teacherName,
+                            'teacherId': teacherUser?.uid ?? '',
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
                       if (mounted) Navigator.pop(context);
                     }
                   },
@@ -478,7 +552,202 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     backgroundColor: accentLila,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text("Salvează"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+*/
+
+  void _showAddCourseDialog() {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final imageUrlController = TextEditingController();
+    String selectedCategory = _allCategories.first;
+
+    // Variabile pentru profesorul selectat
+    String? selectedTeacherId;
+    String? selectedTeacherName;
+
+    const Color primaryIndigo = Color(0xff1e1b4b);
+    const Color accentLila = Color(0xff7c4dff);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                "Adaugă Curs Nou",
+                style: TextStyle(
+                  color: primaryIndigo,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: "Titlu Curs (ex: Matematică clasa a V-a)",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+                      decoration: InputDecoration(
+                        labelText: "Categorie Principală",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      isExpanded: true,
+                      items: _allCategories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(
+                            category,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        if (newValue != null) {
+                          setDialogState(() => selectedCategory = newValue);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- SELECTAREA PROFESORULUI TITULAR ---
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .where('role', isEqualTo: 'teacher')
+                          .snapshots(),
+                      builder: (context, teacherSnapshot) {
+                        if (!teacherSnapshot.hasData) {
+                          return const LinearProgressIndicator();
+                        }
+
+                        var teachers = teacherSnapshot.data!.docs;
+
+                        return DropdownButtonFormField<String>(
+                          value: selectedTeacherId,
+                          decoration: InputDecoration(
+                            labelText: "Profesor Titular",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          hint: const Text("Selectează profesorul"),
+                          isExpanded: true,
+                          items: teachers.map((doc) {
+                            var data = doc.data() as Map<String, dynamic>;
+                            String tId = doc.id;
+                            String tName =
+                                data['fullName'] ?? data['name'] ?? 'Profesor';
+                            return DropdownMenuItem<String>(
+                              value: tId,
+                              onTap: () {
+                                selectedTeacherName = tName;
+                              },
+                              child: Text(tName),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setDialogState(() {
+                              selectedTeacherId = val;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: "Descriere Curs",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: imageUrlController,
+                      decoration: InputDecoration(
+                        labelText: "Link Imagine / Banner (Opțional)",
+                        hintText: "https://exemplu.ro/imagine.jpg",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Anulează",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (titleController.text.trim().isNotEmpty &&
+                        selectedTeacherId != null) {
+                      await FirebaseFirestore.instance
+                          .collection('courses')
+                          .add({
+                            'title': titleController.text.trim(),
+                            'category': selectedCategory,
+                            'description': descriptionController.text.trim(),
+                            'imageUrl': imageUrlController.text.trim(),
+                            'teacherName': selectedTeacherName ?? 'Profesor',
+                            'teacherId':
+                                selectedTeacherId, // Salvăm ID-ul Roxanei
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
+                      if (mounted) Navigator.pop(context);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Completează titlul și selectează profesorul!',
+                          ),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentLila,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: const Text("Salvează"),
@@ -547,6 +816,217 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
+  void _showEditCourseDialog(
+    String courseId,
+    Map<String, dynamic> currentData,
+  ) {
+    final titleController = TextEditingController(
+      text: currentData['title'] ?? '',
+    );
+    final descriptionController = TextEditingController(
+      text: currentData['description'] ?? '',
+    );
+    final imageUrlController = TextEditingController(
+      text: currentData['imageUrl'] ?? '',
+    );
+    String selectedCategory = currentData['category'] ?? _allCategories.first;
+
+    // Preluăm profesorul curent dacă există deja salvat
+    String? selectedTeacherId = currentData['teacherId'];
+    String? selectedTeacherName = currentData['teacherName'];
+
+    const Color primaryIndigo = Color(0xff1e1b4b);
+    const Color accentLila = Color(0xff7c4dff);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                "Modifică Cursul",
+                style: TextStyle(
+                  color: primaryIndigo,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: "Titlu Curs",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      value: _allCategories.contains(selectedCategory)
+                          ? selectedCategory
+                          : _allCategories.first,
+                      decoration: InputDecoration(
+                        labelText: "Categorie Principală",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      isExpanded: true,
+                      items: _allCategories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(
+                            category,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        if (newValue != null) {
+                          setDialogState(() => selectedCategory = newValue);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- SELECTAREA NOULUI PROFESOR TITULAR ---
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .where('role', isEqualTo: 'teacher')
+                          .snapshots(),
+                      builder: (context, teacherSnapshot) {
+                        if (!teacherSnapshot.hasData) {
+                          return const LinearProgressIndicator();
+                        }
+
+                        var teachers = teacherSnapshot.data!.docs;
+
+                        return DropdownButtonFormField<String>(
+                          value: selectedTeacherId,
+                          decoration: InputDecoration(
+                            labelText: "Profesor Titular",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          hint: const Text("Selectează profesorul"),
+                          isExpanded: true,
+                          items: teachers.map((doc) {
+                            var data = doc.data() as Map<String, dynamic>;
+                            String tId = doc.id;
+                            String tName =
+                                data['fullName'] ?? data['name'] ?? 'Profesor';
+                            return DropdownMenuItem<String>(
+                              value: tId,
+                              onTap: () {
+                                selectedTeacherName = tName;
+                              },
+                              child: Text(tName),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setDialogState(() {
+                              selectedTeacherId = val;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: "Descriere Curs",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: imageUrlController,
+                      decoration: InputDecoration(
+                        labelText: "Link Imagine / Banner (Opțional)",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Anulează",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (titleController.text.trim().isNotEmpty) {
+                      await FirebaseFirestore.instance
+                          .collection('courses')
+                          .doc(courseId)
+                          .update({
+                            'title': titleController.text.trim(),
+                            'category': selectedCategory,
+                            'description': descriptionController.text.trim(),
+                            'imageUrl': imageUrlController.text.trim(),
+                            'teacherName':
+                                selectedTeacherName ??
+                                currentData['teacherName'] ??
+                                'Profesor',
+                            'teacherId':
+                                selectedTeacherId ??
+                                currentData['teacherId'] ??
+                                '',
+                          });
+
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Cursul a fost actualizat cu succes!',
+                            ),
+                            backgroundColor: Colors.green,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentLila,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text("Salvează Modificările"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showPendingRequestsDialog() {
     const Color primaryIndigo = Color(0xff1e1b4b);
 
@@ -613,7 +1093,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         builder: (context, userSnap) {
                           if (userSnap.hasData && userSnap.data!.exists) {
                             var uData =
-                            userSnap.data!.data() as Map<String, dynamic>;
+                                userSnap.data!.data() as Map<String, dynamic>;
                             String fullName = uData['fullName'] ?? fallbackName;
                             return Text(
                               fullName,
@@ -641,7 +1121,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         builder: (context, courseSnap) {
                           if (courseSnap.hasData && courseSnap.data!.exists) {
                             var cData =
-                            courseSnap.data!.data() as Map<String, dynamic>;
+                                courseSnap.data!.data() as Map<String, dynamic>;
                             return Text(
                               'Curs: ${cData['title'] ?? 'Fără titlu'}',
                               style: const TextStyle(
@@ -650,8 +1130,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               ),
                             );
                           }
-                          return const Text('Se încarcă cursul...',
-                              style: TextStyle(fontSize: 12));
+                          return const Text(
+                            'Se încarcă cursul...',
+                            style: TextStyle(fontSize: 12),
+                          );
                         },
                       ),
                       trailing: Row(
@@ -730,7 +1212,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -834,9 +1319,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   builder: (context, coursesSnapshot) {
                     if (!coursesSnapshot.hasData) {
                       return const Center(
-                        child: CircularProgressIndicator(
-                          color: accentLila,
-                        ),
+                        child: CircularProgressIndicator(color: accentLila),
                       );
                     }
 
@@ -881,7 +1364,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       itemBuilder: (context, index) {
                         var courseDoc = filteredDocs[index];
                         var courseData =
-                        courseDoc.data() as Map<String, dynamic>;
+                            courseDoc.data() as Map<String, dynamic>;
                         String courseId = courseDoc.id;
                         String title = courseData['title'] ?? '';
                         String category = courseData['category'] ?? '';
@@ -901,12 +1384,27 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             isApproved: true,
                             actionWidget: Row(
                               children: [
+                                // --- BUTONUL DE EDITARE ---
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                    size: 20,
+                                  ),
+                                  tooltip: "Modifică Cursul",
+                                  onPressed: () => _showEditCourseDialog(
+                                    courseId,
+                                    courseData,
+                                  ),
+                                ),
+                                // --- BUTONUL DE ȘTERGERE ---
                                 IconButton(
                                   icon: const Icon(
                                     Icons.delete,
                                     color: Colors.red,
                                     size: 20,
                                   ),
+                                  tooltip: "Șterge Cursul",
                                   onPressed: () =>
                                       _deleteCourse(courseId, title),
                                 ),
@@ -1074,13 +1572,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 ),
                 child: imageUrl.isNotEmpty
                     ? Image.network(
-                  imageUrl,
-                  height: 130,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _buildPlaceholderImage(accentLila),
-                )
+                        imageUrl,
+                        height: 130,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildPlaceholderImage(accentLila),
+                      )
                     : _buildPlaceholderImage(accentLila),
               ),
               Padding(
@@ -1125,8 +1623,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       const SizedBox(height: 6),
                       Text(
                         description,
-                        style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ],
