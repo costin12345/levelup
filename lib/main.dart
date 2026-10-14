@@ -226,41 +226,23 @@ class _MainScreenState extends State<MainScreen> {
         List<String> menuTitles = [];
 
         if (userRole == 'teacher') {
-          menuTitles = ["Home", "Catalog", "Cursuri", "Progres"];
+          menuTitles = [
+            "Home",
+            "Catalog",
+            "Cursuri",
+            // Fără Profil, dacă l-ai scos
+          ];
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(2)),
             const TeacherCatalogScreen(),
             CoursesScreen(role: userRole),
             ProgressScreen(role: 'teacher', currentUserId: currentUser!.uid),
-          ];
-        } else if (userRole == 'parent') {
-          menuTitles = ["Home", "Catalog", "Copilul Meu", "Profil"];
-          pages = [
-            HomeTab(onGoToCourses: () => _changeTab(1)),
-            const CatalogScreen(role: 'parent'),
-            FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(currentUser!.uid)
-                  .get(),
-              builder: (context, snapshot) {
-                String childEmail = '';
-                if (snapshot.hasData && snapshot.data!.exists) {
-                  var data = snapshot.data!.data() as Map<String, dynamic>;
-                  childEmail = data['childEmail'] ?? '';
-                }
-                return ProgressScreen(
-                  role: 'parent',
-                  currentUserId: currentUser!.uid,
-                  childEmail: childEmail,
-                );
-              },
-            ),
+            // Dacă ai adăugat Arhivă sau alt ecran, îl pui aici
             const Center(
               child: Text(
-                "Profilul Părintelui",
+                "Arhivă teste",
                 style: TextStyle(
-                  color: primaryIndigo,
+                  color: Color(0xff1e1b4b),
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -268,7 +250,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ];
         } else if (userRole == 'parent') {
-          menuTitles = ["Home", "Catalog", "Copilul Meu", "Profil"];
+          menuTitles = ["Home", "Catalog", "Copilul Meu"];
           pages = [
             HomeTab(onGoToCourses: () => _changeTab(1)),
             const CatalogScreen(role: 'parent'),
