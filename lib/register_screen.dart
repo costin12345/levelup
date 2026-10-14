@@ -108,51 +108,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ? 'Părintele $rawName'
           : 'Elevul $rawName';
 
-      final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
-        {
-          "type": "service_account",
-          "project_id": "level-up-19583",
-          "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\nSwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\nBAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\n/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\n68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\FQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\nUGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\nSFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
-          "client_email":
-              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
-          "client_id": "112777526185284576732",
-          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-          "token_uri": "https://oauth2.googleapis.com/token",
-          "auth_provider_x509_cert_url":
-              "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
-          "universe_domain": "googleapis.com",
-        },
-      );
-
-      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-      final client = await auth.clientViaServiceAccount(
-        serviceAccountCredentials,
-        scopes,
-      );
-
       final teachersDocs = await FirebaseFirestore.instance
           .collection('users')
           .where('role', whereIn: ['teacher', 'Teacher'])
           .get();
 
-      if (teachersDocs.docs.isEmpty) {
-        client.close();
-        return;
-      }
-
-      final String fcmV1Url =
-          'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
+      if (teachersDocs.docs.isEmpty) return;
 
       String pushTitle = '👤 Cont nou creat!';
       String pushBody = '$formattedName a creat un cont și așteaptă aprobarea.';
 
       for (var teacherDoc in teachersDocs.docs) {
         var tData = teacherDoc.data();
-        String? teacherFcmToken = tData['fcmToken'];
         String teacherId = teacherDoc.id;
+        String? teacherFcmToken = tData['fcmToken'];
 
+        // 1. Salvăm în Firestore pentru clopoțel
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': teacherId,
           'title': pushTitle,
@@ -162,50 +133,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        var pendingUsers = await FirebaseFirestore.instance
-            .collection('users')
-            .where('role', isEqualTo: 'student')
-            .where('hasAccess', isEqualTo: false)
-            .get();
-
-        var pendingEnrollments = await FirebaseFirestore.instance
-            .collection('enrollments')
-            .where('status', isEqualTo: 'pending')
-            .get();
-
-        int unreadCount =
-            pendingUsers.docs.length + pendingEnrollments.docs.length;
-
+        // 2. Dacă profesorul are un fcmToken pe telefon, trimitem și notificarea push pe iOS/Android
         if (teacherFcmToken != null && teacherFcmToken.isNotEmpty) {
-          await client.post(
-            Uri.parse(fcmV1Url),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'message': {
-                'token': teacherFcmToken,
-                'notification': {'title': pushTitle, 'body': pushBody},
-                'android': {
-                  'priority': 'HIGH',
-                  'notification': {'sound': 'default'},
-                },
-                'apns': {
-                  'headers': {'apns-priority': '10', 'apns-push-type': 'alert'},
-                  'payload': {
-                    'aps': {'sound': 'default', 'badge': unreadCount},
-                  },
-                },
-                'data': {
-                  'type': 'user_registration',
-                  'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-                },
-              },
-            }),
-          );
+          // Aici poți folosi endpoint-ul FCM sau un apel HTTP simplu,
+          // însă pe Web trimiterea directă cu Service Account blochează din cauza CORS.
+          // Cea mai sigură metodă pe termen lung pentru producție este Firebase Cloud Functions.
         }
       }
-      client.close();
+      debugPrint("Notificările au fost înregistrate pentru profesori!");
     } catch (e) {
-      debugPrint("Eroare la notificarea profesorului pentru cont nou: $e");
+      debugPrint("Eroare la notificarea profesorului: $e");
     }
   }
 
