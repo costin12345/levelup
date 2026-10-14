@@ -84,7 +84,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: Text('Ștergere "$userName"'),
         content: Text(
           'Ești sigur că vrei să ștergi contul utilizatorului $userName? '
-          'Toate înscrierile și notificările acestuia vor fi eliminate.',
+              'Toate înscrierile și notificările acestuia vor fi eliminate.',
         ),
         actions: [
           TextButton(
@@ -144,8 +144,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _handleStudentNotificationClick(
-    DocumentSnapshot notifDoc,
-  ) async {
+      DocumentSnapshot notifDoc,
+      ) async {
     var data = notifDoc.data() as Map<String, dynamic>;
     String notifId = notifDoc.id;
 
@@ -635,13 +635,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                   trailing: !isRead
                       ? Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                        )
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  )
                       : null,
                   onTap: () => _handleStudentNotificationClick(doc),
                 ),
