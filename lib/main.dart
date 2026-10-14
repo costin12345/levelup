@@ -18,18 +18,18 @@ import 'add_grade_dialog.dart';
 import 'progress_screen.dart'; // Asigură-te că importi fișierul cu ecranul de progres
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
+FlutterLocalNotificationsPlugin();
 
 Future<void> initLocalNotifications() async {
   const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+  AndroidInitializationSettings('@mipmap/ic_launcher');
 
   const DarwinInitializationSettings initializationSettingsIOS =
-      DarwinInitializationSettings(
-        requestAlertPermission: true,
-        requestBadgePermission: true,
-        requestSoundPermission: true,
-      );
+  DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
 
   const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
@@ -199,7 +199,7 @@ class _MainScreenState extends State<MainScreen> {
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false,
+            (route) => false,
       );
     }
   }
@@ -211,9 +211,9 @@ class _MainScreenState extends State<MainScreen> {
     return StreamBuilder<DocumentSnapshot>(
       stream: currentUser != null
           ? FirebaseFirestore.instance
-                .collection('users')
-                .doc(currentUser.uid)
-                .snapshots()
+          .collection('users')
+          .doc(currentUser.uid)
+          .snapshots()
           : null,
       builder: (context, userSnapshot) {
         String userRole = 'student';
@@ -353,9 +353,9 @@ class _MainScreenState extends State<MainScreen> {
                   stream: (() async* {
                     if (userRole == 'teacher') {
                       await for (var _
-                          in FirebaseFirestore.instance
-                              .collection('users')
-                              .snapshots()) {
+                      in FirebaseFirestore.instance
+                          .collection('users')
+                          .snapshots()) {
                         var pendingUsers = await FirebaseFirestore.instance
                             .collection('users')
                             .where('role', isEqualTo: 'student')
@@ -373,11 +373,11 @@ class _MainScreenState extends State<MainScreen> {
                       }
                     } else {
                       await for (var snapshot
-                          in FirebaseFirestore.instance
-                              .collection('notifications')
-                              .where('userId', isEqualTo: currentUser.uid)
-                              .where('isRead', isEqualTo: false)
-                              .snapshots()) {
+                      in FirebaseFirestore.instance
+                          .collection('notifications')
+                          .where('userId', isEqualTo: currentUser.uid)
+                          .where('isRead', isEqualTo: false)
+                          .snapshots()) {
                         int unreadCount = snapshot.docs.length;
 
                         if (!kIsWeb) {
@@ -799,7 +799,7 @@ class HomeTab extends StatelessWidget {
                                   ),
                                   child: const Row(
                                     mainAxisAlignment:
-                                        MainAxisAlignment.spaceAround,
+                                    MainAxisAlignment.spaceAround,
                                     children: [
                                       Text(
                                         "• Monitorizare note în timp real",
@@ -1252,13 +1252,13 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildFeatureCard(
-    IconData icon,
-    String title,
-    String desc,
-    double maxWidth,
-    Color accentLila, {
-    required bool isRow,
-  }) {
+      IconData icon,
+      String title,
+      String desc,
+      double maxWidth,
+      Color accentLila, {
+        required bool isRow,
+      }) {
     double? cardWidth = isRow
         ? null
         : (maxWidth > 600 ? (maxWidth - 36) / 4 : (maxWidth - 12) / 2);
