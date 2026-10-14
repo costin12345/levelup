@@ -22,10 +22,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
   final TextEditingController _searchController = TextEditingController();
 
-  static const Color primaryIndigo = Color(0xff1e1b4b);
-  static const Color accentPurple = Color(0xff7c3aed);
-  static const Color bgColor = Color(0xfff8fafc);
-
   @override
   void initState() {
     super.initState();
@@ -47,16 +43,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       height: 42,
       child: Opacity(
         opacity: isRead ? 0.5 : 1.0,
-        child: Lottie.asset(
-          assetPath,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return Icon(
-              Icons.notifications_active,
-              color: isRead ? Colors.grey : primaryIndigo,
-            );
-          },
-        ),
+        child: Lottie.asset(assetPath, fit: BoxFit.contain),
       ),
     );
   }
@@ -176,21 +163,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (!mounted) return;
 
+    // 🚀 DACĂ ESTE NOTIFICARE DE NOTĂ
     if (notifType == 'grade') {
+      // Verificăm rolul utilizatorului curent (elev sau părinte)
       if (widget.role == 'parent') {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                const Scaffold(body: CatalogScreen(role: 'parent')),
+            builder: (context) => const Scaffold(
+              body: CatalogScreen(
+                role: 'parent',
+              ), // Părintele merge în Catalogul Copiilor Mei
+            ),
           ),
         );
       } else {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                const Scaffold(body: CatalogScreen(role: 'student')),
+            builder: (context) => const Scaffold(
+              body: CatalogScreen(
+                role: 'student',
+              ), // Elevul merge în catalogul lui
+            ),
           ),
         );
       }
@@ -227,68 +222,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     if (currentUser == null) {
       return const Scaffold(
-        backgroundColor: bgColor,
         body: Center(child: Text("Utilizator neconectat.")),
       );
     }
 
     // ==========================================
-    // 1. DACĂ ESTE PROFESOR -> Panou de Administrare cu noul design
+    // 1. DACĂ ESTE PROFESOR -> Are Panoul de Administrare cu 3 Tab-uri
     // ==========================================
     if (widget.role == 'teacher') {
       return DefaultTabController(
         length: 3,
         child: Scaffold(
-          backgroundColor: bgColor,
+          backgroundColor: const Color(0xfffff8dc),
           appBar: AppBar(
-            backgroundColor: primaryIndigo,
-            toolbarHeight: 85,
-            titleSpacing: 16,
-            elevation: 0,
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Image.asset(
-                    'images/logo.jpg',
-                    height: 40,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "PANOU ADMIN",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      "GESTIONARE UTILIZATORI",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            title: const Text(
+              "Panou Administrare",
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
+            backgroundColor: const Color(0xff42153e),
+            foregroundColor: Colors.white,
             bottom: const TabBar(
-              labelColor: accentPurple,
+              labelColor: Colors.amber,
               unselectedLabelColor: Colors.white70,
-              indicatorColor: accentPurple,
+              indicatorColor: Colors.amber,
               tabs: [
                 Tab(
                   icon: Icon(Icons.person_add, size: 20),
@@ -314,7 +270,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(color: accentPurple),
+                      child: CircularProgressIndicator(
+                        color: Color(0xff42153e),
+                      ),
                     );
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -340,27 +298,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       String email = uData['email'] ?? '';
 
                       return Card(
-                        elevation: 1,
-                        color: Colors.white,
+                        elevation: 2,
                         margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(color: Colors.grey.shade200),
-                        ),
                         child: ListTile(
                           title: Text(
                             name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: primaryIndigo,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
                             email,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                            style: const TextStyle(fontSize: 12),
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -369,7 +316,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 icon: const Icon(
                                   Icons.check_circle,
                                   color: Colors.green,
-                                  size: 28,
+                                  size: 30,
                                 ),
                                 tooltip: 'Aprobă Accesul',
                                 onPressed: () async {
@@ -384,7 +331,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 icon: const Icon(
                                   Icons.cancel,
                                   color: Colors.red,
-                                  size: 28,
+                                  size: 30,
                                 ),
                                 tooltip: 'Respinge Contul',
                                 onPressed: () =>
@@ -408,7 +355,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(color: accentPurple),
+                      child: CircularProgressIndicator(
+                        color: Color(0xff42153e),
+                      ),
                     );
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -449,27 +398,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               String courseTitle =
                                   courseSnap.data?['title'] ?? 'Curs';
                               return Card(
-                                elevation: 1,
-                                color: Colors.white,
+                                elevation: 2,
                                 margin: const EdgeInsets.only(bottom: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  side: BorderSide(color: Colors.grey.shade200),
-                                ),
                                 child: ListTile(
                                   title: Text(
                                     studentName,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: primaryIndigo,
                                     ),
                                   ),
                                   subtitle: Text(
                                     'Solicită înscriere la: $courseTitle',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
-                                    ),
+                                    style: const TextStyle(fontSize: 13),
                                   ),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -478,7 +418,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         icon: const Icon(
                                           Icons.check_circle,
                                           color: Colors.green,
-                                          size: 28,
+                                          size: 30,
                                         ),
                                         onPressed: () async {
                                           await FirebaseFirestore.instance
@@ -492,7 +432,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         icon: const Icon(
                                           Icons.cancel,
                                           color: Colors.red,
-                                          size: 28,
+                                          size: 30,
                                         ),
                                         onPressed: () async {
                                           await FirebaseFirestore.instance
@@ -522,29 +462,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   children: [
                     TextField(
                       controller: _searchController,
-                      cursorColor: accentPurple,
                       decoration: InputDecoration(
                         hintText: 'Caută după nume sau email...',
                         prefixIcon: const Icon(
                           Icons.search,
-                          color: primaryIndigo,
+                          color: Color(0xff42153e),
                         ),
                         fillColor: Colors.white,
                         filled: true,
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: accentPurple,
-                            width: 2,
-                          ),
-                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       onChanged: (_) => setState(() {}),
@@ -558,9 +485,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
                             return const Center(
-                              child: CircularProgressIndicator(
-                                color: accentPurple,
-                              ),
+                              child: CircularProgressIndicator(),
                             );
                           }
 
@@ -590,27 +515,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               bool hasAccess = uData['hasAccess'] ?? false;
 
                               return Card(
-                                elevation: 1,
-                                color: Colors.white,
                                 margin: const EdgeInsets.only(bottom: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(color: Colors.grey.shade200),
-                                ),
                                 child: ListTile(
                                   title: Text(
                                     name,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: primaryIndigo,
                                     ),
                                   ),
                                   subtitle: Text(
                                     '$email • ${hasAccess ? 'Activ' : 'Neaprobat'}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
+                                    style: const TextStyle(fontSize: 12),
                                   ),
                                   trailing: IconButton(
                                     icon: const Icon(
@@ -637,55 +552,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     // ==========================================
-    // 2. DACĂ ESTE ELEV/PĂRINTE -> Notificări personale cu noul design
+    // 2. DACĂ ESTE ELEV -> Are UN SINGUR ECRAN Simplu cu Notificările Lui
     // ==========================================
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: const Color(0xfffff8dc),
       appBar: AppBar(
-        backgroundColor: primaryIndigo,
-        toolbarHeight: 85,
-        titleSpacing: 16,
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Image.asset(
-                'images/logo.jpg',
-                height: 40,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(width: 14),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "NOTIFICĂRI",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                Text(
-                  "ACTIVITATE RECENTĂ",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        title: const Text(
+          "Notificările Mele",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: const Color(0xff42153e),
+        foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -695,7 +572,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: accentPurple),
+              child: CircularProgressIndicator(color: Color(0xff42153e)),
             );
           }
 
@@ -703,7 +580,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             return const Center(
               child: Text(
                 "Nu ai nicio notificare în prezent.",
-                style: TextStyle(color: Colors.grey, fontSize: 15),
+                style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             );
           }
@@ -730,14 +607,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               String type = data['type'] ?? 'homework';
 
               return Card(
-                elevation: isRead ? 1 : 2,
-                color: isRead ? Colors.white : const Color(0xfff3e8ff),
+                elevation: isRead ? 1 : 3,
+                color: isRead ? Colors.white : Colors.amber.shade50,
                 margin: const EdgeInsets.only(bottom: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   side: isRead
-                      ? BorderSide(color: Colors.grey.shade200)
-                      : const BorderSide(color: accentPurple, width: 1.5),
+                      ? BorderSide.none
+                      : BorderSide(color: Colors.amber.shade700, width: 1.5),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(
@@ -749,19 +626,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     title,
                     style: TextStyle(
                       fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                      color: primaryIndigo,
+                      color: const Color(0xff42153e),
                     ),
                   ),
                   subtitle: Text(
                     body,
-                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                    style: TextStyle(color: Colors.grey.shade800, fontSize: 13),
                   ),
                   trailing: !isRead
                       ? Container(
                           width: 10,
                           height: 10,
                           decoration: const BoxDecoration(
-                            color: accentPurple,
+                            color: Colors.red,
                             shape: BoxShape.circle,
                           ),
                         )
