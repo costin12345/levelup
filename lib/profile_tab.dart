@@ -397,74 +397,232 @@ class _ProfileTabState extends State<ProfileTab> {
                     const SizedBox(height: 30),
 
                     // Titlu + Opțiuni de Ordonare (Sortare)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          role == 'teacher'
-                              ? "Cururile pe care le predai"
-                              : "Cururile la care ești înscris",
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: primaryIndigo,
-                          ),
-                        ),
-                        // Butoane de sortare (Crescător/Descrescător și după titlu/materie)
-                        Row(
-                          children: [
-                            DropdownButton<String>(
-                              value: _sortBy,
-                              underline: const SizedBox(),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: primaryIndigo,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'title',
-                                  child: Text("După titlu/clasă"),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'category',
-                                  child: Text("După materie"),
-                                ),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) setState(() => _sortBy = val);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.person_remove_alt_1, // Iconiță sugerată pentru conturi șterse
-                                color: Colors.redAccent,
-                                size: 26,
-                              ),
-                              tooltip: "Conturi șterse și motive",
-                              onPressed: () =>
-                                  _showDeletionRequestsDialog(context),
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                _isAscending
-                                    ? Icons.arrow_upward
-                                    : Icons.arrow_downward,
-                                size: 18,
-                                color: accentLila,
-                              ),
-                              tooltip: _isAscending
-                                  ? "Crescător"
-                                  : "Descrescător",
-                              onPressed: () {
-                                setState(() => _isAscending = !_isAscending);
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
+                    // ... în interiorul clasei ProfileTab, în metoda build ...
+
+                    // Titlu + Opțiuni de Ordonare (Sortare) - Modificat pentru a fi responsive
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // Dacă ecranul este prea îngust (telefon), afișăm pe două rânduri
+                          bool isPhone = constraints.maxWidth < 400;
+
+                          return isPhone
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Rândul 1: Titlul
+                                    Text(
+                                      role == 'teacher'
+                                          ? "Cururile pe care le predai"
+                                          : "Cururile la care ești înscris",
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryIndigo,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Rândul 2: Sortarea și butonul de ștergere (aliniate între ele)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // Dropdown-ul de sortare
+                                        Expanded(
+                                          child: Container(
+                                            height: 36,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: Colors.grey.shade200,
+                                              ),
+                                            ),
+                                            child: DropdownButton<String>(
+                                              value: _sortBy,
+                                              isExpanded: true,
+                                              underline: const SizedBox(),
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: primaryIndigo,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              items: const [
+                                                DropdownMenuItem(
+                                                  value: 'title',
+                                                  child: Text(
+                                                    "După titlu/clasă",
+                                                  ),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: 'category',
+                                                  child: Text("După materie"),
+                                                ),
+                                              ],
+                                              onChanged: (val) {
+                                                if (val != null)
+                                                  setState(() => _sortBy = val);
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        // Butonul de sortare crescător/descrescător
+                                        Container(
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.grey.shade200,
+                                            ),
+                                          ),
+                                          child: IconButton(
+                                            icon: Icon(
+                                              _isAscending
+                                                  ? Icons.arrow_upward
+                                                  : Icons.arrow_downward,
+                                              size: 18,
+                                              color: accentLila,
+                                            ),
+                                            tooltip: _isAscending
+                                                ? "Crescător"
+                                                : "Descrescător",
+                                            onPressed: () {
+                                              setState(
+                                                () => _isAscending =
+                                                    !_isAscending,
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        // Butonul pentru conturi șterse (vizibil doar pentru profesor)
+                                        if (role == 'teacher') ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            height: 36,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: Colors.grey.shade200,
+                                              ),
+                                            ),
+                                            child: IconButton(
+                                              icon: const Icon(
+                                                Icons.person_remove_alt_1,
+                                                color: Colors.redAccent,
+                                                size: 18,
+                                              ),
+                                              tooltip:
+                                                  "Conturi șterse și motive",
+                                              onPressed: () =>
+                                                  _showDeletionRequestsDialog(
+                                                    context,
+                                                  ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                )
+                              : // Varianta originală pentru tablete / ecrane mari
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      role == 'teacher'
+                                          ? "Cururile pe care le predai"
+                                          : "Cururile la care ești înscris",
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryIndigo,
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        // Dropdown-ul de sortare
+                                        DropdownButton<String>(
+                                          value: _sortBy,
+                                          underline: const SizedBox(),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: primaryIndigo,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: 'title',
+                                              child: Text("După titlu/clasă"),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'category',
+                                              child: Text("După materie"),
+                                            ),
+                                          ],
+                                          onChanged: (val) {
+                                            if (val != null)
+                                              setState(() => _sortBy = val);
+                                          },
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Săgeata de sortare
+                                        IconButton(
+                                          icon: Icon(
+                                            _isAscending
+                                                ? Icons.arrow_upward
+                                                : Icons.arrow_downward,
+                                            size: 18,
+                                            color: accentLila,
+                                          ),
+                                          tooltip: _isAscending
+                                              ? "Crescător"
+                                              : "Descrescător",
+                                          onPressed: () {
+                                            setState(
+                                              () =>
+                                                  _isAscending = !_isAscending,
+                                            );
+                                          },
+                                        ),
+                                        // Iconița pentru conturi șterse
+                                        if (role == 'teacher') ...[
+                                          const SizedBox(width: 8),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.person_remove_alt_1,
+                                              color: Colors.redAccent,
+                                              size: 20,
+                                            ),
+                                            tooltip: "Conturi șterse și motive",
+                                            onPressed: () =>
+                                                _showDeletionRequestsDialog(
+                                                  context,
+                                                ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                );
+                        },
+                      ),
                     ),
+                    const SizedBox(height: 12),
+
+                    // Aici urmează StreamBuilder-ul care afișează lista de cursuri (rămâne neschimbat)
+                    // role == 'teacher' ? ... : ...
                     const SizedBox(height: 12),
 
                     // Zona de afișare a cursurilor (cu sortare aplicată)
