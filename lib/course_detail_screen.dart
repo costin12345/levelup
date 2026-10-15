@@ -101,8 +101,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     required String lessonId,
   }) async {
     try {
-      debugPrint("1. PORNEȘTE SALVAREA NOTIFICĂRILOR ÎN FIRESTORE");
+      debugPrint("1. PORNEȘTE TRIMITEREa NOTIFICĂRILOR PENTRU LECȚIE");
 
+      // 1. Căutăm înscrierile aprobate pentru acest curs
       final enrollments = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('courseId', isEqualTo: widget.courseId)
@@ -120,14 +121,53 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
       String pushBody = notificationType == 'homework'
           ? 'A fost încărcată tema: "$lessonTitle"'
-          : 'A fost adăugată înregistrarea cursului: "$lessonTitle"';
+          : 'A fost adăugată lecția: "$lessonTitle"';
 
-      // Salvăm notificarea în Firestore pentru fiecare elev înroat
+      // 2. Credențiale identice ca la RegisterScreen
+      final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
+        {
+          "type": "service_account",
+          "project_id": "level-up-19583",
+          "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\SwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\BAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\FQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\UGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\SFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
+          "client_email":
+              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
+          "client_id": "112777526185284576732",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url":
+              "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
+          "universe_domain": "googleapis.com",
+        },
+      );
+
+      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+      final client = await auth.clientViaServiceAccount(
+        serviceAccountCredentials,
+        scopes,
+      );
+
+      final String fcmV1Url =
+          'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
+
+      // 3. Parcurgem fiecare elev înroat
       for (var doc in enrollments.docs) {
-        String userId = doc['userId'];
+        String studentId = doc['userId'];
 
+        // Preluăm documentul elevului din colecția 'users' pentru a-i citi fcmToken-ul exact ca la register
+        var studentDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(studentId)
+            .get();
+        if (!studentDoc.exists) continue;
+
+        var studentData = studentDoc.data() as Map<String, dynamic>;
+        String? studentFcmToken = studentData['fcmToken'];
+
+        // Salvăm notificarea în Firestore
         await FirebaseFirestore.instance.collection('notifications').add({
-          'userId': userId,
+          'userId': studentId,
           'courseId': widget.courseId,
           'lessonId': lessonId,
           'title': pushTitle,
@@ -136,10 +176,52 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           'type': notificationType,
           'createdAt': FieldValue.serverTimestamp(),
         });
+
+        // 4. Trimitem Push Notification (FCM V1) direct pe telefonul elevului
+        if (studentFcmToken != null && studentFcmToken.isNotEmpty) {
+          try {
+            var response = await client.post(
+              Uri.parse(fcmV1Url),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'message': {
+                  'token': studentFcmToken,
+                  'notification': {'title': pushTitle, 'body': pushBody},
+                  'android': {
+                    'priority': 'HIGH',
+                    'notification': {'sound': 'default'},
+                  },
+                  'apns': {
+                    'headers': {
+                      'apns-priority': '10',
+                      'apns-push-type': 'alert',
+                    },
+                    'payload': {
+                      'aps': {'sound': 'default'},
+                    },
+                  },
+                  'data': {
+                    'type': notificationType,
+                    'courseId': widget.courseId,
+                    'lessonId': lessonId,
+                    'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                  },
+                },
+              }),
+            );
+            debugPrint(
+              "Răspuns FCM Lecție Nouă: ${response.statusCode} - ${response.body}",
+            );
+          } catch (e) {
+            debugPrint("Eroare trimitere FCM lecție către elev: $e");
+          }
+        } else {
+          debugPrint("Elevul $studentId nu are fcmToken salvat!");
+        }
       }
-      debugPrint("Notificările au fost salvate cu succes.");
+      client.close();
     } catch (e) {
-      debugPrint("Eroare la trimiterea notificărilor: $e");
+      debugPrint("Eroare generală la trimiterea notificărilor de lecție: $e");
     }
   }
 
@@ -460,13 +542,12 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             .collection('lessons')
                             .add(lessonPayload);
 
+                        // 🌟 Aici este apelul care trimite notificarea către elevi!
                         await _sendPushToStudents(
                           lessonTitle: lTitle,
                           notificationType: 'lesson',
                           lessonId: docRef.id,
                         );
-                      } else {
-                        await existingLesson.reference.update(lessonPayload);
                       }
 
                       if (context.mounted) {
@@ -491,6 +572,107 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         );
       },
     );
+  }
+
+  Future<void> _notifyStudentsAboutNewCourse({
+    required String courseId,
+    required String courseTitle,
+  }) async {
+    try {
+      // 1. Preluăm toți elevii înrolați sau toți elevii (după caz)
+      final studentsDocs = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', whereIn: ['student', 'Student'])
+          .get();
+
+      if (studentsDocs.docs.isEmpty) return;
+
+      final serviceAccountCredentials = auth.ServiceAccountCredentials.fromJson(
+        {
+          "type": "service_account",
+          "project_id": "level-up-19583",
+          "private_key_id": "151838f47968dcd4313994d7176c1f7cf2e69513",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUoFcO7yVlsfky\nHnDJJtXw66laZ26aTXRzz7Vb7VAJ967FYnrDTEiNNWfSYx9omDXLOMCsDyxLbbJE\ncmdgOVm6RX6q7bLhpJplGdHTL7zUTDVXfJE/E/KHOb5feAtk2c1zjZdXol4gBAIR\nFa9Y/KNRUlfMLgcx+Tgkh+F08tb58hFINgK+U3zdNtpWNV8rP2owjZtRGKYKRgg+\nLG0dbMMMgc1KdvcEJE4wAWTMB2Q0p+5hOCexJP0r7VGOh+xhyiQfZFjprX2GTCpq\nSoLuRgfFp+4FzaMNpBDs8XORQLpGYmoE6dPX5EJ4Jh0lFwY/8gq80wM9AdmA80AE\nUAd3TFC3AgMBAAECggEAAnzmd+DEIxam2qIbjLxSbYa8YmKVGzjDyjpzHfe+uNci\nlDcCRmMP8u2zNiAodRdZgx66C76uXyrnQUDGGoyhPaTkMLN7pS3sC+R2SDkl8E/8\nocuYgXtGGl9Kbcs1oED3fp4jWAhTf0lnYsl1AJ64JH1I/1/HKsZb6frYYFTFFNiY\SwVIlyvIddpIKvXCLWPT8XyBBfIsOsyRQfoNbtdsoKrdfLTCMNTkcXQG7mhOpRXf\BAYGCfh3sxRYj0V06A2KzLrfbbl5zd+8phYTrClYKVonWUGXiTTOHgKHOQOftrO/\nPjU8D3NDzff/zh8uMGecTDcR9O35jx9h3bhBk09KZQKBgQDsIBLKVEmzBs+WSgwx\/0xft/PoZ/6E7FLC1RWOmZY77pXpQRoMjQDQzJRC+YdI5yVGmlRTfulNPZE53lO7\nu2efdX9wbcnWmwpmAWWKhJyBnQao1cwWRCF1Irlj7olx3x4EXjfh5vxpIAVe8/T5\nCbb6K39W/0QedUtCDgRYTm9xbQKBgQDmhevSRjFN/jdok/J995cfnuX6bLyYazDY\nghRXAts2Pb/+qhSsggQvGUSb6x//r3y5SHZrbYsVoB1W97InzMsrtzCxT+jtocxb\68u8EzEfU2xYW5eRwDc4M0ZIbhN1QHGKHEUigj2BWt03OW2eSvCpeBxA6VukFtwE\n8E0kwsCYMwKBgFVV3hSbU6tMydcR2chz8KEjNRYIB3b4hYx+P/UyUpZESo9rBMQG\nbYYIeYie76KMTu9uNQ2b7ysIFiUo0XAmcXOyniT+uJRDogVtecoO1RUOr+pyofhm\FQVlUETqX2f07786Yc3VkeFYPjiryBv8w9EzySiixnaPg2xS7oUPi70dAoGBALXU\nwNSVxWJNuYrl2AqAd1Xb0m+bwY9ATcEZqc2QVTUNtBm+Mpx32bEE71dFOXJHC8xi\nWfYW6/Rc3YexzXcTVNbgoqnZ7FM0oquG7KcnREH/XaC8bmvrACN2XmPXX8XG1Ugp\UGcN8FHOSFu9ErgfSIGEWlThPQXLejTzDwaGD8B9AoGBAMKMxgN+EdI1XWvR2nqT\SFXnQkEu+8HG62jakbjda2I5rNO7ozvE+YUeh8U0o+y+lEgdmvms4UIvc1RQVJ0U\npCvJ5YSUlFWlnCab+yZZBkkHihGiCGWWMDCJbdlZe++XBl2mBcna8UiurFpdtXnu\nrMhuipkeyIUYvku53bTFvmny\n-----END PRIVATE KEY-----\n",
+          "client_email":
+              "firebase-adminsdk-fbsvc@level-up-19583.iam.gserviceaccount.com",
+          "client_id": "112777526185284576732",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url":
+              "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40level-up-19583.iam.gserviceaccount.com",
+          "universe_domain": "googleapis.com",
+        },
+      );
+
+      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+      final client = await auth.clientViaServiceAccount(
+        serviceAccountCredentials,
+        scopes,
+      );
+
+      final String fcmV1Url =
+          'https://fcm.googleapis.com/v1/projects/level-up-19583/messages:send';
+
+      String pushTitle = '📚 Curs nou disponibil!';
+      String pushBody = 'A fost publicat cursul nou: "$courseTitle".';
+
+      for (var studentDoc in studentsDocs.docs) {
+        var sData = studentDoc.data() as Map<String, dynamic>;
+        String? studentFcmToken = sData['fcmToken'];
+        String studentId = studentDoc.id;
+
+        // 1. Salvăm notificarea în Firestore pentru elev
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'userId': studentId,
+          'courseId': courseId,
+          'title': pushTitle,
+          'body': pushBody,
+          'isRead': false,
+          'type': 'new_course',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // 2. Trimitem Push Notification (FCM V1) către elev
+        if (studentFcmToken != null && studentFcmToken.isNotEmpty) {
+          try {
+            await client.post(
+              Uri.parse(fcmV1Url),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'message': {
+                  'token': studentFcmToken,
+                  'notification': {'title': pushTitle, 'body': pushBody},
+                  'android': {
+                    'priority': 'HIGH',
+                    'notification': {'sound': 'default'},
+                  },
+                  'apns': {
+                    'headers': {
+                      'apns-priority': '10',
+                      'apns-push-type': 'alert',
+                    },
+                    'payload': {
+                      'aps': {'sound': 'default'},
+                    },
+                  },
+                  'data': {
+                    'type': 'new_course',
+                    'courseId': courseId,
+                    'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                  },
+                },
+              }),
+            );
+          } catch (e) {
+            debugPrint("Eroare trimitere FCM către elev: $e");
+          }
+        }
+      }
+      client.close();
+    } catch (e) {
+      debugPrint("Eroare la notificarea elevilor: $e");
+    }
   }
 
   @override

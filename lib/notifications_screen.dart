@@ -64,19 +64,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
-      var pendingUsers = await FirebaseFirestore.instance
-          .collection('users')
-          .where('role', isEqualTo: 'student')
-          .where('hasAccess', isEqualTo: false)
-          .get();
+      int totalPending = 0;
 
-      var pendingEnrollments = await FirebaseFirestore.instance
-          .collection('enrollments')
-          .where('status', isEqualTo: 'pending')
-          .get();
+      if (widget.role == 'teacher') {
+        // Pentru profesor: numără conturile și înscrierile în așteptare
+        var pendingUsers = await FirebaseFirestore.instance
+            .collection('users')
+            .where('role', isEqualTo: 'student')
+            .where('hasAccess', isEqualTo: false)
+            .get();
 
-      int totalPending =
-          pendingUsers.docs.length + pendingEnrollments.docs.length;
+        var pendingEnrollments = await FirebaseFirestore.instance
+            .collection('enrollments')
+            .where('status', isEqualTo: 'pending')
+            .get();
+
+        totalPending =
+            pendingUsers.docs.length + pendingEnrollments.docs.length;
+      } else {
+        // 🌟 Pentru elev/părinte: numără notificările necitite din colecția 'notifications'
+        var unreadNotifications = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: currentUser!.uid)
+            .where('isRead', isEqualTo: false)
+            .get();
+
+        totalPending = unreadNotifications.docs.length;
+      }
 
       if (await FlutterAppBadger.isAppBadgeSupported()) {
         if (totalPending > 0) {
@@ -607,7 +621,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   ),
                                   subtitle: Text(
                                     '$email • ${hasAccess ? 'Activ' : 'Neaprobat'}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey,
                                     ),

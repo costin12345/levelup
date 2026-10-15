@@ -1,3 +1,5 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,7 +19,17 @@ import 'progress_screen.dart'; // 🌟 Import corect pentru Progres
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // 🌟 Înregistrăm handler-ul pentru notificări în fundal
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   runApp(const MainScreen());
+}
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint("Mesaj primit în fundal: ${message.messageId}");
 }
 
 class MainScreen extends StatelessWidget {
@@ -67,6 +79,11 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    _saveFcmTokenForCurrentUser(); // 🌟 Aici salvăm token-ul la pornirea ecranului principal
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -232,8 +249,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             backgroundColor: primaryIndigo,
             elevation: 0,
             toolbarHeight: 70,
-            titleSpacing: 16,
-            // 🌟 Pe telefon lăsăm AppBar să pună automat iconița cu 3 linii (Hamburger) datorită drawer-ului
+            titleSpacing: 24,
             title: Row(
               children: [
                 Container(
@@ -278,37 +294,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               const SizedBox(width: 8),
 
-              // 🌟 Pe PC / Tableta afișăm meniul orizontal, pe telefon îl ascundem (fiind în meniul cu 3 linii)
-              if (!isMobile) ...[
-                if (isParent) ...[
-                  _buildTopNavButton("Home", 0),
-                  _buildTopNavButton("Catalog", 1),
-                  _buildTopNavButton("Progres", 2),
-                  _buildTopNavButton("Profil", 3),
-                ] else if (isTeacher) ...[
-                  _buildTopNavButton("Home", 0),
-                  _buildTopNavButton("Catalog", 1),
-                  _buildTopNavButton("Cursuri", 2),
-                  _buildTopNavButton("Materiale", 3),
-                  _buildTopNavButton("Profil", 4),
-                ] else ...[
-                  _buildTopNavButton("Home", 0),
-                  _buildTopNavButton("Catalog", 1),
-                  _buildTopNavButton("Cursuri", 2),
-                  _buildTopNavButton("Materiale", 3),
-                  _buildTopNavButton("Progres", 4),
-                  _buildTopNavButton("Profil", 5),
-                ],
-                const SizedBox(width: 24),
-                IconButton(
-                  onPressed: () async {
-                    await FirebaseAuth.instance.signOut();
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.white70),
-                  tooltip: "Deconectare",
-                ),
+              // 🌟 Meniul orizontal sus pe toate dispozitivele
+              if (isParent) ...[
+                _buildTopNavButton("Home", 0),
+                _buildTopNavButton("Catalog", 1),
+                _buildTopNavButton("Progres", 2),
+                _buildTopNavButton("Profil", 3),
+              ] else if (isTeacher) ...[
+                _buildTopNavButton("Home", 0),
+                _buildTopNavButton("Catalog", 1),
+                _buildTopNavButton("Cursuri", 2),
+                _buildTopNavButton("Materiale", 3),
+                _buildTopNavButton("Profil", 4),
+              ] else ...[
+                _buildTopNavButton("Home", 0),
+                _buildTopNavButton("Catalog", 1),
+                _buildTopNavButton("Cursuri", 2),
+                _buildTopNavButton("Materiale", 3),
+                _buildTopNavButton("Progres", 4),
+                _buildTopNavButton("Profil", 5),
               ],
 
+              const SizedBox(width: 24),
+              IconButton(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                },
+                icon: const Icon(Icons.logout, color: Colors.white70),
+                tooltip: "Deconectare",
+              ),
               const SizedBox(width: 16),
             ],
           ),
@@ -337,5 +351,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _saveFcmTokenForCurrentUser() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      String? token;
+
+      if (kIsWeb) {
+        // Pe Web, pentru a evita eroarea, sărim generarea token-ului FCM de pe client
+        // sau o rulăm doar dacă ai nevoie neapărat de Web push (necesită VAPID key din Firebase Console).
+        debugPrint("Rulează pe Web - omitere obținere token FCM nativ.");
+        return;
+      } else {
+        // Pe Telefon (Android / iOS)
+        NotificationSettings settings = await FirebaseMessaging.instance
+            .requestPermission(alert: true, badge: true, sound: true);
+
+        if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+            settings.authorizationStatus == AuthorizationStatus.provisional) {
+          token = await FirebaseMessaging.instance.getToken();
+        }
+      }
+
+      if (token != null && token.isNotEmpty) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'fcmToken': token,
+        }, SetOptions(merge: true));
+
+        debugPrint("SUCCES: Token FCM salvat -> $token");
+      }
+    } catch (e) {
+      debugPrint("Eroare la obținerea/salvarea token-ului FCM: $e");
+    }
   }
 }
