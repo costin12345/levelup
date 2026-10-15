@@ -88,40 +88,152 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         bool isTeacher = userRole == 'teacher';
         bool isParent = userRole == 'parent';
 
-        // 🌟 Generăm ecranele și meniurile dinamic în funcție de rol
-        // 🌟 Generăm ecranele corect în funcție de rol
-
-        // 🌟 Generăm ecranele și meniurile dinamic în funcție de rol
+        // Listă de ecrane în funcție de rol
         final List<Widget> screens = isTeacher
             ? [
                 HomeTab(onGoToCourses: () => setState(() => _currentIndex = 2)),
                 const TeacherCatalogScreen(),
                 CoursesScreen(role: userRole),
                 MaterialsScreen(role: userRole),
-                const ProfileTab(), // Index 4
+                const ProfileTab(),
               ]
             : isParent
             ? [
                 HomeTab(onGoToCourses: () => setState(() => _currentIndex = 1)),
-                CatalogScreen(role: userRole), // Index 1
-                const ProgressScreen(), // Index 2
-                const ProfileTab(), // Index 3
+                CatalogScreen(role: userRole),
+                const ProgressScreen(),
+                const ProfileTab(),
               ]
             : [
                 HomeTab(onGoToCourses: () => setState(() => _currentIndex = 2)),
                 CatalogScreen(role: userRole),
                 CoursesScreen(role: userRole),
                 MaterialsScreen(role: userRole),
-                const ProgressScreen(), // Index 4
-                const ProfileTab(), // Index 5
+                const ProgressScreen(),
+                const ProfileTab(),
               ];
+
+        // Titlurile și iconițele pentru meniul lateral (Drawer) pe telefon
+        final List<Map<String, dynamic>> menuItems = isTeacher
+            ? [
+                {'title': 'Home', 'icon': Icons.home},
+                {'title': 'Catalog', 'icon': Icons.star},
+                {'title': 'Cursuri', 'icon': Icons.book},
+                {'title': 'Materiale', 'icon': Icons.folder},
+                {'title': 'Profil', 'icon': Icons.person},
+              ]
+            : isParent
+            ? [
+                {'title': 'Home', 'icon': Icons.home},
+                {'title': 'Catalog', 'icon': Icons.star},
+                {'title': 'Progres', 'icon': Icons.trending_up},
+                {'title': 'Profil', 'icon': Icons.person},
+              ]
+            : [
+                {'title': 'Home', 'icon': Icons.home},
+                {'title': 'Catalog', 'icon': Icons.star},
+                {'title': 'Cursuri', 'icon': Icons.book},
+                {'title': 'Materiale', 'icon': Icons.folder},
+                {'title': 'Progres', 'icon': Icons.trending_up},
+                {'title': 'Profil', 'icon': Icons.person},
+              ];
+
+        // Verificăm dacă ecranul este îngust (telefon)
+        bool isMobile = MediaQuery.of(context).size.width < 850;
+
         return Scaffold(
           backgroundColor: const Color(0xfff8fafc),
+          // 🌟 Meniul lateral (Drawer) apare automat pe telefon când se apasă pe iconița cu 3 linii
+          drawer: isMobile
+              ? Drawer(
+                  backgroundColor: Colors.white,
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      DrawerHeader(
+                        decoration: const BoxDecoration(color: primaryIndigo),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Icon(
+                              Icons.school,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              "LEVEL UP",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "Rol: ${userRole.toUpperCase()}",
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ...menuItems.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        var item = entry.value;
+                        bool isSelected = _currentIndex == index;
+
+                        return ListTile(
+                          leading: Icon(
+                            item['icon'],
+                            color: isSelected
+                                ? const Color(0xff7c4dff)
+                                : Colors.grey.shade700,
+                          ),
+                          title: Text(
+                            item['title'],
+                            style: TextStyle(
+                              color: isSelected
+                                  ? const Color(0xff7c4dff)
+                                  : primaryIndigo,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onTap: () {
+                            setState(() => _currentIndex = index);
+                            Navigator.pop(
+                              context,
+                            ); // Închide drawer-ul după selecție
+                          },
+                        );
+                      }),
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(Icons.logout, color: Colors.red),
+                        title: const Text(
+                          "Deconectare",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await FirebaseAuth.instance.signOut();
+                        },
+                      ),
+                    ],
+                  ),
+                )
+              : null,
           appBar: AppBar(
             backgroundColor: primaryIndigo,
             elevation: 0,
             toolbarHeight: 70,
-            titleSpacing: 24,
+            titleSpacing: 16,
+            // 🌟 Pe telefon lăsăm AppBar să pună automat iconița cu 3 linii (Hamburger) datorită drawer-ului
             title: Row(
               children: [
                 Container(
@@ -166,35 +278,37 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               const SizedBox(width: 8),
 
-              // 🌟 Generăm butoanele dinamic în funcție de rol, fără const global
-              if (isParent) ...[
-                _buildTopNavButton("Home", 0),
-                _buildTopNavButton("Catalog", 1),
-                _buildTopNavButton("Progres", 2),
-                _buildTopNavButton("Profil", 3),
-              ] else if (isTeacher) ...[
-                _buildTopNavButton("Home", 0),
-                _buildTopNavButton("Catalog", 1),
-                _buildTopNavButton("Cursuri", 2),
-                _buildTopNavButton("Materiale", 3),
-                _buildTopNavButton("Profil", 4),
-              ] else ...[
-                _buildTopNavButton("Home", 0),
-                _buildTopNavButton("Catalog", 1),
-                _buildTopNavButton("Cursuri", 2),
-                _buildTopNavButton("Materiale", 3),
-                _buildTopNavButton("Progres", 4),
-                _buildTopNavButton("Profil", 5),
+              // 🌟 Pe PC / Tableta afișăm meniul orizontal, pe telefon îl ascundem (fiind în meniul cu 3 linii)
+              if (!isMobile) ...[
+                if (isParent) ...[
+                  _buildTopNavButton("Home", 0),
+                  _buildTopNavButton("Catalog", 1),
+                  _buildTopNavButton("Progres", 2),
+                  _buildTopNavButton("Profil", 3),
+                ] else if (isTeacher) ...[
+                  _buildTopNavButton("Home", 0),
+                  _buildTopNavButton("Catalog", 1),
+                  _buildTopNavButton("Cursuri", 2),
+                  _buildTopNavButton("Materiale", 3),
+                  _buildTopNavButton("Profil", 4),
+                ] else ...[
+                  _buildTopNavButton("Home", 0),
+                  _buildTopNavButton("Catalog", 1),
+                  _buildTopNavButton("Cursuri", 2),
+                  _buildTopNavButton("Materiale", 3),
+                  _buildTopNavButton("Progres", 4),
+                  _buildTopNavButton("Profil", 5),
+                ],
+                const SizedBox(width: 24),
+                IconButton(
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.white70),
+                  tooltip: "Deconectare",
+                ),
               ],
 
-              const SizedBox(width: 24),
-              IconButton(
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                },
-                icon: const Icon(Icons.logout, color: Colors.white70),
-                tooltip: "Deconectare",
-              ),
               const SizedBox(width: 16),
             ],
           ),
