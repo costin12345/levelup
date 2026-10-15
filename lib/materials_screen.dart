@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MaterialsScreen extends StatefulWidget {
   final String role;
@@ -459,23 +460,100 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                             children: tests.map((testDoc) {
                               var testData =
                                   testDoc.data() as Map<String, dynamic>;
-                              return Chip(
-                                avatar: const Icon(
-                                  Icons.insert_drive_file,
-                                  size: 14,
-                                  color: Colors.deepPurple,
+                              String testTitle = testData['title'] ?? 'Test';
+                              String testDate = testData['date'] ?? '';
+                              String testLink = testData['details'] ?? '';
+
+                              return InkWell(
+                                onTap: () async {
+                                  if (testLink.isNotEmpty) {
+                                    final Uri url = Uri.parse(testLink);
+                                    try {
+                                      // Asigură-te că ai importat 'package:url_launcher/url_launcher.dart' sus în fișier
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(
+                                          url,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                      } else {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Nu s-a putut deschide link-ul!',
+                                              ),
+                                              backgroundColor: Colors.redAccent,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    } catch (e) {
+                                      debugPrint(
+                                        "Eroare la deschiderea link-ului: $e",
+                                      );
+                                    }
+                                  } else {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Acest test nu are un link atașat.',
+                                          ),
+                                          backgroundColor: Colors.orange,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.insert_drive_file,
+                                        size: 14,
+                                        color: Colors.deepPurple,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "$testTitle ($testDate)",
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      // Dacă e profesor, îi lăsăm și opțiunea de ștergere cu X
+                                      if (widget.role == 'teacher') ...[
+                                        const SizedBox(width: 8),
+                                        InkWell(
+                                          onTap: () =>
+                                              testDoc.reference.delete(),
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 14,
+                                            color: Colors.red.shade400,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
-                                label: Text(
-                                  "${testData['title']} (${testData['date']})",
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                deleteIcon: widget.role == 'teacher'
-                                    ? const Icon(Icons.close, size: 14)
-                                    : null,
-                                onDeleted: widget.role == 'teacher'
-                                    ? () => testDoc.reference.delete()
-                                    : null,
-                                backgroundColor: Colors.grey.shade100,
                               );
                             }).toList(),
                           );

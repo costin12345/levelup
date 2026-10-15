@@ -26,7 +26,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
   String _activeCatalogMenu = "Note și Absențe";
   String _reportScope = "Pe Grupe";
   bool _isFiltersExpanded = false;
-  bool _isArhivaTestExpanded = false;
+  //bool _isArhivaTestExpanded = false;
   String? _selectedClassTab;
 
   @override
@@ -100,118 +100,119 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
           },
         ),
 
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _isArhivaTestExpanded = !_isArhivaTestExpanded;
-                  if (_isArhivaTestExpanded && _selectedClassTab == null) {
-                    _selectedClassTab = "Clasa a 4-a";
-                    _activeCatalogMenu = "Arhivă Teste";
-                  }
-                });
-              },
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: isArhivadTeste
-                      ? accentLila.withOpacity(0.1)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.folder_shared_outlined,
-                      size: 18,
-                      color: isArhivadTeste ? accentLila : Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "Arhivă Teste",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isArhivadTeste
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: isArhivadTeste
-                              ? primaryIndigo
-                              : Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      _isArhivaTestExpanded
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_isArhivaTestExpanded)
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: List.generate(9, (index) {
-                    int gradeNumber = index + 4;
-                    String className = "Clasa a ${gradeNumber}-a";
-                    bool isClassSelected =
-                        isArhivadTeste && _selectedClassTab == className;
-
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          _activeCatalogMenu = "Arhivă Teste";
-                          _selectedClassTab = className;
-                        });
-                        if (isMobile) Navigator.pop(context);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 6,
-                          horizontal: 8,
-                        ),
-                        margin: const EdgeInsets.only(bottom: 4),
-                        decoration: BoxDecoration(
-                          color: isClassSelected
-                              ? accentLila.withOpacity(0.15)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          className,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isClassSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isClassSelected
-                                ? primaryIndigo
-                                : Colors.grey.shade600,
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-          ],
-        ),
+        //     Column(
+        //       crossAxisAlignment: CrossAxisAlignment.start,
+        //       children: [
+        //         InkWell(
+        //           onTap: () {
+        //             setState(() {
+        //               _isArhivaTestExpanded = !_isArhivaTestExpanded;
+        //               if (_isArhivaTestExpanded && _selectedClassTab == null) {
+        //                 _selectedClassTab = "Clasa a 4-a";
+        //                 _activeCatalogMenu = "Arhivă Teste";
+        //               }
+        //             });
+        //           },
+        //           borderRadius: BorderRadius.circular(10),
+        //           child: Container(
+        //             margin: const EdgeInsets.only(bottom: 6),
+        //             padding: const EdgeInsets.symmetric(
+        //               horizontal: 12,
+        //               vertical: 10,
+        //             ),
+        //             decoration: BoxDecoration(
+        //               color: isArhivadTeste
+        //                   ? accentLila.withOpacity(0.1)
+        //                   : Colors.transparent,
+        //               borderRadius: BorderRadius.circular(10),
+        //             ),
+        //             child: Row(
+        //               children: [
+        //                 Icon(
+        //                   Icons.folder_shared_outlined,
+        //                   size: 18,
+        //                   color: isArhivadTeste ? accentLila : Colors.grey.shade600,
+        //                 ),
+        //                 const SizedBox(width: 12),
+        //                 Expanded(
+        //                   child: Text(
+        //                     "Arhivă Teste",
+        //                     style: TextStyle(
+        //                       fontSize: 13,
+        //                       fontWeight: isArhivadTeste
+        //                           ? FontWeight.bold
+        //                           : FontWeight.w500,
+        //                       color: isArhivadTeste
+        //                           ? primaryIndigo
+        //                           : Colors.grey.shade700,
+        //                     ),
+        //                   ),
+        //                 ),
+        //                 Icon(
+        //                   _isArhivaTestExpanded
+        //                       ? Icons.keyboard_arrow_up
+        //                       : Icons.keyboard_arrow_down,
+        //                   size: 16,
+        //                   color: Colors.grey,
+        //                 ),
+        //               ],
+        //             ),
+        //           ),
+        //         ),
+        //         if (_isArhivaTestExpanded)
+        //           Padding(
+        //             padding: const EdgeInsets.only(left: 20.0),
+        //             child: Column(
+        //               crossAxisAlignment: CrossAxisAlignment.start,
+        //               children: List.generate(9, (index) {
+        //                 int gradeNumber = index + 4;
+        //                 String className = "Clasa a ${gradeNumber}-a";
+        //                 bool isClassSelected =
+        //                     isArhivadTeste && _selectedClassTab == className;
+        //
+        //                 return InkWell(
+        //                   onTap: () {
+        //                     setState(() {
+        //                       _activeCatalogMenu = "Arhivă Teste";
+        //                       _selectedClassTab = className;
+        //                     });
+        //                     if (isMobile) Navigator.pop(context);
+        //                   },
+        //                   child: Container(
+        //                     padding: const EdgeInsets.symmetric(
+        //                       vertical: 6,
+        //                       horizontal: 8,
+        //                     ),
+        //                     margin: const EdgeInsets.only(bottom: 4),
+        //                     decoration: BoxDecoration(
+        //                       color: isClassSelected
+        //                           ? accentLila.withOpacity(0.15)
+        //                           : Colors.transparent,
+        //                       borderRadius: BorderRadius.circular(8),
+        //                     ),
+        //                     child: Text(
+        //                       className,
+        //                       style: TextStyle(
+        //                         fontSize: 12,
+        //                         fontWeight: isClassSelected
+        //                             ? FontWeight.bold
+        //                             : FontWeight.normal,
+        //                         color: isClassSelected
+        //                             ? primaryIndigo
+        //                             : Colors.grey.shade600,
+        //                       ),
+        //                     ),
+        //                   ),
+        //                 );
+        //               }),
+        //             ),
+        //           ),
+        //       ],
+        //     ),
+        //   ],
+        // );
       ],
     );
-
     return Scaffold(
       backgroundColor: const Color(0xfff8fafc),
       appBar: AppBar(
@@ -1193,7 +1194,39 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                                               color: Colors.grey.shade500,
                                             ),
                                           ),
+                                          const SizedBox(width: 6),
+
+                                          // 🌟 AICI PUI BUTONUL DE EDITARE:
+                                          InkWell(
+                                            onTap: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) => EditGradeDialog(
+                                                  docId: item['id'],
+                                                  currentData: {
+                                                    'studentName': studentName,
+                                                    'grade': item['grade'],
+                                                    'homeworkStatus':
+                                                        item['homeworkStatus'] ??
+                                                        'neefectuata',
+                                                    'paymentStatus':
+                                                        item['paymentStatus'] ??
+                                                        'neplatita',
+                                                    'feedback':
+                                                        item['feedback'] ?? '',
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            child: const Icon(
+                                              Icons.edit,
+                                              size: 12,
+                                              color: Colors.blue,
+                                            ),
+                                          ),
                                           const SizedBox(width: 4),
+
+                                          // Butonul existent de ștergere (X)
                                           InkWell(
                                             onTap: () async {
                                               await FirebaseFirestore.instance

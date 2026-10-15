@@ -22,11 +22,18 @@ class _LoginScreenState extends State<LoginScreen> {
   static const Color primaryIndigo = Color(0xff1e1b4b);
   static const Color accentPurple = Color(0xff7c3aed);
   static const Color bgColor = Color(0xfff8fafc);
-
   Future<void> _login() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text;
 
+    // Verificare format email valid prin expresie regulată
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      _showSnackBar(
+        'Te rugăm să introduci o adresă de email validă (ex: nume@exemplu.com)!',
+      );
+      return;
+    }
     if (email.isEmpty || password.isEmpty) {
       _showSnackBar('Te rugăm să introduci emailul și parola!');
       return;
@@ -35,12 +42,29 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // 1. Autentificare în Firebase
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
 
+      User? user = userCredential.user;
+
+      // 🌟 2. Noua verificare: Dacă emailul nu este confirmat, blocăm accesul!
+      if (user != null && !user.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          _showSnackBar(
+            'Te rugăm să îți verifici adresa de email înainte de a te autentifica. Verifică-ți căsuța poștală!',
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // 3. Verificăm datele și accesul în Firestore
+      // Verificăm datele și accesul în Firestore
       var userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(userCredential.user!.uid)
+          .doc(user!.uid)
           .get();
 
       if (userDoc.exists) {
@@ -48,20 +72,21 @@ class _LoginScreenState extends State<LoginScreen> {
         String role = userData['role'] ?? 'student';
         bool hasAccess = userData['hasAccess'] ?? true;
 
-        if ((role == 'student' || role == 'parent') && !hasAccess) {
+        // 🌟 Blocăm accesul dacă este elev, părinte SAU profesor și nu are hasAccess: true
+        if (!hasAccess) {
           await FirebaseAuth.instance.signOut();
           if (mounted) {
             _showSnackBar(
-              'Contul tău așteaptă aprobarea din partea profesorului.',
+              'Contul tău (rol: $role) așteaptă aprobarea din partea administratorului.',
             );
           }
           setState(() => _isLoading = false);
           return;
         }
       }
-
       if (!mounted) return;
 
+      // 4. Totul este în regulă, intrăm în aplicație
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
@@ -83,6 +108,84 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showForgotPasswordDialog(BuildContext context) {
+    final TextEditingController resetEmailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Resetează Parola"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Introdu adresa de email asociată contului tău și îți vom trimite un link pentru resetarea parolei.",
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: resetEmailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: 'Adresă de Email',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Anulare", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff1e1b4b),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              String email = resetEmailController.text.trim();
+              if (email.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Te rugăm să introduci adresa de email."),
+                  ),
+                );
+                return;
+              }
+
+              try {
+                await FirebaseAuth.instance.sendPasswordResetEmail(
+                  email: email,
+                );
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "Emailul de resetare a fost trimis! Verifică-ți căsuța.",
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } on FirebaseAuthException catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.message ?? "A apărut o eroare."),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text("Trimite Link"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSnackBar(String message) {
@@ -476,6 +579,28 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ],
+                        ),
+                        // Înlocuiește codul existent pentru "Ai uitat parola?" cu acesta:
+                        Center(
+                          child: TextButton(
+                            onPressed: () => _showForgotPasswordDialog(context),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 8,
+                              ),
+                            ),
+                            child: const Text(
+                              "Ai uitat parola?",
+                              style: TextStyle(
+                                color: Color(
+                                  0xff7c4dff,
+                                ), // Culoarea mov specifică designului
+                                fontWeight: FontWeight.w600, // Un font ușor mai gros pentru vizibilitate
+                                fontSize: 13, // O dimensiune decentă
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),

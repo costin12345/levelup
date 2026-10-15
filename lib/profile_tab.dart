@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'login_screen.dart';
-import 'course_detail_screen.dart'; // Asigură-te că importi ecranul de detalii curs (pentru accesare)
+import 'course_detail_screen.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -13,10 +14,8 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  // Stări pentru ordonare (sortare)
-  String _sortBy =
-      'title'; // 'title' (alfabetic/clase) sau 'category' (materie)
-  bool _isAscending = true; // crescător sau descrescător
+  String _sortBy = 'title';
+  bool _isAscending = true;
 
   Future<void> _handleLogout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -32,7 +31,6 @@ class _ProfileTabState extends State<ProfileTab> {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Variabile pentru motivul ștergerii
     String selectedReason = 'Nu mai folosesc aplicația';
     final List<String> reasons = [
       'Nu mai folosesc aplicația',
@@ -43,7 +41,6 @@ class _ProfileTabState extends State<ProfileTab> {
     final TextEditingController customReasonController =
         TextEditingController();
 
-    // Pasul 1: Afișăm dialogul de confirmare și selectare a motivului
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -119,7 +116,6 @@ class _ProfileTabState extends State<ProfileTab> {
 
     if (confirm != true) return;
 
-    // Determinăm motivul final
     String finalReason = selectedReason == 'Alt motiv'
         ? (customReasonController.text.trim().isNotEmpty
               ? customReasonController.text.trim()
@@ -127,7 +123,6 @@ class _ProfileTabState extends State<ProfileTab> {
         : selectedReason;
 
     try {
-      // Preluăm detaliile utilizatorului înainte de ștergere pentru a le trimite profesorului
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -135,11 +130,10 @@ class _ProfileTabState extends State<ProfileTab> {
       String userName = "Utilizator";
       String userEmail = user.email ?? '';
       if (userDoc.exists) {
-        var data = userDoc.data() as Map<String, dynamic>;
-        userName = data['fullName'] ?? data['name'] ?? 'Utilizator';
+        var docData = userDoc.data() as Map<String, dynamic>;
+        userName = docData['fullName'] ?? docData['name'] ?? 'Utilizator';
       }
 
-      // Pasul 2: Trimitem o notificare / înregistrare către profesori în colecția 'account_deletion_requests'
       await FirebaseFirestore.instance
           .collection('account_deletion_requests')
           .add({
@@ -150,7 +144,6 @@ class _ProfileTabState extends State<ProfileTab> {
             'createdAt': FieldValue.serverTimestamp(),
           });
 
-      // Pasul 3: Ștergem documentul din Firestore și contul din Firebase Auth
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -229,10 +222,10 @@ class _ProfileTabState extends State<ProfileTab> {
                 itemCount: requests.length,
                 itemBuilder: (context, index) {
                   final req = requests[index];
-                  final data = req.data() as Map<String, dynamic>;
-                  final String name = data['userName'] ?? 'Utilizator';
-                  final String email = data['userEmail'] ?? '';
-                  final String reason = data['reason'] ?? 'Fără motiv';
+                  final reqData = req.data() as Map<String, dynamic>;
+                  final String name = reqData['userName'] ?? 'Utilizator';
+                  final String email = reqData['userEmail'] ?? '';
+                  final String reason = reqData['reason'] ?? 'Fără motiv';
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
@@ -298,6 +291,85 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
+  void _showAddChildDialog(BuildContext context) {
+    final TextEditingController codeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Adaugă un Copil Nou"),
+          content: TextField(
+            controller: codeController,
+            decoration: const InputDecoration(
+              labelText: "Introdu Codul Unic al Elevului",
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Anulează"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff7c4dff),
+              ),
+              onPressed: () async {
+                String codeInput = codeController.text.trim().toUpperCase();
+                if (codeInput.isEmpty) return;
+
+                var studentQuery = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('studentCode', isEqualTo: codeInput)
+                    .where('role', isEqualTo: 'student')
+                    .get();
+
+                if (studentQuery.docs.isEmpty) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Codul unic nu este valid!'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                  return;
+                }
+
+                String childEmail = studentQuery.docs.first.data()['email'];
+                User? currentUser = FirebaseAuth.instance.currentUser;
+
+                if (currentUser != null) {
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(currentUser.uid)
+                      .update({
+                        'childrenEmails': FieldValue.arrayUnion([childEmail]),
+                      });
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Copilul a fost adăugat cu succes!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text(
+                "Adaugă",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     User? user = FirebaseAuth.instance.currentUser;
@@ -322,11 +394,13 @@ class _ProfileTabState extends State<ProfileTab> {
                 String fullName = "Utilizator";
                 String email = user?.email ?? '';
                 String role = 'student';
+                String? studentCode;
 
                 if (snapshot.hasData && snapshot.data!.exists) {
                   var data = snapshot.data!.data() as Map<String, dynamic>;
                   fullName = data['fullName'] ?? data['name'] ?? 'Utilizator';
                   role = data['role'] ?? 'student';
+                  studentCode = data['studentCode'];
                 }
 
                 String roleText = role == 'teacher'
@@ -336,7 +410,6 @@ class _ProfileTabState extends State<ProfileTab> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Secțiunea de profil (Sus)
                     Center(
                       child: Column(
                         children: [
@@ -396,22 +469,16 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Titlu + Opțiuni de Ordonare (Sortare)
-                    // ... în interiorul clasei ProfileTab, în metoda build ...
-
-                    // Titlu + Opțiuni de Ordonare (Sortare) - Modificat pentru a fi responsive
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          // Dacă ecranul este prea îngust (telefon), afișăm pe două rânduri
                           bool isPhone = constraints.maxWidth < 400;
 
                           return isPhone
                               ? Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Rândul 1: Titlul
                                     Text(
                                       role == 'teacher'
                                           ? "Cururile pe care le predai"
@@ -423,12 +490,10 @@ class _ProfileTabState extends State<ProfileTab> {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    // Rândul 2: Sortarea și butonul de ștergere (aliniate între ele)
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
-                                        // Dropdown-ul de sortare
                                         Expanded(
                                           child: Container(
                                             height: 36,
@@ -472,7 +537,6 @@ class _ProfileTabState extends State<ProfileTab> {
                                           ),
                                         ),
                                         const SizedBox(width: 12),
-                                        // Butonul de sortare crescător/descrescător
                                         Container(
                                           height: 36,
                                           decoration: BoxDecoration(
@@ -503,7 +567,6 @@ class _ProfileTabState extends State<ProfileTab> {
                                             },
                                           ),
                                         ),
-                                        // Butonul pentru conturi șterse (vizibil doar pentru profesor)
                                         if (role == 'teacher') ...[
                                           const SizedBox(width: 8),
                                           Container(
@@ -535,8 +598,7 @@ class _ProfileTabState extends State<ProfileTab> {
                                     ),
                                   ],
                                 )
-                              : // Varianta originală pentru tablete / ecrane mari
-                                Row(
+                              : Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
@@ -552,7 +614,6 @@ class _ProfileTabState extends State<ProfileTab> {
                                     ),
                                     Row(
                                       children: [
-                                        // Dropdown-ul de sortare
                                         DropdownButton<String>(
                                           value: _sortBy,
                                           underline: const SizedBox(),
@@ -577,7 +638,6 @@ class _ProfileTabState extends State<ProfileTab> {
                                           },
                                         ),
                                         const SizedBox(width: 8),
-                                        // Săgeata de sortare
                                         IconButton(
                                           icon: Icon(
                                             _isAscending
@@ -596,7 +656,6 @@ class _ProfileTabState extends State<ProfileTab> {
                                             );
                                           },
                                         ),
-                                        // Iconița pentru conturi șterse
                                         if (role == 'teacher') ...[
                                           const SizedBox(width: 8),
                                           IconButton(
@@ -621,12 +680,6 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Aici urmează StreamBuilder-ul care afișează lista de cursuri (rămâne neschimbat)
-                    // role == 'teacher' ? ... : ...
-                    const SizedBox(height: 12),
-
-                    // Zona de afișare a cursurilor (cu sortare aplicată)
-                    // În interiorul clasei ProfileTab, la StreamBuilder-ul pentru cursuri (pentru non-profesori):
                     role == 'teacher'
                         ? StreamBuilder<QuerySnapshot>(
                             stream: FirebaseFirestore.instance
@@ -644,7 +697,6 @@ class _ProfileTabState extends State<ProfileTab> {
                             },
                           )
                         : FutureBuilder<DocumentSnapshot>(
-                            // Pasul 1: Preluăm datele contului curent pentru a vedea dacă are un `childEmail` (în cazul în care e părinte)
                             future: FirebaseFirestore.instance
                                 .collection('users')
                                 .doc(user?.uid)
@@ -656,17 +708,16 @@ class _ProfileTabState extends State<ProfileTab> {
                                 );
                               }
 
-                              var userData =
+                              var userDocData =
                                   userDocSnap.data!.data()
                                       as Map<String, dynamic>? ??
                                   {};
-                              String targetEmail = email; // Valoarea implicită este emailul elevului logat
+                              String targetEmail = email;
 
                               if (role == 'parent') {
-                                targetEmail = userData['childEmail'] ?? '';
+                                targetEmail = userDocData['childEmail'] ?? '';
                               }
 
-                              // Pasul 2: Căutăm în `enrollments` folosind emailul țintă (al elevului sau al copilului asociat)
                               return StreamBuilder<QuerySnapshot>(
                                 stream: FirebaseFirestore.instance
                                     .collection('enrollments')
@@ -735,9 +786,49 @@ class _ProfileTabState extends State<ProfileTab> {
                         color: primaryIndigo,
                       ),
                     ),
+                    // Verificăm dacă rolul este părinte pentru a afișa opțiunea de adăugare elev
+                    if (role == 'parent') ...[
+                      const SizedBox(height: 16),
+                      Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff7c4dff).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.person_add_alt_1,
+                              color: Color(0xff7c4dff),
+                            ),
+                          ),
+                          title: const Text(
+                            "Adaugă un Copil Nou",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            "Introdu codul unic al elevului pentru a-l lega la cont",
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          onTap: () => _showAddChildDialog(context),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
 
-                    // Butoanele de Acțiune (Deconectare & Ștergere Cont)
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -746,6 +837,121 @@ class _ProfileTabState extends State<ProfileTab> {
                       ),
                       child: Column(
                         children: [
+                          // Afișare cod unic dacă utilizatorul este elev
+                          if (role == 'student' && studentCode != null) ...[
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: primaryIndigo.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: accentLila.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          "Cod Unic pentru Părinte",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          studentCode,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: primaryIndigo,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.copy, color: accentLila),
+                                      onPressed: () {
+                                        Clipboard.setData(
+                                          ClipboardData(text: studentCode!),
+                                        );
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  "Codul a fost copiat în clipboard!",
+                                                ),
+                                                backgroundColor: Colors.green,
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                      },
+                                    ),
+                                    // Verificăm dacă rolul este părinte pentru a afișa opțiunea de adăugare elev
+                                    if (role == 'parent') ...[
+                                      const SizedBox(height: 16),
+                                      Card(
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          side: BorderSide(
+                                            color: Colors.grey.shade200,
+                                          ),
+                                        ),
+                                        child: ListTile(
+                                          leading: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xff7c4dff)
+                                                  .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: const Icon(
+                                              Icons.person_add_alt_1,
+                                              color: Color(0xff7c4dff),
+                                            ),
+                                          ),
+                                          title: const Text(
+                                            "Adaugă un Copil Nou",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          subtitle: const Text(
+                                            "Introdu codul unic al elevului pentru a-l lega la cont",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          trailing: const Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 16,
+                                            color: Colors.grey,
+                                          ),
+                                          onTap: () =>
+                                              _showAddChildDialog(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                           ListTile(
                             leading: const Icon(
                               Icons.logout,
@@ -758,6 +964,7 @@ class _ProfileTabState extends State<ProfileTab> {
                             ),
                             onTap: () => _handleLogout(context),
                           ),
+
                           const Divider(height: 1, color: Colors.black12),
                           ListTile(
                             leading: const Icon(
@@ -788,7 +995,6 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  // Widget ajutător pentru afișarea și sortarea curursurilor profesorului
   Widget _buildCoursesList(
     BuildContext context,
     AsyncSnapshot<QuerySnapshot> snapshot,
@@ -824,7 +1030,6 @@ class _ProfileTabState extends State<ProfileTab> {
 
     var courses = snapshot.data!.docs;
 
-    // Aplicăm sortarea locală în funcție de opțiunile alese (_sortBy și _isAscending)
     courses.sort((a, b) {
       var dataA = a.data() as Map<String, dynamic>;
       var dataB = b.data() as Map<String, dynamic>;
@@ -866,7 +1071,6 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  // Widget ajutător pentru elevi/părinți
   Widget _buildManualCoursesList(
     BuildContext context,
     List<QueryDocumentSnapshot> courseDocs,
@@ -892,7 +1096,6 @@ class _ProfileTabState extends State<ProfileTab> {
       );
     }
 
-    // Sortare
     courseDocs.sort((a, b) {
       var dataA = a.data() as Map<String, dynamic>;
       var dataB = b.data() as Map<String, dynamic>;
@@ -919,7 +1122,6 @@ class _ProfileTabState extends State<ProfileTab> {
         String category = courseData['category'] ?? '';
         String description = courseData['description'] ?? '';
 
-        // Găsim statusul înscrierii în siguranță
         String status = 'Înscris';
         try {
           var enroll = enrollDocs.firstWhere(
@@ -948,7 +1150,6 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  // Designul unui rând de curs cu posibilitate de accesare la apăsare
   Widget _buildCourseItemContainer(
     BuildContext context,
     String courseId,
@@ -1026,7 +1227,6 @@ class _ProfileTabState extends State<ProfileTab> {
             const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
           ],
         ),
-        // Accesarea cursului direct de aici
         onTap: () {
           Navigator.push(
             context,
