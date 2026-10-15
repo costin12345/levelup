@@ -92,14 +92,34 @@ Future<void> setupFCM() async {
 
       String? fcmToken = await messaging.getToken();
 
-      if (fcmToken == null && defaultTargetPlatform == TargetPlatform.iOS) {
-        await Future.delayed(const Duration(seconds: 3));
-        fcmToken = await messaging.getToken();
-      }
-
       if (fcmToken != null && fcmToken.isNotEmpty) {
         await saveTokenToFirestore(fcmToken);
       }
+
+      // 🌟 ACEASTA ESTE PESA LIPSĂ CARE AFIȘEAZĂ BANNERUL PE IOS ÎN TIMP REAL:
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        RemoteNotification? notification = message.notification;
+        if (notification != null) {
+          flutterLocalNotificationsPlugin.show(
+            notification.hashCode,
+            notification.title,
+            notification.body,
+            const NotificationDetails(
+              iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+              ),
+              android: AndroidNotificationDetails(
+                'high_importance_channel',
+                'Notificări Importante',
+                importance: Importance.max,
+                priority: Priority.high,
+              ),
+            ),
+          );
+        }
+      });
     }
   } catch (e) {
     debugPrint("Eroare FCM: $e");
@@ -111,6 +131,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   if (!kIsWeb) {
+    await initLocalNotifications(); // <-- Foarte important pentru afișarea pe iOS
     try {
       if (await FlutterAppBadger.isAppBadgeSupported()) {
         FlutterAppBadger.removeBadge();
