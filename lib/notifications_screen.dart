@@ -22,40 +22,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
   final TextEditingController _searchController = TextEditingController();
 
-  static const Color primaryIndigo = Color(0xff1e1b4b);
-  static const Color accentPurple = Color(0xff7c3aed);
-  static const Color bgColor = Color(0xfff8fafc);
-
   @override
   void initState() {
     super.initState();
-    _updateBadgeForUser();
+    _updateBadgeForUser(); // <--- Adaugă aici
   }
 
+  // 2. Funcție ajutătoare care alege animația Lottie în funcție de tipul notificării
   Widget _getAnimationForType(String type, bool isRead) {
-    String assetPath = 'images/animations/homework.json';
+    String assetPath = 'images/animations/homework.json'; // Animație implicită (exemplu pentru teme/lecții)
 
     if (type == 'user_registration') {
-      assetPath = 'images/animations/enrollment.json';
+      assetPath =
+          'images/animations/enrollment.json'; // Animație pentru conturi noi
     } else if (type == 'enrollment') {
-      assetPath = 'images/animations/user_reg.json';
+      assetPath =
+          'images/animations/user_reg.json'; // Animație pentru înscrieri
     }
 
     return SizedBox(
       width: 42,
       height: 42,
       child: Opacity(
-        opacity: isRead ? 0.5 : 1.0,
-        child: Lottie.asset(
-          assetPath,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return Icon(
-              Icons.notifications_active,
-              color: isRead ? Colors.grey : primaryIndigo,
-            );
-          },
-        ),
+        opacity: isRead
+            ? 0.5
+            : 1.0, // Dacă e citită, o facem puțin mai transparentă
+        child: Lottie.asset(assetPath, fit: BoxFit.contain),
       ),
     );
   }
@@ -63,19 +55,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _updateBadgeForUser() async {
     if (kIsWeb || currentUser == null) return;
     try {
+      // 1. Numărăm elevii care așteaptă aprobarea (hasAccess: false)
       var pendingUsers = await FirebaseFirestore.instance
           .collection('users')
           .where('role', isEqualTo: 'student')
           .where('hasAccess', isEqualTo: false)
           .get();
 
+      // 2. Numărăm înscrierile la cursuri în așteptare (status: pending)
       var pendingEnrollments = await FirebaseFirestore.instance
           .collection('enrollments')
           .where('status', isEqualTo: 'pending')
           .get();
 
+      // Suma totală exactă pe care o folosește și clopoțelul din main.dart
       int totalPending =
           pendingUsers.docs.length + pendingEnrollments.docs.length;
+
+      debugPrint(
+        "🔍 Badge actualizat la: $totalPending (Conturi: ${pendingUsers.docs.length}, Înscrieri: ${pendingEnrollments.docs.length})",
+      );
 
       if (await FlutterAppBadger.isAppBadgeSupported()) {
         if (totalPending > 0) {
@@ -89,6 +88,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  /*// Pe Web sau alte platforme non-mobile nu există badge-uri native
+    if (kIsWeb || currentUser == null) return;
+    try {
+      // Numărăm strict doar notificările necitite ale utilizatorului curent din Firestore
+      QuerySnapshot unreadNotifsSnap = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('userId', isEqualTo: currentUser!.uid)
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      int unreadCount = unreadNotifsSnap.docs.length;
+
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
+        if (unreadCount > 0) {
+          FlutterAppBadger.updateBadgeCount(unreadCount);
+        } else {
+          FlutterAppBadger.removeBadge();
+        }
+      }
+    } catch (e) {
+      debugPrint("Eroare la actualizarea badge-ului: $e");
+    }*/
+
   Future<void> _confirmAndDeleteUser(String userId, String userName) async {
     bool? confirm = await showDialog<bool>(
       context: context,
@@ -96,7 +118,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: Text('Ștergere "$userName"'),
         content: Text(
           'Ești sigur că vrei să ștergi contul utilizatorului $userName? '
-              'Toate înscrierile și notificările acestuia vor fi eliminate.',
+          'Toate înscrierile și notificările acestuia vor fi eliminate.',
         ),
         actions: [
           TextButton(
@@ -155,49 +177,97 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _handleStudentNotificationClick(
+    DocumentSnapshot notifDoc,
+  ) async {
+    var data = notifDoc.data() as Map<String, dynamic>;
+    String notifId = notifDoc.id;
+
+    String courseId = data['courseId'] ?? '';
+    String lessonId = data['lessonId'] ?? '';
+    String notifType = data['type'] ?? 'lesson';
+    String notifTitle = data['title'] ?? 'Detalii Notificare';
+
+    await FirebaseFirestore.instance
+        .collection('notifications')
+        .doc(notifId)
+        .update({'isRead': true});
+
+    _updateBadgeForUser();
+
+    if (!mounted) return;
+
+    if (notifType == 'grade') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CatalogScreen(role: 'student'),
+        ),
+      );
+    } else if (courseId.isNotEmpty && lessonId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LessonDetailPage(
+            courseId: courseId,
+            lessonId: lessonId,
+            lessonTitle: notifTitle,
+            initialTab: notifType,
+            role: 'student',
+          ),
+        ),
+      );
+    } else if (courseId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CourseDetailScreen(
+            courseId: courseId,
+            title: notifTitle,
+            category: 'General',
+            description: '',
+            role: 'student',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (currentUser == null) {
       return const Scaffold(
-        backgroundColor: bgColor,
         body: Center(child: Text("Utilizator neconectat.")),
       );
     }
 
     // ==========================================
-    // 1. DACĂ ESTE PROFESOR -> Panou de Administrare cu Tab-uri
+    // 1. DACĂ ESTE PROFESOR -> Are Panoul de Administrare cu 3 Tab-uri
     // ==========================================
-    if (widget.role.toLowerCase().contains('teach') ||
-        widget.role.toLowerCase().contains('prof')) {
+    if (widget.role == 'teacher') {
       return DefaultTabController(
         length: 3,
         child: Scaffold(
-          backgroundColor: bgColor,
+          backgroundColor: const Color(0xfffff8dc),
           appBar: AppBar(
-            backgroundColor: primaryIndigo,
-            toolbarHeight: 70,
-            titleSpacing: 16,
-            elevation: 0,
             title: const Text(
-              "Panou Administrare & Notificări",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              "Panou Administrare",
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
+            backgroundColor: const Color(0xff42153e),
+            foregroundColor: Colors.white,
             bottom: const TabBar(
-              labelColor: accentPurple,
+              labelColor: Colors.amber,
               unselectedLabelColor: Colors.white70,
-              indicatorColor: accentPurple,
+              indicatorColor: Colors.amber,
               tabs: [
                 Tab(
-                  icon: Icon(Icons.person_add, size: 18),
+                  icon: Icon(Icons.person_add, size: 20),
                   text: "Conturi Noi",
                 ),
-                Tab(icon: Icon(Icons.school, size: 18), text: "Înscrieri"),
+                Tab(icon: Icon(Icons.school, size: 20), text: "Înscrieri"),
                 Tab(
-                  icon: Icon(Icons.group_remove, size: 18),
+                  icon: Icon(Icons.group_remove, size: 20),
                   text: "Gestionare Useri",
                 ),
               ],
@@ -215,7 +285,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(color: accentPurple),
+                      child: CircularProgressIndicator(
+                        color: Color(0xff42153e),
+                      ),
                     );
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -241,27 +313,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       String email = uData['email'] ?? '';
 
                       return Card(
-                        elevation: 1,
-                        color: Colors.white,
+                        elevation: 2,
                         margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(color: Colors.grey.shade200),
-                        ),
                         child: ListTile(
                           title: Text(
                             name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: primaryIndigo,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
                             email,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                            style: const TextStyle(fontSize: 12),
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -270,7 +331,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 icon: const Icon(
                                   Icons.check_circle,
                                   color: Colors.green,
-                                  size: 28,
+                                  size: 30,
                                 ),
                                 tooltip: 'Aprobă Accesul',
                                 onPressed: () async {
@@ -285,7 +346,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 icon: const Icon(
                                   Icons.cancel,
                                   color: Colors.red,
-                                  size: 28,
+                                  size: 30,
                                 ),
                                 tooltip: 'Respinge Contul',
                                 onPressed: () =>
@@ -309,7 +370,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(color: accentPurple),
+                      child: CircularProgressIndicator(
+                        color: Color(0xff42153e),
+                      ),
                     );
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -350,27 +413,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               String courseTitle =
                                   courseSnap.data?['title'] ?? 'Curs';
                               return Card(
-                                elevation: 1,
-                                color: Colors.white,
+                                elevation: 2,
                                 margin: const EdgeInsets.only(bottom: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  side: BorderSide(color: Colors.grey.shade200),
-                                ),
                                 child: ListTile(
                                   title: Text(
                                     studentName,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: primaryIndigo,
                                     ),
                                   ),
                                   subtitle: Text(
                                     'Solicită înscriere la: $courseTitle',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
-                                    ),
+                                    style: const TextStyle(fontSize: 13),
                                   ),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -379,7 +433,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         icon: const Icon(
                                           Icons.check_circle,
                                           color: Colors.green,
-                                          size: 28,
+                                          size: 30,
                                         ),
                                         onPressed: () async {
                                           await FirebaseFirestore.instance
@@ -393,7 +447,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         icon: const Icon(
                                           Icons.cancel,
                                           color: Colors.red,
-                                          size: 28,
+                                          size: 30,
                                         ),
                                         onPressed: () async {
                                           await FirebaseFirestore.instance
@@ -423,25 +477,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   children: [
                     TextField(
                       controller: _searchController,
-                      cursorColor: accentPurple,
                       decoration: InputDecoration(
                         hintText: 'Caută după nume sau email...',
                         prefixIcon: const Icon(
                           Icons.search,
-                          color: primaryIndigo,
+                          color: Color(0xff42153e),
                         ),
                         fillColor: Colors.white,
                         filled: true,
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: accentPurple,
-                            width: 2,
-                          ),
-                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       onChanged: (_) => setState(() {}),
@@ -453,13 +498,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             .collection('users')
                             .snapshots(),
                         builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
+                          if (!snapshot.hasData)
                             return const Center(
-                              child: CircularProgressIndicator(
-                                color: accentPurple,
-                              ),
+                              child: CircularProgressIndicator(),
                             );
-                          }
 
                           String query = _searchController.text
                               .toLowerCase()
@@ -487,27 +529,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               bool hasAccess = uData['hasAccess'] ?? false;
 
                               return Card(
-                                elevation: 1,
-                                color: Colors.white,
                                 margin: const EdgeInsets.only(bottom: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(color: Colors.grey.shade200),
-                                ),
                                 child: ListTile(
                                   title: Text(
                                     name,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: primaryIndigo,
                                     ),
                                   ),
                                   subtitle: Text(
                                     '$email • ${hasAccess ? 'Activ' : 'Neaprobat'}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
+                                    style: const TextStyle(fontSize: 12),
                                   ),
                                   trailing: IconButton(
                                     icon: const Icon(
@@ -534,16 +566,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     // ==========================================
-    // 2. DACĂ ESTE ELEV/PĂRINTE -> Notificări personale
+    // 2. DACĂ ESTE ELEV -> Are UN SINGUR ECAN Simplu cu Notificările Lui Personale
     // ==========================================
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: const Color(0xfffff8dc),
       appBar: AppBar(
-        backgroundColor: primaryIndigo,
         title: const Text(
           "Notificările Mele",
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: const Color(0xff42153e),
+        foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -553,7 +586,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: accentPurple),
+              child: CircularProgressIndicator(color: Color(0xff42153e)),
             );
           }
 
@@ -561,22 +594,70 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             return const Center(
               child: Text(
                 "Nu ai nicio notificare în prezent.",
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             );
           }
 
-          var notifs = snapshot.data!.docs;
+          var notifs = snapshot.data!.docs.toList();
+          notifs.sort((a, b) {
+            var dataA = a.data() as Map<String, dynamic>;
+            var dataB = b.data() as Map<String, dynamic>;
+            Timestamp? tA = dataA['createdAt'] as Timestamp?;
+            Timestamp? tB = dataB['createdAt'] as Timestamp?;
+            if (tA == null || tB == null) return 0;
+            return tB.compareTo(tA);
+          });
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: notifs.length,
             itemBuilder: (context, index) {
-              var data = notifs[index].data() as Map<String, dynamic>;
+              var doc = notifs[index];
+              var data = doc.data() as Map<String, dynamic>;
+              bool isRead = data['isRead'] ?? false;
+              String title = data['title'] ?? 'Notificare';
+              String body = data['body'] ?? '';
+              String type = data['type'] ?? 'homework';
+
               return Card(
+                elevation: isRead ? 1 : 3,
+                color: isRead ? Colors.white : Colors.amber.shade50,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: isRead
+                      ? BorderSide.none
+                      : BorderSide(color: Colors.amber.shade700, width: 1.5),
+                ),
                 child: ListTile(
-                  title: Text(data['title'] ?? ''),
-                  subtitle: Text(data['body'] ?? ''),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: _getAnimationForType(type, isRead),
+                  title: Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                      color: const Color(0xff42153e),
+                    ),
+                  ),
+                  subtitle: Text(
+                    body,
+                    style: TextStyle(color: Colors.grey.shade800, fontSize: 13),
+                  ),
+                  trailing: !isRead
+                      ? Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                      : null,
+                  onTap: () => _handleStudentNotificationClick(doc),
                 ),
               );
             },
