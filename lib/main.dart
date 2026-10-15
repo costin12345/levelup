@@ -85,6 +85,30 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     _saveFcmTokenForCurrentUser(); // 🌟 Aici salvăm token-ul la pornirea ecranului principal
   }
 
+  PopupMenuItem<int> _buildPopupItem(int index, String title, IconData icon) {
+    bool isSelected = _currentIndex == index;
+    return PopupMenuItem<int>(
+      value: index,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: isSelected ? const Color(0xffffd700) : Colors.white70,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              color: isSelected ? const Color(0xffffd700) : Colors.white,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color primaryIndigo = Color(0xff1e1b4b);
@@ -277,6 +301,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ],
             ),
             actions: [
+              // 1. Clopoțelul de notificări
               IconButton(
                 onPressed: () {
                   Navigator.push(
@@ -294,28 +319,55 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               const SizedBox(width: 8),
 
-              // 🌟 Meniul orizontal sus pe toate dispozitivele
-              if (isParent) ...[
-                _buildTopNavButton("Home", 0),
-                _buildTopNavButton("Catalog", 1),
-                _buildTopNavButton("Progres", 2),
-                _buildTopNavButton("Profil", 3),
-              ] else if (isTeacher) ...[
-                _buildTopNavButton("Home", 0),
-                _buildTopNavButton("Catalog", 1),
-                _buildTopNavButton("Cursuri", 2),
-                _buildTopNavButton("Materiale", 3),
-                _buildTopNavButton("Profil", 4),
-              ] else ...[
-                _buildTopNavButton("Home", 0),
-                _buildTopNavButton("Catalog", 1),
-                _buildTopNavButton("Cursuri", 2),
-                _buildTopNavButton("Materiale", 3),
-                _buildTopNavButton("Progres", 4),
-                _buildTopNavButton("Profil", 5),
-              ],
+              // 2. Meniul cu 3 linii (Hamburger) poziționat în dreapta, cu fundal închis
+              PopupMenuButton<int>(
+                icon: const Icon(
+                  Icons.menu,
+                  color: Colors.white,
+                  size: 28,
+                ), // Cele 3 linii
+                color: const Color(
+                  0xff0f172a,
+                ), // Negru închis / Albastru foarte închis elegant
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onSelected: (index) {
+                  setState(() => _currentIndex = index);
+                },
+                itemBuilder: (context) {
+                  // Generăm opțiunile în funcție de rol
+                  if (isParent) {
+                    return [
+                      _buildPopupItem(0, "Home", Icons.home),
+                      _buildPopupItem(1, "Catalog", Icons.star),
+                      _buildPopupItem(2, "Progres", Icons.trending_up),
+                      _buildPopupItem(3, "Profil", Icons.person),
+                    ];
+                  } else if (isTeacher) {
+                    return [
+                      _buildPopupItem(0, "Home", Icons.home),
+                      _buildPopupItem(1, "Catalog", Icons.star),
+                      _buildPopupItem(2, "Cursuri", Icons.book),
+                      _buildPopupItem(3, "Materiale", Icons.folder),
+                      _buildPopupItem(4, "Profil", Icons.person),
+                    ];
+                  } else {
+                    return [
+                      _buildPopupItem(0, "Home", Icons.home),
+                      _buildPopupItem(1, "Catalog", Icons.star),
+                      _buildPopupItem(2, "Cursuri", Icons.book),
+                      _buildPopupItem(3, "Materiale", Icons.folder),
+                      _buildPopupItem(4, "Progres", Icons.trending_up),
+                      _buildPopupItem(5, "Profil", Icons.person),
+                    ];
+                  }
+                },
+              ),
 
-              const SizedBox(width: 24),
+              const SizedBox(width: 8),
+
+              // 3. Butonul de deconectare
               IconButton(
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
