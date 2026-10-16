@@ -93,14 +93,13 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } on FirebaseAuthException catch (e) {
       String message = 'A apărut o eroare la autentificare.';
-      if (e.code == 'user-not-found') {
-        message = 'Nu există niciun cont cu acest email.';
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        message =
+            'Nu există niciun cont cu acest email sau datele sunt incorecte.';
       } else if (e.code == 'wrong-password') {
         message = 'Parolă incorectă.';
       } else if (e.code == 'invalid-email') {
-        message = 'Adresa de email este invalidă.';
-      } else if (e.code == 'invalid-credential') {
-        message = 'Datele de autentificare sunt incorecte.';
+        message = 'Adresa de email introdusă nu are o structură validă.';
       }
       _showSnackBar(message);
     } catch (e) {

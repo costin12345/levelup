@@ -464,7 +464,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         bool isTeacher = userRole == 'teacher';
         bool isParent = userRole == 'parent';
 
-        // Listă ecrane
+        // 1. Listă ecrane
         final List<Widget> screens = isTeacher
             ? [
                 HomeTab(onGoToCourses: () => setState(() => _currentIndex = 2)),
@@ -489,7 +489,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 const ProfileTab(),
               ];
 
-        // Opțiunile pentru meniul lateral (inclusiv Deconectare la final)
+        // 2. Titlurile și iconițele pentru tab-uri / meniu
         final List<Map<String, dynamic>> menuItems = isTeacher
             ? [
                 {'title': 'Home', 'icon': Icons.home},
@@ -514,96 +514,112 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 {'title': 'Profil', 'icon': Icons.person},
               ];
 
+        // 🌟 Verificăm dacă ecranul este lat (Laptop/Desktop) sau îngust (Telefon/Tabletă)
+        bool isDesktop = MediaQuery.of(context).size.width >= 850;
+
         return Scaffold(
           backgroundColor: const Color(0xfff8fafc),
-          // Meniul lateral cu fundal negru închis / indigo foarte închis
-          drawer: Drawer(
-            backgroundColor: const Color(0xff0f172a), // Negru închis elegant
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                DrawerHeader(
-                  decoration: const BoxDecoration(color: primaryIndigo),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
+
+          // 🌟 Drawer-ul apare DOAR pe telefoane/tablete, pe desktop este null
+          drawer: isDesktop
+              ? null
+              : Drawer(
+                  backgroundColor: const Color(0xff0f172a),
+                  child: ListView(
+                    padding: EdgeInsets.zero,
                     children: [
-                      const Icon(Icons.school, color: Colors.white, size: 36),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "LEVEL UP",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      DrawerHeader(
+                        decoration: const BoxDecoration(color: primaryIndigo),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Icon(
+                              Icons.school,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              "LEVEL UP",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "Rol: ${userRole.toUpperCase()}",
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        "Rol: ${userRole.toUpperCase()}",
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
+                      ...menuItems.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        var item = entry.value;
+                        bool isSelected = _currentIndex == index;
+
+                        return ListTile(
+                          leading: Icon(
+                            item['icon'],
+                            color: isSelected
+                                ? const Color(0xffffd700)
+                                : Colors.white70,
+                          ),
+                          title: Text(
+                            item['title'],
+                            style: TextStyle(
+                              color: isSelected
+                                  ? const Color(0xffffd700)
+                                  : Colors.white,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onTap: () {
+                            setState(() => _currentIndex = index);
+                            Navigator.pop(context);
+                          },
+                        );
+                      }),
+                      const Divider(color: Colors.white24),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.logout,
+                          color: Colors.redAccent,
                         ),
+                        title: const Text(
+                          "Deconectare",
+                          style: TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await FirebaseAuth.instance.signOut();
+                        },
                       ),
                     ],
                   ),
                 ),
-                ...menuItems.asMap().entries.map((entry) {
-                  int index = entry.key;
-                  var item = entry.value;
-                  bool isSelected = _currentIndex == index;
-
-                  return ListTile(
-                    leading: Icon(
-                      item['icon'],
-                      color: isSelected
-                          ? const Color(0xffffd700)
-                          : Colors.white70,
-                    ),
-                    title: Text(
-                      item['title'],
-                      style: TextStyle(
-                        color: isSelected
-                            ? const Color(0xffffd700)
-                            : Colors.white,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    selected: isSelected,
-                    onTap: () {
-                      setState(() => _currentIndex = index);
-                      Navigator.pop(context); // Închide drawer-ul
-                    },
-                  );
-                }),
-                const Divider(color: Colors.white24),
-                // 🌟 Butonul de Deconectare mutat pe ultimul rând în meniu
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.redAccent),
-                  title: const Text(
-                    "Deconectare",
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await FirebaseAuth.instance.signOut();
-                  },
-                ),
-              ],
-            ),
-          ),
           appBar: AppBar(
             backgroundColor: primaryIndigo,
             elevation: 0,
             toolbarHeight: 70,
             titleSpacing: 16,
-            // Flutter pune automat iconița cu 3 linii în stânga datorită drawer-ului de mai sus
+            iconTheme: const IconThemeData(color: Colors.white),
+            automaticallyImplyLeading: !isDesktop,
+
+            // 1. În stânga rămâne strict doar Logo-ul și numele aplicației
             title: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   padding: const EdgeInsets.all(6),
@@ -629,29 +645,133 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 ),
               ],
             ),
+
+            // 2. În dreapta punem tab-urile, clopoțelul și deconectarea (dacă suntem pe Desktop)
             actions: [
-              // Doar clopoțelul de notificări rămâne în dreapta sus
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NotificationsScreen(role: userRole),
-                    ),
+              if (isDesktop) ...[
+                // Tab-urile aliniate în dreapta, înainte de clopoțel
+                Row(
+                  children: menuItems.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    return _buildTopNavButton(entry.value['title'], index);
+                  }).toList(),
+                ),
+                const SizedBox(width: 16),
+              ],
+
+              // Clopoțelul de notificări (vine primul în zona din dreapta)
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('notifications')
+                    .where('userId', isEqualTo: currentUser?.uid ?? 'dummy')
+                    .where('isRead', isEqualTo: false)
+                    .where(
+                      'type',
+                      whereIn: ['user_registration', 'course_enrollment'],
+                    )
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  int unreadCount = 0;
+                  if (snapshot.hasData) {
+                    unreadCount = snapshot.data!.docs.where((doc) {
+                      var data = doc.data() as Map<String, dynamic>;
+                      String title = (data['title'] ?? '')
+                          .toString()
+                          .toLowerCase();
+                      bool isGeneralManagement =
+                          title.contains('gestionare') ||
+                          title.contains('modificare');
+                      return !isGeneralManagement;
+                    }).length;
+                  }
+
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  NotificationsScreen(role: userRole),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                        ),
+                        tooltip: "Notificări",
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '$unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
                   );
                 },
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                  color: Colors.white,
-                ),
-                tooltip: "Notificări",
               ),
+              const SizedBox(width: 8),
+
+              // Butonul de deconectare (ultimul din dreapta pe desktop)
+              if (isDesktop)
+                IconButton(
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.white70),
+                  tooltip: "Deconectare",
+                ),
+
               const SizedBox(width: 16),
             ],
           ),
           body: screens[_currentIndex],
         );
       },
+    );
+  }
+
+  Widget _buildTopNavButton(String title, int index) {
+    bool isSelected = _currentIndex == index;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6.0),
+      child: TextButton(
+        onPressed: () => setState(() => _currentIndex = index),
+        style: TextButton.styleFrom(
+          foregroundColor: isSelected ? const Color(0xffffd700) : Colors.white,
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? const Color(0xffffd700) : Colors.white,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
+          ),
+        ),
+      ),
     );
   }
 }
