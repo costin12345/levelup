@@ -255,7 +255,7 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Bannerul frumos cu gradient apare acum și pe mobil dacă se dorește, sau păstrăm randarea clară
+                  // 1. Bannerul principal cu gradient (care conține titlul și descrierea)
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -297,8 +297,6 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                                     ? "Situația mediilor centralizate pe fiecare clasă și grupă"
                                     : isRapoarte
                                     ? "Statistici vizuale și rapoarte de performanță"
-                                    : isArhivadTeste
-                                    ? "Gestionarea folderelor și testelor încărcate"
                                     : "Managementul avansat al notelor și absențelor",
                                 style: const TextStyle(
                                   fontSize: 12,
@@ -308,62 +306,42 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
                             ],
                           ),
                         ),
-                        if (!isMediiPeGrupa &&
-                            !isRapoarte &&
-                            !isArhivadTeste &&
-                            !isMobile)
-                          Row(
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () => showDialog(
-                                  context: context,
-                                  builder: (context) => const AddGradeDialog(),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: accentLila,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                icon: const Icon(Icons.add, size: 16),
-                                label: const Text(
-                                  "Adaugă Notă",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              OutlinedButton.icon(
-                                onPressed: () => _showAddAbsenceDialog(context),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.white54),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.event_busy,
-                                  size: 16,
-                                  color: Colors.amberAccent,
-                                ),
-                                label: const Text(
-                                  "Adaugă Absență",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // 2. Bara orizontală cu butoane (pe mobil) plasată elegant sub banner
+                  if (isMobile) ...[
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildMobileTabChip(
+                            "Note și Absențe",
+                            Icons.fact_check,
+                            accentLila,
+                            primaryIndigo,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildMobileTabChip(
+                            "Medii pe Grupă",
+                            Icons.bar_chart,
+                            accentLila,
+                            primaryIndigo,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildMobileTabChip(
+                            "Rapoarte Academice",
+                            Icons.description_outlined,
+                            accentLila,
+                            primaryIndigo,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // --- FILTRE ---
                   if (!isMediiPeGrupa && !isRapoarte && !isArhivadTeste)
@@ -2411,6 +2389,53 @@ class _TeacherCatalogScreenState extends State<TeacherCatalogScreen> {
             );
           }).toList(),
           onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  // 🌟 Funcția helper pentru butoanele orizontale de pe mobil
+  Widget _buildMobileTabChip(
+    String title,
+    IconData icon,
+    Color accentLila,
+    Color primaryIndigo,
+  ) {
+    bool isSelected = _activeCatalogMenu == title;
+    return InkWell(
+      onTap: () => setState(() => _activeCatalogMenu = title),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryIndigo : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? primaryIndigo : Colors.grey.shade300,
+          ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: primaryIndigo.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: isSelected ? Colors.white : accentLila),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : primaryIndigo,
+              ),
+            ),
+          ],
         ),
       ),
     );

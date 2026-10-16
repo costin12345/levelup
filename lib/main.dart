@@ -659,29 +659,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 const SizedBox(width: 16),
               ],
 
-              // Clopoțelul de notificări (vine primul în zona din dreapta)
+              // 🌟 Clopoțel care numără TOATE cererile și conturile (fകാന്‍ limită de citit/necitit)
+              // 🌟 Clopoțel definit corect: numără toate înscrierile și conturile, citite sau necitite, excluzând doar gestionarea userilor
+              // 🌟 Clopoțel global: numără absolut toate înscrierile și conturile din baza de date
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('notifications')
-                    .where('userId', isEqualTo: currentUser?.uid ?? 'dummy')
-                    .where('isRead', isEqualTo: false)
-                    .where(
-                      'type',
-                      whereIn: ['user_registration', 'course_enrollment'],
-                    )
                     .snapshots(),
                 builder: (context, snapshot) {
                   int unreadCount = 0;
+
                   if (snapshot.hasData) {
                     unreadCount = snapshot.data!.docs.where((doc) {
                       var data = doc.data() as Map<String, dynamic>;
+                      String type = data['type'] ?? '';
                       String title = (data['title'] ?? '')
                           .toString()
                           .toLowerCase();
-                      bool isGeneralManagement =
+
+                      bool isTargetType =
+                          (type == 'user_registration' ||
+                          type == 'course_enrollment');
+                      bool isManagement =
                           title.contains('gestionare') ||
                           title.contains('modificare');
-                      return !isGeneralManagement;
+
+                      return isTargetType && !isManagement;
                     }).length;
                   }
 
